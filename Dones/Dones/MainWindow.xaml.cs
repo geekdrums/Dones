@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Collections.ObjectModel;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Documents;
@@ -20,9 +21,19 @@ namespace Dones
 	/// </summary>
 	public partial class MainWindow : Window
 	{
+		public ObservableCollection<Line> VisibleLines;
+
 		public MainWindow()
 		{
 			InitializeComponent();
+
+			VisibleLines = new ObservableCollection<Line>();
+			VisibleLines.Add(new Line("Hello World"));
+			VisibleLines.Add(new Line("Hello"));
+			VisibleLines.Add(new Line("Hello"));
+			VisibleLines.Add(new Line("Hello"));
+
+			TreeLine.ItemsSource = VisibleLines;
 		}
 	}
 }

@@ -7,26 +7,17 @@
         mc:Ignorable="d"
         Title="MainWindow" Height="350" Width="525">
     <Grid>
-        <StackPanel Margin="10,10,0,0">
-            <TextBox HorizontalAlignment="Left" Height="23" TextWrapping="Wrap" VerticalAlignment="Top" Width="500" BorderBrush="{DynamicResource {x:Static SystemColors.WindowBrushKey}}"/>
-            <TextBox HorizontalAlignment="Left" Height="23" TextWrapping="Wrap" VerticalAlignment="Top" Width="500" BorderBrush="{DynamicResource {x:Static SystemColors.WindowBrushKey}}"/>
-            <TextBox HorizontalAlignment="Left" Height="23" TextWrapping="Wrap" VerticalAlignment="Top" Width="500" BorderBrush="{DynamicResource {x:Static SystemColors.WindowBrushKey}}"/>
-            <TextBox HorizontalAlignment="Left" Height="23" TextWrapping="Wrap" VerticalAlignment="Top" Width="500" BorderBrush="{DynamicResource {x:Static SystemColors.WindowBrushKey}}"/>
-            <TextBox HorizontalAlignment="Left" Height="23" TextWrapping="Wrap" VerticalAlignment="Top" Width="500" BorderBrush="{DynamicResource {x:Static SystemColors.WindowBrushKey}}"/>
-            <TextBox HorizontalAlignment="Left" Height="23" TextWrapping="Wrap" VerticalAlignment="Top" Width="500" BorderBrush="{DynamicResource {x:Static SystemColors.WindowBrushKey}}"/>
-            <TextBox HorizontalAlignment="Left" Height="23" TextWrapping="Wrap" VerticalAlignment="Top" Width="500" BorderBrush="{DynamicResource {x:Static SystemColors.WindowBrushKey}}"/>
-            <TextBox HorizontalAlignment="Left" Height="23" TextWrapping="Wrap" VerticalAlignment="Top" Width="500" BorderBrush="{DynamicResource {x:Static SystemColors.WindowBrushKey}}"/>
-            <TextBox HorizontalAlignment="Left" Height="23" TextWrapping="Wrap" VerticalAlignment="Top" Width="500" BorderBrush="{DynamicResource {x:Static SystemColors.WindowBrushKey}}"/>
-            <TextBox HorizontalAlignment="Left" Height="23" TextWrapping="Wrap" VerticalAlignment="Top" Width="500" BorderBrush="{DynamicResource {x:Static SystemColors.WindowBrushKey}}"/>
-            <TextBox HorizontalAlignment="Left" Height="23" TextWrapping="Wrap" VerticalAlignment="Top" Width="500" BorderBrush="{DynamicResource {x:Static SystemColors.WindowBrushKey}}"/>
-            <TextBox HorizontalAlignment="Left" Height="23" TextWrapping="Wrap" VerticalAlignment="Top" Width="500" BorderBrush="{DynamicResource {x:Static SystemColors.WindowBrushKey}}"/>
-            <TextBox HorizontalAlignment="Left" Height="23" TextWrapping="Wrap" VerticalAlignment="Top" Width="500" BorderBrush="{DynamicResource {x:Static SystemColors.WindowBrushKey}}"/>
-            <TextBox HorizontalAlignment="Left" Height="23" TextWrapping="Wrap" VerticalAlignment="Top" Width="500" BorderBrush="{DynamicResource {x:Static SystemColors.WindowBrushKey}}"/>
-            <TextBox HorizontalAlignment="Left" Height="23" TextWrapping="Wrap" VerticalAlignment="Top" Width="500" BorderBrush="{DynamicResource {x:Static SystemColors.WindowBrushKey}}"/>
-            <TextBox HorizontalAlignment="Left" Height="23" TextWrapping="Wrap" VerticalAlignment="Top" Width="500" BorderBrush="{DynamicResource {x:Static SystemColors.WindowBrushKey}}"/>
-            <TextBox HorizontalAlignment="Left" Height="23" TextWrapping="Wrap" VerticalAlignment="Top" Width="500" BorderBrush="{DynamicResource {x:Static SystemColors.WindowBrushKey}}"/>
-            <TextBox HorizontalAlignment="Left" Height="23" TextWrapping="Wrap" VerticalAlignment="Top" Width="500" BorderBrush="{DynamicResource {x:Static SystemColors.WindowBrushKey}}"/>
-        </StackPanel>
-
+        <ItemsControl Name="TreeLine" ItemsSource="{Binding VisibleLines}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <StackPanel/>
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <TextBox Text="{Binding Text}" HorizontalAlignment="Stretch" Height="23" TextWrapping="NoWrap" VerticalAlignment="Top" BorderThickness="0"/>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
     </Grid>
 </Window>
