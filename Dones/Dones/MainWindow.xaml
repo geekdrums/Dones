@@ -5,6 +5,8 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Dones"
         mc:Ignorable="d"
+        KeyDown="Window_KeyDown"
+        PreviewKeyDown="Window_PreviewKeyDown"
         Title="MainWindow" Height="350" Width="525">
     <Grid>
         <ItemsControl Name="TreeLine" ItemsSource="{Binding VisibleLines}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
@@ -15,7 +17,14 @@
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                    <TextBox Text="{Binding Text}" HorizontalAlignment="Stretch" Height="23" TextWrapping="NoWrap" VerticalAlignment="Top" BorderThickness="0"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="{Binding LevelWidth}"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Rectangle Grid.Column="0"/>
+                        <TextBox Grid.Column="1" Text="{Binding Text, Mode=TwoWay}" HorizontalAlignment="Stretch" Height="23" TextWrapping="NoWrap" VerticalAlignment="Top" BorderThickness="0"/>
+                    </Grid>
                 </DataTemplate>
             </ItemsControl.ItemTemplate>
         </ItemsControl>

@@ -35,5 +35,34 @@ namespace Dones
 
 			TreeLine.ItemsSource = VisibleLines;
 		}
+
+		private void Window_KeyDown(object sender, KeyEventArgs e)
+		{
+
+		}
+
+		private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
+		{
+			FrameworkElement focusedElement = ( FocusManager.GetFocusedElement(this) as FrameworkElement );
+			if( focusedElement == null ) return;
+
+			BindingExpression bindExp = focusedElement.GetBindingExpression(TextBox.TextProperty);
+			Line focusLine = bindExp.DataItem as Line;
+			int index = VisibleLines.IndexOf(focusLine);
+
+			if( e.Key == Key.Tab && focusLine != null )
+			{
+				e.Handled = true;
+				focusLine.Level += Keyboard.Modifiers != ModifierKeys.Shift ? 1 : -1;
+			}
+			else if( e.Key == Key.Down && index < VisibleLines.Count - 1 )
+			{
+				focusedElement.MoveFocus(new TraversalRequest(FocusNavigationDirection.Next));
+			}
+			else if( e.Key == Key.Up && index > 0 )
+			{
+				focusedElement.MoveFocus(new TraversalRequest(FocusNavigationDirection.Previous));
+			}
+		}
 	}
 }
