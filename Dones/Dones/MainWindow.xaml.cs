@@ -23,8 +23,7 @@ namespace Dones
 	{
 		public ObservableCollection<Line> VisibleLines;
 
-		//List<Line> Lines;
-		Line MasterLine;
+		public Line MasterLine;
 
 		public MainWindow()
 		{
@@ -39,25 +38,11 @@ namespace Dones
 			MasterLine.Add(new Line("Hello5"));
 			MasterLine.Add(new Line("Hello6"));
 
-			VisibleLines = new ObservableCollection<Line>();
-
-			UpdateVisibleLines();
-
-			TreeLine.ItemsSource = VisibleLines;
-		}
-
-		void UpdateVisibleLines()
-		{
-			VisibleLines.Clear();
-			foreach( Line visibleLine in MasterLine.GetVisibleLines() )
-			{
-				VisibleLines.Add(visibleLine);
-			}
+			TreeLine.ItemsSource = MasterLine;
 		}
 
 		private void Window_KeyDown(object sender, KeyEventArgs e)
 		{
-
 		}
 
 		private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
@@ -67,10 +52,8 @@ namespace Dones
 			{
 				return;
 			}
-
 			BindingExpression bindExp = focusedElement.GetBindingExpression(TextBox.TextProperty);
 			Line focusLine = bindExp.DataItem as Line;
-			int focusIndex = VisibleLines.IndexOf(focusLine);
 
 			if( e.Key == Key.Tab && focusLine != null )
 			{
@@ -82,35 +65,27 @@ namespace Dones
 					if( focusLine.Parent != null && focusLine.Parent.Parent != null )
 					{
 						focusLine.Parent.Parent.Insert(focusLine.Parent.IndexInParent + 1, focusLine);
-						UpdateVisibleLines();
 					}
 				}
 				else
 				{
-					Line parentLine = null;
-					int IndexInParent = -1;
 					if( focusLine.Parent != null )
 					{
-						IndexInParent = focusLine.IndexInParent;
+						int IndexInParent = focusLine.IndexInParent;
 						if( IndexInParent > 0 )
 						{
-							parentLine = focusLine.Parent[IndexInParent - 1];
+							focusLine.Parent[IndexInParent - 1].Add(focusLine);
 						}
-					}
-
-					if( parentLine != null )
-					{
-						parentLine.Add(focusLine);
-						UpdateVisibleLines();
 					}
 				}
 
+				CollectionViewSource.GetDefaultView(TreeLine.ItemsSource).Refresh();
 			}
-			else if( e.Key == Key.Down && focusIndex < VisibleLines.Count - 1 )
+			else if( e.Key == Key.Down && focusLine != MasterLine.LastVisibleLine )
 			{
 				focusedElement.MoveFocus(new TraversalRequest(FocusNavigationDirection.Next));
 			}
-			else if( e.Key == Key.Up && focusIndex > 0 )
+			else if( e.Key == Key.Up && focusLine != MasterLine[0] )
 			{
 				focusedElement.MoveFocus(new TraversalRequest(FocusNavigationDirection.Previous));
 			}
