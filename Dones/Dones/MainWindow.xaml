@@ -9,7 +9,7 @@
         PreviewKeyDown="Window_PreviewKeyDown"
         Title="MainWindow" Height="350" Width="525">
     <Grid>
-        <ItemsControl Name="TreeLine" ItemsSource="{Binding VisibleLines}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+        <ItemsControl Name="TreeLine" ItemsSource="{Binding VisibleLines}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Focusable="False">
             <ItemsControl.ItemsPanel>
                 <ItemsPanelTemplate>
                     <StackPanel/>
@@ -19,10 +19,9 @@
                 <DataTemplate>
                     <Grid>
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="{Binding LevelWidth}"/>
+                            <ColumnDefinition Width="{Binding LevelSpace}"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
-                        <Rectangle Grid.Column="0"/>
                         <TextBox Grid.Column="1" Text="{Binding Text, Mode=TwoWay}" HorizontalAlignment="Stretch" Height="23" TextWrapping="NoWrap" VerticalAlignment="Top" BorderThickness="0"/>
                     </Grid>
                 </DataTemplate>

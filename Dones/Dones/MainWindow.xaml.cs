@@ -23,17 +23,36 @@ namespace Dones
 	{
 		public ObservableCollection<Line> VisibleLines;
 
+		//List<Line> Lines;
+		Line MasterLine;
+
 		public MainWindow()
 		{
 			InitializeComponent();
 
+			MasterLine = new Line("CategoryName", -1);
+			MasterLine.Add(new Line("Hello World"));
+			MasterLine.Add(new Line("Hello1"));
+			MasterLine.Add(new Line("Hello2"));
+			MasterLine.Add(new Line("Hello3"));
+			MasterLine.Add(new Line("Hello4"));
+			MasterLine.Add(new Line("Hello5"));
+			MasterLine.Add(new Line("Hello6"));
+
 			VisibleLines = new ObservableCollection<Line>();
-			VisibleLines.Add(new Line("Hello World"));
-			VisibleLines.Add(new Line("Hello"));
-			VisibleLines.Add(new Line("Hello"));
-			VisibleLines.Add(new Line("Hello"));
+
+			UpdateVisibleLines();
 
 			TreeLine.ItemsSource = VisibleLines;
+		}
+
+		void UpdateVisibleLines()
+		{
+			VisibleLines.Clear();
+			foreach( Line visibleLine in MasterLine.GetVisibleLines() )
+			{
+				VisibleLines.Add(visibleLine);
+			}
 		}
 
 		private void Window_KeyDown(object sender, KeyEventArgs e)
@@ -44,22 +63,54 @@ namespace Dones
 		private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
 		{
 			FrameworkElement focusedElement = ( FocusManager.GetFocusedElement(this) as FrameworkElement );
-			if( focusedElement == null ) return;
+			if( focusedElement == null )
+			{
+				return;
+			}
 
 			BindingExpression bindExp = focusedElement.GetBindingExpression(TextBox.TextProperty);
 			Line focusLine = bindExp.DataItem as Line;
-			int index = VisibleLines.IndexOf(focusLine);
+			int focusIndex = VisibleLines.IndexOf(focusLine);
 
 			if( e.Key == Key.Tab && focusLine != null )
 			{
 				e.Handled = true;
-				focusLine.Level += Keyboard.Modifiers != ModifierKeys.Shift ? 1 : -1;
+
+
+				if( Keyboard.Modifiers == ModifierKeys.Shift )
+				{
+					if( focusLine.Parent != null && focusLine.Parent.Parent != null )
+					{
+						focusLine.Parent.Parent.Insert(focusLine.Parent.IndexInParent + 1, focusLine);
+						UpdateVisibleLines();
+					}
+				}
+				else
+				{
+					Line parentLine = null;
+					int IndexInParent = -1;
+					if( focusLine.Parent != null )
+					{
+						IndexInParent = focusLine.IndexInParent;
+						if( IndexInParent > 0 )
+						{
+							parentLine = focusLine.Parent[IndexInParent - 1];
+						}
+					}
+
+					if( parentLine != null )
+					{
+						parentLine.Add(focusLine);
+						UpdateVisibleLines();
+					}
+				}
+
 			}
-			else if( e.Key == Key.Down && index < VisibleLines.Count - 1 )
+			else if( e.Key == Key.Down && focusIndex < VisibleLines.Count - 1 )
 			{
 				focusedElement.MoveFocus(new TraversalRequest(FocusNavigationDirection.Next));
 			}
-			else if( e.Key == Key.Up && index > 0 )
+			else if( e.Key == Key.Up && focusIndex > 0 )
 			{
 				focusedElement.MoveFocus(new TraversalRequest(FocusNavigationDirection.Previous));
 			}
