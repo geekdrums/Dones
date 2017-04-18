@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Specialized;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 using System.Text;
@@ -49,15 +50,12 @@ namespace Dones
 			{
 				if( parent_ != null )
 				{
-					int indexInParent = IndexInParent;
-					parent_.children_.Remove(this);
-					parent_.OnCollectionChanged(parent_, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, this, indexInParent));
+					parent_.Remove(this);
 				}
 				parent_ = value;
 				if( parent_ != null )
 				{
-					parent_.children_.Add(this);
-					parent_.OnCollectionChanged(parent_, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, this, this.IndexInParent));
+					parent_.Add(this);
 				}
 				else
 				{
@@ -82,9 +80,7 @@ namespace Dones
 		{
 			if( child.parent_ != null )
 			{
-				//int indexInParent = child.IndexInParent;
 				child.parent_.Remove(child);
-				//child.parent_.OnCollectionChanged(child.parent_, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, child, indexInParent));
 			}
 			child.parent_ = this;
 			children_.Add(child);
@@ -95,9 +91,7 @@ namespace Dones
 		{
 			if( child.parent_ != null )
 			{
-				//int indexInParent = child.IndexInParent;
 				child.parent_.Remove(child);
-				//child.parent_.OnCollectionChanged(child.parent_, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, child, indexInParent));
 			}
 			child.parent_ = this;
 			children_.Insert(index, child);
@@ -109,7 +103,6 @@ namespace Dones
 			int indexInParent = child.IndexInParent;
 			child.parent_ = null;
 			children_.Remove(child);
-			//child.Level = 0;
 			OnCollectionChanged(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, child, indexInParent));
 		}
 

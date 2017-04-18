@@ -7,6 +7,7 @@ using System.Windows;
 using System.Collections.ObjectModel;
 using System.Windows.Controls;
 using System.Windows.Data;
+using System.Windows.Media.Animation;
 using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -21,8 +22,6 @@ namespace Dones
 	/// </summary>
 	public partial class MainWindow : Window
 	{
-		public ObservableCollection<Line> VisibleLines;
-
 		public Line MasterLine;
 
 		public MainWindow()
@@ -58,8 +57,7 @@ namespace Dones
 			if( e.Key == Key.Tab && focusLine != null )
 			{
 				e.Handled = true;
-
-
+				
 				if( Keyboard.Modifiers == ModifierKeys.Shift )
 				{
 					if( focusLine.Parent != null && focusLine.Parent.Parent != null )
@@ -69,17 +67,13 @@ namespace Dones
 				}
 				else
 				{
-					if( focusLine.Parent != null )
+					int IndexInParent = focusLine.IndexInParent;
+					if( IndexInParent > 0 )
 					{
-						int IndexInParent = focusLine.IndexInParent;
-						if( IndexInParent > 0 )
-						{
-							focusLine.Parent[IndexInParent - 1].Add(focusLine);
-						}
+						focusLine.Parent[IndexInParent - 1].Add(focusLine);
 					}
 				}
 
-				CollectionViewSource.GetDefaultView(TreeLine.ItemsSource).Refresh();
 			}
 			else if( e.Key == Key.Down && focusLine != MasterLine.LastVisibleLine )
 			{
