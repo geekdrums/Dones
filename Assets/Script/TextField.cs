@@ -69,18 +69,4 @@ public class TextField : InputField
 			isJustFocused_ = false;
 		}
 	}
-	
-	//public override void OnUpdateSelected(BaseEventData eventData)
-	//{
-	//	if( Input.GetKeyDown(KeyCode.DownArrow) || Input.GetKeyDown(KeyCode.UpArrow) )
-	//	{
-	//		int oldCaretPos = caretPos_;
-	//		base.OnUpdateSelected(eventData);
-	//		caretPos_ = oldCaretPos;
-	//	}
-	//	else
-	//	{
-	//		base.OnUpdateSelected(eventData);
-	//	}
-	//}
 }

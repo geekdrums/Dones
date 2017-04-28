@@ -27,11 +27,13 @@ public class Line : IEnumerable<Line>
 				{
 					if( line.Field != null ) line.Field.enabled = (isFolded_ == false);
 				}
-				AdjustLayoutInChildren();
+				AdjustLayoutRecursive();
 			}
 		}
 	}
 	protected bool isFolded_ = false;
+
+	public bool EnableRecursiveLayout { get; set; }
 
 	public GameObject Binding { get; protected set; }
 	public TextField Field { get; protected set; }
@@ -44,6 +46,7 @@ public class Line : IEnumerable<Line>
 		Text = text;
 		IsFolded = false;
 		IsDone = false;
+		EnableRecursiveLayout = true;
 	}
 	
 	public void Bind(GameObject binding)
@@ -126,7 +129,7 @@ public class Line : IEnumerable<Line>
 			child.parent_.children_.Remove(child);
 			if( child.Level > this.Level )
 			{
-				child.parent_.AdjustLayoutInChildren(oldIndexinParent);
+				child.parent_.AdjustLayoutRecursive(oldIndexinParent);
 			}
 		}
 		child.parent_ = this;
@@ -143,7 +146,7 @@ public class Line : IEnumerable<Line>
 		}
 		else
 		{
-			AdjustLayoutInChildren(index);
+			AdjustLayoutRecursive(index);
 		}
 	}
 	public void Remove(Line child)
@@ -157,9 +160,13 @@ public class Line : IEnumerable<Line>
 		children_.Remove(child);
 		child.parent_ = null;
 		
+		if( child.Binding != null )
+		{
+			MonoBehaviour.Destroy(child.Binding);
+		}
 		if( IsFolded == false )
 		{
-			AdjustLayoutInChildren(indexInParent);
+			AdjustLayoutRecursive(indexInParent);
 		}
 	}
 
@@ -176,11 +183,20 @@ public class Line : IEnumerable<Line>
 		}
 	}
 
-	protected void AdjustLayoutInChildren(int startIndex = 0)
+	protected void AdjustLayoutRecursive(int startIndex = 0)
 	{
 		if( startIndex < Count )
 		{
 			Vector3 target = children_[startIndex].TargetPosition;
+			if( EnableRecursiveLayout == false )
+			{
+				if( children_[startIndex].Binding != null )
+				{
+					AnimManager.AddAnim(children_[startIndex].Binding, target, ParamType.Position, AnimType.Time, GameContext.Config.AnimTime);
+				}
+				return;
+			}
+
 			for( int i = startIndex; i < Count; ++i )
 			{
 				if( children_[i].Binding != null )
@@ -193,7 +209,7 @@ public class Line : IEnumerable<Line>
 
 		if( parent_ != null )
 		{
-			parent_.AdjustLayoutInChildren(IndexInParent + 1);
+			parent_.AdjustLayoutRecursive(IndexInParent + 1);
 		}
 	}
 

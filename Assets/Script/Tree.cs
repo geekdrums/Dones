@@ -91,9 +91,16 @@ public class Tree : MonoBehaviour {
 				string subString = focusedLine_.Text.Substring(0, caretPos);
 				string newString = focusedLine_.Text.Substring(caretPos, focusedLine_.Text.Length - caretPos);
 				focusedLine_.Text = subString;
-				focusedLine_.Field.text = subString;	// UniRxとかでもっとうまくできるならそうする
+				focusedLine_.Field.text = subString;    // UniRxとかでもっとうまくできるならそうする
 				line.Text = newString;
-				focusedLine_.Parent.Insert(focusedLine_.IndexInParent + 1, line);
+				if( focusedLine_.HasVisibleChild )
+				{
+					focusedLine_.Insert(0, line);
+				}
+				else
+				{
+					focusedLine_.Parent.Insert(focusedLine_.IndexInParent + 1, line);
+				}
 			}
 			line.Bind(Instantiate(FieldPrefab.gameObject));
 			Fields.Add(line.Field);
@@ -104,7 +111,59 @@ public class Tree : MonoBehaviour {
 			}
 			else
 			{
-				focusedLine_.Field.IsFocused = true; 
+				focusedLine_.Field.IsFocused = true;
+			}
+		}
+		else if( Input.GetKeyDown(KeyCode.Backspace) )
+		{
+			int caretPos = focusedLine_.Field.CaretPosision;
+			if( caretPos == 0 )
+			{
+				Line prev = focusedLine_.PrevVisibleLine;
+				if( prev != null )
+				{
+					prev.Field.CaretPosision = prev.Text.Length;
+					prev.Text += focusedLine_.Text;
+					prev.Field.text = prev.Text;
+					prev.Field.IsFocused = true;
+
+					List<Line> children = new List<Line>(focusedLine_);
+
+					prev.EnableRecursiveLayout = false;
+					foreach( Line child in children )
+					{
+						prev.Insert(0, child);
+					}
+					prev.EnableRecursiveLayout = true;
+
+					focusedLine_.Parent.Remove(focusedLine_);
+
+					focusedLine_ = prev;
+				}
+			}
+		}
+		else if( Input.GetKeyDown(KeyCode.Delete) )
+		{
+			int caretPos = focusedLine_.Field.CaretPosision;
+			if( caretPos == focusedLine_.Text.Length )
+			{
+				Line next = focusedLine_.NextVisibleLine;
+				if( next != null )
+				{
+					focusedLine_.Text += next.Text;
+					focusedLine_.Field.text = focusedLine_.Text;
+
+					List<Line> children = new List<Line>(next);
+
+					focusedLine_.EnableRecursiveLayout = false;
+					foreach( Line child in children )
+					{
+						focusedLine_.Insert(0, child);
+					}
+					focusedLine_.EnableRecursiveLayout = true;
+
+					next.Parent.Remove(next);
+				}
 			}
 		}
 		else if( Input.GetKeyDown(KeyCode.DownArrow) )
