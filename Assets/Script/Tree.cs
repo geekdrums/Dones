@@ -1,23 +1,18 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UniRx;
 
 public class Tree : MonoBehaviour {
 	
 	public TextField FieldPrefab;
 	public List<TextField> Fields = new List<TextField>();
 
-	public string Text { get { return mesh_.text; } set { mesh_.text = value; } }
-
 	Line rootLine_;
 	Line focusedLine_;
-	TextMesh mesh_;
 
 	// Use this for initialization
-	void Start () {
-
-		mesh_ = GetComponent<TextMesh>();
-
+	void Awake () {
 		// test
 		rootLine_ = new Line("CategoryName");
 		rootLine_.Add(new Line("Hello World"));
@@ -34,27 +29,13 @@ public class Tree : MonoBehaviour {
 			line.Bind(Instantiate(FieldPrefab.gameObject));
 			Fields.Add(line.Field);
 		}
-		
+
 		Fields[0].IsFocused = true;
-		focusedLine_ = Fields[0].BindedLine;
 	}
 	
 	// Update is called once per frame
 	void Update ()
 	{
-		if( Input.GetMouseButtonUp(0) )
-		{
-			focusedLine_ = null;
-			foreach( TextField field in Fields )
-			{
-				if( field.IsFocused )
-				{
-					focusedLine_ = field.BindedLine;
-					break;
-				}
-			}
-		}
-
 		if( focusedLine_ == null )
 		{
 			return;
@@ -89,9 +70,8 @@ public class Tree : MonoBehaviour {
 			else
 			{
 				string subString = focusedLine_.Text.Substring(0, caretPos);
-				string newString = focusedLine_.Text.Substring(caretPos, focusedLine_.Text.Length - caretPos);
+				string newString = focusedLine_.Text.Substring(caretPos, focusedLine_.TextLength - caretPos);
 				focusedLine_.Text = subString;
-				focusedLine_.Field.text = subString;    // UniRxとかでもっとうまくできるならそうする
 				line.Text = newString;
 				if( focusedLine_.HasVisibleChild )
 				{
@@ -122,9 +102,8 @@ public class Tree : MonoBehaviour {
 				Line prev = focusedLine_.PrevVisibleLine;
 				if( prev != null )
 				{
-					prev.Field.CaretPosision = prev.Text.Length;
+					prev.Field.CaretPosision = prev.TextLength;
 					prev.Text += focusedLine_.Text;
-					prev.Field.text = prev.Text;
 					prev.Field.IsFocused = true;
 
 					List<Line> children = new List<Line>(focusedLine_);
@@ -145,13 +124,12 @@ public class Tree : MonoBehaviour {
 		else if( Input.GetKeyDown(KeyCode.Delete) )
 		{
 			int caretPos = focusedLine_.Field.CaretPosision;
-			if( caretPos == focusedLine_.Text.Length )
+			if( caretPos == focusedLine_.TextLength )
 			{
 				Line next = focusedLine_.NextVisibleLine;
 				if( next != null )
 				{
 					focusedLine_.Text += next.Text;
-					focusedLine_.Field.text = focusedLine_.Text;
 
 					List<Line> children = new List<Line>(next);
 
@@ -184,7 +162,7 @@ public class Tree : MonoBehaviour {
 				focusedLine_ = prev;
 			}
 		}
-		else if( Input.GetKeyDown(KeyCode.RightArrow) && focusedLine_.Field.CaretPosision >= focusedLine_.Text.Length )
+		else if( Input.GetKeyDown(KeyCode.RightArrow) && focusedLine_.Field.CaretPosision >= focusedLine_.TextLength )
 		{
 			Line next = focusedLine_.NextVisibleLine;
 			if( next != null )
@@ -199,10 +177,15 @@ public class Tree : MonoBehaviour {
 			Line prev = focusedLine_.PrevVisibleLine;
 			if( prev != null )
 			{
-				prev.Field.CaretPosision = prev.Text.Length;
+				prev.Field.CaretPosision = prev.TextLength;
 				prev.Field.IsFocused = true;
 				focusedLine_ = prev;
 			}
 		}
+	}
+
+	public void OnFocused(Line line)
+	{
+		focusedLine_ = line;
 	}
 }

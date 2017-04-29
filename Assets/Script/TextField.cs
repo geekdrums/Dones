@@ -1,9 +1,10 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Events;
-using UnityEngine.EventSystems;
 using UnityEngine.UI;
+using UniRx;
+using UniRx.Triggers;
+using UnityEngine.EventSystems;
 
 public class TextField : InputField
 {
@@ -20,13 +21,14 @@ public class TextField : InputField
 			if( value )
 			{
 				ActivateInputField();
-				isJustFocused_ = true;
 			}
 		}
 	}
-	protected bool isJustFocused_;
 
+	public Color Background { get { return image_.color; } set { image_.color = value; } }
 	public Color Foreground { get { return mesh_.color; } set { mesh_.color = value; } }
+
+	protected Image image_;
 	protected TextMesh mesh_;
 
 	// Use this for initialization
@@ -34,12 +36,20 @@ public class TextField : InputField
 	{
 		base.Awake();
 		mesh_ = GetComponent<TextMesh>();
+		image_ = GetComponent<Image>();
+
+		this.ObserveEveryValueChanged(x => x.isFocused)
+			.Where(f => f)
+			.Subscribe(x =>
+			{
+				GetComponentInParent<Tree>().OnFocused(BindedLine);
+			}).AddTo(this);
 	}
 
 	// Update is called once per frame
 	void Update()
 	{
-		if( IsFocused )
+		if( isFocused )
 		{
 			if( Input.GetKeyDown(KeyCode.DownArrow) == false && Input.GetKeyDown(KeyCode.UpArrow) == false )
 			{
@@ -49,24 +59,38 @@ public class TextField : InputField
 		}
 	}
 
-
-	public void OnValueChanged()
-	{
-		BindedLine.Text = text;
-	}
-
-	public void EndEdit()
-	{
-	}
-
 	protected override void LateUpdate()
 	{
+		bool oldIsFocused = isFocused;
+
 		base.LateUpdate();
-		
-		if( isJustFocused_ )
+
+		if( oldIsFocused != isFocused )
 		{
 			selectionAnchorPosition = selectionFocusPosition = caretPos_;
-			isJustFocused_ = false;
 		}
+	}
+
+	public override void OnPointerDown(PointerEventData eventData)
+	{
+		bool myDrag = IsActive() &&
+			   IsInteractable() &&
+			   eventData.button == PointerEventData.InputButton.Left &&
+			   m_TextComponent != null &&
+			   m_Keyboard == null;
+
+		if( myDrag == false )
+			return;
+
+		EventSystem.current.SetSelectedGameObject(gameObject, eventData);
+		
+		base.OnPointerDown(eventData);
+		
+		Vector2 localMousePos;
+		RectTransformUtility.ScreenPointToLocalPointInRectangle(textComponent.rectTransform, eventData.position, eventData.pressEventCamera, out localMousePos);
+		caretPos_ = caretSelectPositionInternal = caretPositionInternal = GetCharacterIndexFromPosition(localMousePos) + m_DrawStart;
+
+		UpdateLabel();
+		eventData.Use();
 	}
 }

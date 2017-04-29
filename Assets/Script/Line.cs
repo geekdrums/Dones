@@ -5,12 +5,15 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using UniRx;
 
 public class Line : IEnumerable<Line>
 {
 	#region params
 
-	public string Text { get; set; }
+	public string Text { get { return textRx_.Value; } set { textRx_.Value = value; } }
+	public int TextLength { get { return textRx_.Value.Length; } }
+	protected ReactiveProperty<string> textRx_ = new ReactiveProperty<string>();
 
 	public bool IsDone { get { return isDone_; } set { isDone_ = value; } }
 	protected bool isDone_ = false;
@@ -23,9 +26,19 @@ public class Line : IEnumerable<Line>
 			if( isFolded_  != value )
 			{
 				isFolded_ = value;
-				foreach( Line line in children_ )
+				if( isFolded_ )
 				{
-					if( line.Field != null ) line.Field.enabled = (isFolded_ == false);
+					foreach( Line line in children_ )
+					{
+						if( line.Binding != null )
+						{
+							line.Binding.SetActive(false);
+						}
+					}
+				}
+				else
+				{
+					Field.StartCoroutine(ActivateCoroutine(GameContext.Config.AnimTime / 2));
 				}
 				AdjustLayoutRecursive();
 			}
@@ -43,10 +56,51 @@ public class Line : IEnumerable<Line>
 
 	public Line(string text = "")
 	{
-		Text = text;
+		textRx_.Value = text;
 		IsFolded = false;
 		IsDone = false;
 		EnableRecursiveLayout = true;
+
+		children_.ObserveAdd().Subscribe(x =>
+		{
+			Line child = x.Value;
+			Line oldParent = child.parent_;
+			child.parent_ = this;
+			if( oldParent != null )
+			{
+				oldParent.children_.Remove(child);
+			}
+
+			if( child.Binding != null && this.Binding != null )
+			{
+				child.Binding.transform.parent = this.Binding.transform;
+			}
+
+			if( IsFolded )
+			{
+				IsFolded = false;
+			}
+			else
+			{
+				AdjustLayoutRecursive(x.Index);
+			}
+		});
+
+		children_.ObserveRemove().Subscribe(x =>
+		{
+			Line child = x.Value;
+
+			if( child.parent_ == this && child.Binding != null )
+			{
+				MonoBehaviour.Destroy(child.Binding);
+				child.parent_ = null;
+			}
+
+			if( IsFolded == false )
+			{
+				AdjustLayoutRecursive(x.Index);
+			}
+		});
 	}
 	
 	public void Bind(GameObject binding)
@@ -56,12 +110,20 @@ public class Line : IEnumerable<Line>
 		if( Field != null )
 		{
 			Field.BindedLine = this;
-			Field.text = Text;
+			Field.text = textRx_.Value;
+			Field.onValueChanged.AsObservable().Subscribe(text => textRx_.Value = text).AddTo(Field);
+			textRx_.Subscribe(text => Field.text = text).AddTo(Field);
 			if( parent_ != null && parent_.Binding != null )
 			{
 				Binding.transform.parent = parent_.Binding.transform;
 				Field.transform.localPosition = TargetPosition;
 			}
+			children_.ObserveCountChanged(true).Subscribe(x =>
+			{
+				TreeToggle toggle = Field.GetComponentInChildren<TreeToggle>();
+				toggle.interactable = (x > 0);
+				AnimManager.AddAnim(toggle.targetGraphic, toggle.interactable && toggle.isOn ? 0 : 90, ParamType.RotationZ, AnimType.Time, GameContext.Config.AnimTime);
+			}).AddTo(Field);
 		}
 	}
 
@@ -70,19 +132,7 @@ public class Line : IEnumerable<Line>
 
 	public Line Parent { get { return parent_; } private set { parent_ = value; } }
 	protected Line parent_;
-
-	public Line this[int index]
-	{
-		get
-		{
-			return children_[index];
-		}
-		private set
-		{
-			children_[index] = value;
-		}
-	}
-	protected List<Line> children_ = new List<Line>();
+	protected ReactiveCollection<Line> children_ = new ReactiveCollection<Line>();
 
 	// IEnumerable<Line>
 	public IEnumerator<Line> GetEnumerator()
@@ -96,79 +146,22 @@ public class Line : IEnumerable<Line>
 	{
 		return this.GetEnumerator();
 	}
+
+	public Line this[int index]
+	{
+		get
+		{
+			return children_[index];
+		}
+		private set
+		{
+			children_[index] = value;
+		}
+	}
 	public int Count { get { return children_.Count; } }
-	
-	public void Add(Line child)
-	{
-		if( child.parent_ != null )
-		{
-			child.parent_.children_.Remove(child);
-		}
-		child.parent_ = this;
-		children_.Add(child);
-
-		if( child.Binding != null && this.Binding != null )
-		{
-			child.Binding.transform.parent = this.Binding.transform;
-		}
-
-		if( IsFolded )
-		{
-			IsFolded = false;
-		}
-		else
-		{
-			child.AdjustLayout();
-		}
-	}
-	public void Insert(int index, Line child)
-	{
-		if( child.parent_ != null )
-		{
-			int oldIndexinParent = child.IndexInParent;
-			child.parent_.children_.Remove(child);
-			if( child.Level > this.Level )
-			{
-				child.parent_.AdjustLayoutRecursive(oldIndexinParent);
-			}
-		}
-		child.parent_ = this;
-		children_.Insert(index, child);
-
-		if( child.Binding != null && this.Binding != null )
-		{
-			child.Binding.transform.parent = this.Binding.transform;
-		}
-
-		if( IsFolded )
-		{
-			IsFolded = false;
-		}
-		else
-		{
-			AdjustLayoutRecursive(index);
-		}
-	}
-	public void Remove(Line child)
-	{
-		if( children_.Contains(child) == false )
-		{
-			return;
-		}
-
-		int indexInParent = child.IndexInParent;
-		children_.Remove(child);
-		child.parent_ = null;
-		
-		if( child.Binding != null )
-		{
-			MonoBehaviour.Destroy(child.Binding);
-		}
-		if( IsFolded == false )
-		{
-			AdjustLayoutRecursive(indexInParent);
-		}
-	}
+	public void Add(Line child) { children_.Add(child); }
+	public void Insert(int index, Line child) { children_.Insert(index, child); }
+	public void Remove(Line child) { children_.Remove(child); }
 
 	#endregion
 
@@ -218,6 +211,18 @@ public class Line : IEnumerable<Line>
 		get
 		{
 			return new Vector3(GameContext.Config.WidthPerLevel, -IndexInLocalTree * GameContext.Config.HeightPerLine);
+		}
+	}
+
+	protected IEnumerator ActivateCoroutine(float delay)
+	{
+		yield return new WaitForSeconds(delay);
+		foreach( Line line in children_ )
+		{
+			if( line.Binding != null )
+			{
+				line.Binding.SetActive(true);
+			}
 		}
 	}
 
