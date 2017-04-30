@@ -37,13 +37,6 @@ public class TextField : InputField
 		base.Awake();
 		mesh_ = GetComponent<TextMesh>();
 		image_ = GetComponent<Image>();
-
-		this.ObserveEveryValueChanged(x => x.isFocused)
-			.Where(f => f)
-			.Subscribe(x =>
-			{
-				GetComponentInParent<Tree>().OnFocused(BindedLine);
-			}).AddTo(this);
 	}
 
 	// Update is called once per frame
@@ -68,6 +61,7 @@ public class TextField : InputField
 		if( oldIsFocused != isFocused )
 		{
 			selectionAnchorPosition = selectionFocusPosition = caretPos_;
+			GetComponentInParent<Tree>().OnFocused(BindedLine);
 		}
 	}
 
@@ -91,6 +85,42 @@ public class TextField : InputField
 		caretPos_ = caretSelectPositionInternal = caretPositionInternal = GetCharacterIndexFromPosition(localMousePos) + m_DrawStart;
 
 		UpdateLabel();
+		eventData.Use();
+	}
+
+	private Event processingEvent_ = new Event();
+	public override void OnUpdateSelected(BaseEventData eventData)
+	{
+		if( !isFocused )
+			return;
+
+		bool consumedEvent = false;
+		while( Event.PopEvent(processingEvent_) )
+		{
+			if( processingEvent_.rawType == EventType.KeyDown )
+			{
+				consumedEvent = true;
+				KeyPressed(processingEvent_);
+			}
+
+			//switch( _ProcessingEvent.type )
+			//{
+			//case EventType.ValidateCommand:
+			//case EventType.ExecuteCommand:
+			//	switch( _ProcessingEvent.commandName )
+			//	{
+			//	case "SelectAll":
+			//		SelectAll();
+			//		consumedEvent = true;
+			//		break;
+			//	}
+			//	break;
+			//}
+		}
+
+		if( consumedEvent )
+			UpdateLabel();
+
 		eventData.Use();
 	}
 }

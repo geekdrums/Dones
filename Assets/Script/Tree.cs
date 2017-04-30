@@ -103,7 +103,7 @@ public class Tree : MonoBehaviour {
 		case KeyCode.Return:
 			{
 				Line line = new Line();
-				if( caretPos == 0 )
+				if( caretPos == 0 && focusedLine_.TextLength > 0 )
 				{
 					focusedLine_.Parent.Insert(focusedLine_.IndexInParent, line);
 				}
@@ -124,15 +124,7 @@ public class Tree : MonoBehaviour {
 				}
 				line.Bind(Instantiate(FieldPrefab.gameObject));
 				Fields.Add(line.Field);
-				if( caretPos > 0 )
-				{
-					line.Field.IsFocused = true;
-					focusedLine_ = line;
-				}
-				else
-				{
-					focusedLine_.Field.IsFocused = true;
-				}
+				line.Field.IsFocused = (caretPos == 0 && focusedLine_.TextLength > 0) == false;
 			}
 			break;
 		case KeyCode.Backspace:
@@ -155,8 +147,6 @@ public class Tree : MonoBehaviour {
 					prev.EnableRecursiveLayout = true;
 
 					focusedLine_.Parent.Remove(focusedLine_);
-
-					focusedLine_ = prev;
 				}
 			}
 			break;
@@ -187,7 +177,6 @@ public class Tree : MonoBehaviour {
 				if( next != null )
 				{
 					next.Field.IsFocused = true;
-					focusedLine_ = next;
 				}
 			}
 			break;
@@ -197,7 +186,6 @@ public class Tree : MonoBehaviour {
 				if( prev != null )
 				{
 					prev.Field.IsFocused = true;
-					focusedLine_ = prev;
 				}
 			}
 			break;
@@ -209,7 +197,6 @@ public class Tree : MonoBehaviour {
 				{
 					next.Field.CaretPosision = 0;
 					next.Field.IsFocused = true;
-					focusedLine_ = next;
 				}
 			}
 			break;
@@ -221,7 +208,6 @@ public class Tree : MonoBehaviour {
 				{
 					prev.Field.CaretPosision = prev.TextLength;
 					prev.Field.IsFocused = true;
-					focusedLine_ = prev;
 				}
 			}
 			break;
