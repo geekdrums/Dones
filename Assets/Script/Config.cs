@@ -7,6 +7,8 @@ public class Config : MonoBehaviour
 	public float WidthPerLevel = 2.0f;
 	public float HeightPerLine = 1.0f;
 	public float AnimTime = 0.07f;
+	public float ArrowStreamDelayTime = 0.5f;
+	public float ArrowStreamIntervalTime = 0.05f;
 
 	// Use this for initialization
 	void Awake()

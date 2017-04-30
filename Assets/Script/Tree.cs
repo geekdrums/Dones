@@ -1,7 +1,9 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UniRx;
+using UniRx.Triggers;
 
 public class Tree : MonoBehaviour {
 	
@@ -31,6 +33,34 @@ public class Tree : MonoBehaviour {
 		}
 
 		Fields[0].IsFocused = true;
+
+		KeyCode[] throttleKeys = new KeyCode[]
+		{
+			KeyCode.UpArrow,
+			KeyCode.DownArrow,
+			KeyCode.RightArrow,
+			KeyCode.LeftArrow,
+			KeyCode.Return,
+			KeyCode.Backspace,
+			KeyCode.Delete
+		};
+
+		foreach(KeyCode key in throttleKeys )
+		{
+			// 最初の入力
+			this.UpdateAsObservable()
+				.Where(x => Input.GetKeyDown(key))
+				.Subscribe(_ => OnThrottleInput(key));
+
+			// 押しっぱなしにした時の自動連打
+			this.UpdateAsObservable()
+				.Where(x => Input.GetKey(key))
+				.Delay(TimeSpan.FromSeconds(GameContext.Config.ArrowStreamDelayTime))
+				.ThrottleFirst(TimeSpan.FromSeconds(GameContext.Config.ArrowStreamIntervalTime))
+				.TakeUntil(this.UpdateAsObservable().Where(x => Input.GetKeyUp(key)))
+				.RepeatUntilDestroy(this)
+				.Subscribe(_ => OnThrottleInput(key));
+		}
 	}
 	
 	// Update is called once per frame
@@ -59,44 +89,53 @@ public class Tree : MonoBehaviour {
 				}
 			}
 		}
-		else if( Input.GetKeyDown(KeyCode.Return) )
+	}
+
+	// 長押しで連続入力可能なもの
+	protected void OnThrottleInput(KeyCode arrow)
+	{
+		if( focusedLine_ == null ) return;
+
+		int caretPos = focusedLine_.Field.CaretPosision;
+
+		switch( arrow )
 		{
-			int caretPos = focusedLine_.Field.CaretPosision;
-			Line line = new Line();
-			if( caretPos == 0 )
+		case KeyCode.Return:
 			{
-				focusedLine_.Parent.Insert(focusedLine_.IndexInParent, line);
-			}
-			else
-			{
-				string subString = focusedLine_.Text.Substring(0, caretPos);
-				string newString = focusedLine_.Text.Substring(caretPos, focusedLine_.TextLength - caretPos);
-				focusedLine_.Text = subString;
-				line.Text = newString;
-				if( focusedLine_.HasVisibleChild )
+				Line line = new Line();
+				if( caretPos == 0 )
 				{
-					focusedLine_.Insert(0, line);
+					focusedLine_.Parent.Insert(focusedLine_.IndexInParent, line);
 				}
 				else
 				{
-					focusedLine_.Parent.Insert(focusedLine_.IndexInParent + 1, line);
+					string subString = focusedLine_.Text.Substring(0, caretPos);
+					string newString = focusedLine_.Text.Substring(caretPos, focusedLine_.TextLength - caretPos);
+					focusedLine_.Text = subString;
+					line.Text = newString;
+					if( focusedLine_.HasVisibleChild )
+					{
+						focusedLine_.Insert(0, line);
+					}
+					else
+					{
+						focusedLine_.Parent.Insert(focusedLine_.IndexInParent + 1, line);
+					}
+				}
+				line.Bind(Instantiate(FieldPrefab.gameObject));
+				Fields.Add(line.Field);
+				if( caretPos > 0 )
+				{
+					line.Field.IsFocused = true;
+					focusedLine_ = line;
+				}
+				else
+				{
+					focusedLine_.Field.IsFocused = true;
 				}
 			}
-			line.Bind(Instantiate(FieldPrefab.gameObject));
-			Fields.Add(line.Field);
-			if( caretPos > 0 )
-			{
-				line.Field.IsFocused = true;
-				focusedLine_ = line;
-			}
-			else
-			{
-				focusedLine_.Field.IsFocused = true;
-			}
-		}
-		else if( Input.GetKeyDown(KeyCode.Backspace) )
-		{
-			int caretPos = focusedLine_.Field.CaretPosision;
+			break;
+		case KeyCode.Backspace:
 			if( caretPos == 0 )
 			{
 				Line prev = focusedLine_.PrevVisibleLine;
@@ -120,10 +159,8 @@ public class Tree : MonoBehaviour {
 					focusedLine_ = prev;
 				}
 			}
-		}
-		else if( Input.GetKeyDown(KeyCode.Delete) )
-		{
-			int caretPos = focusedLine_.Field.CaretPosision;
+			break;
+		case KeyCode.Delete:
 			if( caretPos == focusedLine_.TextLength )
 			{
 				Line next = focusedLine_.NextVisibleLine;
@@ -143,44 +180,51 @@ public class Tree : MonoBehaviour {
 					next.Parent.Remove(next);
 				}
 			}
-		}
-		else if( Input.GetKeyDown(KeyCode.DownArrow) )
-		{
-			Line next = focusedLine_.NextVisibleLine;
-			if( next != null )
+			break;
+		case KeyCode.DownArrow:
 			{
-				next.Field.IsFocused = true;
-				focusedLine_ = next;
+				Line next = focusedLine_.NextVisibleLine;
+				if( next != null )
+				{
+					next.Field.IsFocused = true;
+					focusedLine_ = next;
+				}
 			}
-		}
-		else if( Input.GetKeyDown(KeyCode.UpArrow) )
-		{
-			Line prev = focusedLine_.PrevVisibleLine;
-			if( prev != null )
+			break;
+		case KeyCode.UpArrow:
 			{
-				prev.Field.IsFocused = true;
-				focusedLine_ = prev;
+				Line prev = focusedLine_.PrevVisibleLine;
+				if( prev != null )
+				{
+					prev.Field.IsFocused = true;
+					focusedLine_ = prev;
+				}
 			}
-		}
-		else if( Input.GetKeyDown(KeyCode.RightArrow) && focusedLine_.Field.CaretPosision >= focusedLine_.TextLength )
-		{
-			Line next = focusedLine_.NextVisibleLine;
-			if( next != null )
+			break;
+		case KeyCode.RightArrow:
+			if( caretPos >= focusedLine_.TextLength )
 			{
-				next.Field.CaretPosision = 0;
-				next.Field.IsFocused = true;
-				focusedLine_ = next;
+				Line next = focusedLine_.NextVisibleLine;
+				if( next != null )
+				{
+					next.Field.CaretPosision = 0;
+					next.Field.IsFocused = true;
+					focusedLine_ = next;
+				}
 			}
-		}
-		else if( Input.GetKeyDown(KeyCode.LeftArrow) && focusedLine_.Field.CaretPosision <= 0 )
-		{
-			Line prev = focusedLine_.PrevVisibleLine;
-			if( prev != null )
+			break;
+		case KeyCode.LeftArrow:
+			if( caretPos <= 0 )
 			{
-				prev.Field.CaretPosision = prev.TextLength;
-				prev.Field.IsFocused = true;
-				focusedLine_ = prev;
+				Line prev = focusedLine_.PrevVisibleLine;
+				if( prev != null )
+				{
+					prev.Field.CaretPosision = prev.TextLength;
+					prev.Field.IsFocused = true;
+					focusedLine_ = prev;
+				}
 			}
+			break;
 		}
 	}
 
