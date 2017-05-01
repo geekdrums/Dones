@@ -12,17 +12,14 @@ public class TreeToggle : Toggle {
 	// Use this for initialization
 	protected override void Start () {
 		textField_ = GetComponentInParent<TextField>();
-		if( textField_ != null )
+		onValueChanged.AsObservable().Subscribe(x =>
 		{
-			onValueChanged.AsObservable().Subscribe(x =>
-			{
-				if( textField_.BindedLine != null )
-					textField_.BindedLine.IsFolded = !isOn;
+			if( textField_.BindedLine.IsFolded == !isOn ) return;
+			else textField_.BindedLine.IsFolded = !isOn;
 
-				textField_.IsFocused = true;
-				AnimManager.AddAnim(targetGraphic, interactable && isOn ? 0 : 90, ParamType.RotationZ, AnimType.Time, GameContext.Config.AnimTime);
-			}).AddTo(this);
-		}
+			textField_.IsFocused = true;
+			AnimManager.AddAnim(targetGraphic, interactable && isOn ? 0 : 90, ParamType.RotationZ, AnimType.Time, GameContext.Config.AnimTime);
+		}).AddTo(this);
 	}
 
 	

@@ -15,41 +15,17 @@ public class Line : IEnumerable<Line>
 	public int TextLength { get { return textRx_.Value.Length; } }
 	protected ReactiveProperty<string> textRx_ = new ReactiveProperty<string>();
 
+	public bool IsFolded { get { return isFolded_.Value; } set { isFolded_.Value = value; } }
+	protected ReactiveProperty<bool> isFolded_ = new ReactiveProperty<bool>(false);
+
 	public bool IsDone { get { return isDone_; } set { isDone_ = value; } }
 	protected bool isDone_ = false;
-
-	public bool IsFolded
-	{
-		get { return isFolded_; }
-		set
-		{
-			if( isFolded_  != value )
-			{
-				isFolded_ = value;
-				if( isFolded_ )
-				{
-					foreach( Line line in children_ )
-					{
-						if( line.Binding != null )
-						{
-							line.Binding.SetActive(false);
-						}
-					}
-				}
-				else
-				{
-					Field.StartCoroutine(ActivateCoroutine(GameContext.Config.AnimTime / 2));
-				}
-				AdjustLayoutRecursive();
-			}
-		}
-	}
-	protected bool isFolded_ = false;
 
 	public bool EnableRecursiveLayout { get; set; }
 
 	public GameObject Binding { get; protected set; }
 	public TextField Field { get; protected set; }
+	public TreeToggle Toggle { get; protected set; }
 
 	#endregion
 
@@ -66,7 +42,7 @@ public class Line : IEnumerable<Line>
 			Line child = x.Value;
 			Line oldParent = child.parent_;
 			child.parent_ = this;
-			if( oldParent != null )
+			if( oldParent != null && oldParent != this )
 			{
 				oldParent.children_.Remove(child);
 			}
@@ -101,28 +77,60 @@ public class Line : IEnumerable<Line>
 				AdjustLayoutRecursive(x.Index);
 			}
 		});
+
+		isFolded_.DistinctUntilChanged().Subscribe(b=>
+		{
+			if( isFolded_.Value )
+			{
+				foreach( Line line in children_ )
+				{
+					if( line.Binding != null )
+					{
+						line.Binding.SetActive(false);
+					}
+				}
+			}
+			else
+			{
+				if( Field != null )
+				{
+					Field.StartCoroutine(ActivateCoroutine(GameContext.Config.AnimTime / 2));
+				}
+			}
+			AdjustLayoutRecursive();
+		});
 	}
 	
 	public void Bind(GameObject binding)
 	{
 		Binding = binding;
-		Field = binding.GetComponent<TextField>();
+		Field = Binding.GetComponent<TextField>();
 		if( Field != null )
 		{
-			Field.BindedLine = this;
-			Field.text = textRx_.Value;
-			Field.onValueChanged.AsObservable().Subscribe(text => textRx_.Value = text).AddTo(Field);
-			textRx_.Subscribe(text => Field.text = text).AddTo(Field);
 			if( parent_ != null && parent_.Binding != null )
 			{
 				Binding.transform.parent = parent_.Binding.transform;
 				Field.transform.localPosition = TargetPosition;
 			}
-			children_.ObserveCountChanged(true).Subscribe(x =>
+
+			Field.BindedLine = this;
+			Field.text = textRx_.Value;
+			Field.onValueChanged.AsObservable().Subscribe(text => textRx_.Value = text).AddTo(Field);
+			textRx_.Subscribe(text => Field.text = text).AddTo(Field);
+
+			Toggle = Field.GetComponentInChildren<TreeToggle>();
+			children_.ObserveCountChanged(true).Select(x => x > 0).DistinctUntilChanged().Subscribe(hasChild =>
 			{
-				TreeToggle toggle = Field.GetComponentInChildren<TreeToggle>();
-				toggle.interactable = (x > 0);
-				AnimManager.AddAnim(toggle.targetGraphic, toggle.interactable && toggle.isOn ? 0 : 90, ParamType.RotationZ, AnimType.Time, GameContext.Config.AnimTime);
+				Toggle.interactable = hasChild;
+				AnimManager.AddAnim(Toggle.targetGraphic, Toggle.interactable && Toggle.isOn ? 0 : 90, ParamType.RotationZ, AnimType.Time, GameContext.Config.AnimTime);
+			}).AddTo(Field);
+			isFolded_.DistinctUntilChanged().Subscribe(b =>
+			{
+				if( Toggle.isOn != !IsFolded )
+				{
+					Toggle.isOn = !IsFolded;
+					AnimManager.AddAnim(Toggle.targetGraphic, Toggle.interactable && Toggle.isOn ? 0 : 90, ParamType.RotationZ, AnimType.Time, GameContext.Config.AnimTime);
+				}
 			}).AddTo(Field);
 		}
 	}

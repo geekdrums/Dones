@@ -8,6 +8,18 @@ using UnityEngine.EventSystems;
 
 public class TextField : InputField
 {
+	public static string Clipboard
+	{
+		get
+		{
+			return GUIUtility.systemCopyBuffer;
+		}
+		set
+		{
+			GUIUtility.systemCopyBuffer = value;
+		}
+	}
+
 	public Line BindedLine { get; set; }
 	
 	public int CaretPosision { get { return caretPos_; } set { caretPos_ = value; } }
@@ -30,13 +42,15 @@ public class TextField : InputField
 
 	protected Image image_;
 	protected TextMesh mesh_;
+	protected Tree ownerTree_;
 
 	// Use this for initialization
-	protected override void Awake()
+	protected override void Start()
 	{
-		base.Awake();
+		//base.Awake();
 		mesh_ = GetComponent<TextMesh>();
 		image_ = GetComponent<Image>();
+		ownerTree_ = GetComponentInParent<Tree>();
 	}
 
 	// Update is called once per frame
@@ -61,7 +75,7 @@ public class TextField : InputField
 		if( oldIsFocused != isFocused )
 		{
 			selectionAnchorPosition = selectionFocusPosition = caretPos_;
-			GetComponentInParent<Tree>().OnFocused(BindedLine);
+			ownerTree_.OnFocused(BindedLine);
 		}
 	}
 
@@ -88,7 +102,56 @@ public class TextField : InputField
 		eventData.Use();
 	}
 
-	private Event processingEvent_ = new Event();
+	protected static string[] separator = new string[] { System.Environment.NewLine };
+	protected static string[] tabstrings = new string[] { "	", "    " };
+	protected void Paste()
+	{
+		string[] cilpboardLines = Clipboard.Split(separator, System.StringSplitOptions.None);
+		Append(cilpboardLines[0]);
+
+		int oldLevel = 0;
+		int currentLevel = 0;
+		Line parent = BindedLine.Parent;
+		Line brother = BindedLine;
+		for( int i = 1; i < cilpboardLines.Length; ++i )
+		{
+			string text = cilpboardLines[i];
+			currentLevel = 0;
+			while( text.StartsWith("	") )
+			{
+				++currentLevel;
+				text = text.Remove(0, 1);
+			}
+
+			Line line = new Line(text);
+			if( currentLevel > oldLevel )
+			{
+				brother.Add(line);
+				parent = brother;
+			}
+			else if( currentLevel == oldLevel )
+			{
+				parent.Insert(brother.IndexInParent + 1, line);
+			}
+			else// currentLevel < oldLevel 
+			{
+				for( int level = oldLevel; level > currentLevel; --level )
+				{
+					if( parent.Parent == null ) break;
+					
+					brother = parent;
+					parent = parent.Parent;
+				}
+				parent.Insert(brother.IndexInParent + 1, line);
+			}
+			ownerTree_.InstantiateLine(line);
+			brother = line;
+			oldLevel = currentLevel;
+		}
+	}
+
+
+	protected Event processingEvent_ = new Event();
 	public override void OnUpdateSelected(BaseEventData eventData)
 	{
 		if( !isFocused )
@@ -100,22 +163,32 @@ public class TextField : InputField
 			if( processingEvent_.rawType == EventType.KeyDown )
 			{
 				consumedEvent = true;
-				KeyPressed(processingEvent_);
-			}
 
-			//switch( _ProcessingEvent.type )
-			//{
-			//case EventType.ValidateCommand:
-			//case EventType.ExecuteCommand:
-			//	switch( _ProcessingEvent.commandName )
-			//	{
-			//	case "SelectAll":
-			//		SelectAll();
-			//		consumedEvent = true;
-			//		break;
-			//	}
-			//	break;
-			//}
+				var currentEventModifiers = processingEvent_.modifiers;
+				bool ctrl = SystemInfo.operatingSystemFamily == OperatingSystemFamily.MacOSX ? (currentEventModifiers & EventModifiers.Command) != 0 : (currentEventModifiers & EventModifiers.Control) != 0;
+				bool shift = (currentEventModifiers & EventModifiers.Shift) != 0;
+				bool alt = (currentEventModifiers & EventModifiers.Alt) != 0;
+				bool ctrlOnly = ctrl && !alt && !shift;
+
+				switch( processingEvent_.keyCode )
+				{
+				case KeyCode.V:
+					if( ctrlOnly )
+					{
+						Paste();
+					}
+					break;
+				case KeyCode.M:
+					if( ctrlOnly && BindedLine.Count > 0 )
+					{
+						BindedLine.IsFolded = !BindedLine.IsFolded;
+					}
+					break;
+				default:
+					KeyPressed(processingEvent_);
+					break;
+				}
+			}
 		}
 
 		if( consumedEvent )
@@ -123,4 +196,7 @@ public class TextField : InputField
 
 		eventData.Use();
 	}
+
+
+
 }

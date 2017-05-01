@@ -218,4 +218,10 @@ public class Tree : MonoBehaviour {
 	{
 		focusedLine_ = line;
 	}
+
+	public void InstantiateLine(Line line)
+	{
+		line.Bind(Instantiate(FieldPrefab.gameObject));
+		Fields.Add(line.Field);
+	}
 }
