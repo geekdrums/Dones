@@ -8,18 +8,6 @@ using UnityEngine.EventSystems;
 
 public class TextField : InputField
 {
-	public static string Clipboard
-	{
-		get
-		{
-			return GUIUtility.systemCopyBuffer;
-		}
-		set
-		{
-			GUIUtility.systemCopyBuffer = value;
-		}
-	}
-
 	public Line BindedLine { get; set; }
 	
 	public int CaretPosision { get { return caretPos_; } set { caretPos_ = value; } }
@@ -37,33 +25,43 @@ public class TextField : InputField
 		}
 	}
 
+	public bool IsSelected
+	{
+		get { return isSelected_; }
+		set
+		{
+			if( isSelected_ != value )
+			{
+				isSelected_ = value;
+				Background = isSelected_ ? selectionColor : colors.normalColor;
+			}
+		}
+	}
+	protected bool isSelected_;
+
 	public Color Background { get { return image_.color; } set { image_.color = value; } }
-	public Color Foreground { get { return mesh_.color; } set { mesh_.color = value; } }
+	public Color Foreground { get { return textComponent.color; } set { textComponent.color = value; } }
+	public Rect Rect { get { return new Rect(image_.rectTransform.position, image_.rectTransform.sizeDelta); } }
 
 	protected Image image_;
-	protected TextMesh mesh_;
 	protected Tree ownerTree_;
 
 	// Use this for initialization
+	protected override void Awake()
+	{
+		base.Awake();
+		image_ = GetComponent<Image>();
+	}
+
 	protected override void Start()
 	{
-		//base.Awake();
-		mesh_ = GetComponent<TextMesh>();
-		image_ = GetComponent<Image>();
+		base.Start();
 		ownerTree_ = GetComponentInParent<Tree>();
 	}
 
 	// Update is called once per frame
 	void Update()
 	{
-		if( isFocused )
-		{
-			if( Input.GetKeyDown(KeyCode.DownArrow) == false && Input.GetKeyDown(KeyCode.UpArrow) == false )
-			{
-				caretPos_ = caretPosition;
-			}
-			ForceLabelUpdate();
-		}
 	}
 
 	protected override void LateUpdate()
@@ -93,76 +91,37 @@ public class TextField : InputField
 		EventSystem.current.SetSelectedGameObject(gameObject, eventData);
 		
 		base.OnPointerDown(eventData);
-		
+
+		// override this feature
+		//if( hadFocusBefore )
+		//{
 		Vector2 localMousePos;
 		RectTransformUtility.ScreenPointToLocalPointInRectangle(textComponent.rectTransform, eventData.position, eventData.pressEventCamera, out localMousePos);
 		caretPos_ = caretSelectPositionInternal = caretPositionInternal = GetCharacterIndexFromPosition(localMousePos) + m_DrawStart;
+		//}
 
 		UpdateLabel();
 		eventData.Use();
 	}
 
-	protected static string[] separator = new string[] { System.Environment.NewLine };
-	protected static string[] tabstrings = new string[] { "	", "    " };
-	protected void Paste()
+	public void Paste(string text)
 	{
-		string[] cilpboardLines = Clipboard.Split(separator, System.StringSplitOptions.None);
-		Append(cilpboardLines[0]);
-
-		int oldLevel = 0;
-		int currentLevel = 0;
-		Line parent = BindedLine.Parent;
-		Line brother = BindedLine;
-		for( int i = 1; i < cilpboardLines.Length; ++i )
-		{
-			string text = cilpboardLines[i];
-			currentLevel = 0;
-			while( text.StartsWith("	") )
-			{
-				++currentLevel;
-				text = text.Remove(0, 1);
-			}
-
-			Line line = new Line(text);
-			if( currentLevel > oldLevel )
-			{
-				brother.Add(line);
-				parent = brother;
-			}
-			else if( currentLevel == oldLevel )
-			{
-				parent.Insert(brother.IndexInParent + 1, line);
-			}
-			else// currentLevel < oldLevel 
-			{
-				for( int level = oldLevel; level > currentLevel; --level )
-				{
-					if( parent.Parent == null ) break;
-					
-					brother = parent;
-					parent = parent.Parent;
-				}
-				parent.Insert(brother.IndexInParent + 1, line);
-			}
-			ownerTree_.InstantiateLine(line);
-			brother = line;
-			oldLevel = currentLevel;
-		}
+		Append(text);
 	}
 
-
+	
 	protected Event processingEvent_ = new Event();
 	public override void OnUpdateSelected(BaseEventData eventData)
 	{
 		if( !isFocused )
 			return;
 
-		bool consumedEvent = false;
+		//bool consumedEvent = false;
 		while( Event.PopEvent(processingEvent_) )
 		{
 			if( processingEvent_.rawType == EventType.KeyDown )
 			{
-				consumedEvent = true;
+				//consumedEvent = true;
 
 				var currentEventModifiers = processingEvent_.modifiers;
 				bool ctrl = SystemInfo.operatingSystemFamily == OperatingSystemFamily.MacOSX ? (currentEventModifiers & EventModifiers.Command) != 0 : (currentEventModifiers & EventModifiers.Control) != 0;
@@ -175,7 +134,8 @@ public class TextField : InputField
 				case KeyCode.V:
 					if( ctrlOnly )
 					{
-						Paste();
+						// process in ownerTree
+						return;
 					}
 					break;
 				case KeyCode.M:
@@ -186,17 +146,20 @@ public class TextField : InputField
 					break;
 				default:
 					KeyPressed(processingEvent_);
+					if( processingEvent_.keyCode != KeyCode.DownArrow && processingEvent_.keyCode != KeyCode.UpArrow )
+					{
+						caretPos_ = caretPosition;
+					}
 					break;
 				}
 			}
 		}
 
-		if( consumedEvent )
+		// BackspaceのKeyDownが来ない問題（変換の最後の1文字問題）で、仕方なく毎回Update
+		//if( consumedEvent )
 			UpdateLabel();
 
 		eventData.Use();
 	}
-
-
 
 }

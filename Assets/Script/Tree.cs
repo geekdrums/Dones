@@ -12,6 +12,7 @@ public class Tree : MonoBehaviour {
 
 	Line rootLine_;
 	Line focusedLine_;
+	Line selectionStartLine_, selectionEndLine_;
 
 	// Use this for initialization
 	void Awake () {
@@ -28,12 +29,16 @@ public class Tree : MonoBehaviour {
 
 		foreach( Line line in rootLine_.VisibleTree )
 		{
-			line.Bind(Instantiate(FieldPrefab.gameObject));
-			Fields.Add(line.Field);
+			InstantiateLine(line);
 		}
 
 		Fields[0].IsFocused = true;
 
+		SubscribeKeyInput();
+	}
+
+	protected void SubscribeKeyInput()
+	{
 		KeyCode[] throttleKeys = new KeyCode[]
 		{
 			KeyCode.UpArrow,
@@ -45,18 +50,17 @@ public class Tree : MonoBehaviour {
 			KeyCode.Delete
 		};
 
-		foreach(KeyCode key in throttleKeys )
+		foreach( KeyCode key in throttleKeys )
 		{
 			// 最初の入力
 			this.UpdateAsObservable()
 				.Where(x => Input.GetKeyDown(key))
-				.Subscribe(_ => OnThrottleInput(key));
-
+				.Merge(
 			// 押しっぱなしにした時の自動連打
 			this.UpdateAsObservable()
 				.Where(x => Input.GetKey(key))
 				.Delay(TimeSpan.FromSeconds(GameContext.Config.ArrowStreamDelayTime))
-				.ThrottleFirst(TimeSpan.FromSeconds(GameContext.Config.ArrowStreamIntervalTime))
+				.ThrottleFirst(TimeSpan.FromSeconds(GameContext.Config.ArrowStreamIntervalTime)))
 				.TakeUntil(this.UpdateAsObservable().Where(x => Input.GetKeyUp(key)))
 				.RepeatUntilDestroy(this)
 				.Subscribe(_ => OnThrottleInput(key));
@@ -64,23 +68,20 @@ public class Tree : MonoBehaviour {
 	}
 	
 	// Update is called once per frame
-	void Update ()
+	void Update()
 	{
-		if( focusedLine_ == null )
-		{
-			return;
-		}
+		bool ctrl = Input.GetKey(KeyCode.LeftControl);
+		bool shift = Input.GetKey(KeyCode.LeftShift);
+		bool alt = Input.GetKey(KeyCode.LeftAlt);
+		bool ctrlOnly = ctrl && !alt && !shift;
 
-		if( Input.GetKeyDown(KeyCode.Tab) )
+		if( Input.GetKeyDown(KeyCode.V) && ctrlOnly )
 		{
-			if( Input.GetKey(KeyCode.LeftShift) )
-			{
-				if( focusedLine_.Parent != null && focusedLine_.Parent.Parent != null )
-				{
-					focusedLine_.Parent.Parent.Insert(focusedLine_.Parent.IndexInParent + 1, focusedLine_);
-				}
-			}
-			else
+			Paste();
+		}
+		else if( Input.GetKeyDown(KeyCode.Tab) )
+		{
+			if( shift == false )
 			{
 				int IndexInParent = focusedLine_.IndexInParent;
 				if( IndexInParent > 0 )
@@ -88,17 +89,82 @@ public class Tree : MonoBehaviour {
 					focusedLine_.Parent[IndexInParent - 1].Add(focusedLine_);
 				}
 			}
+			else
+			{
+				if( focusedLine_.Parent != null && focusedLine_.Parent.Parent != null )
+				{
+					focusedLine_.Parent.Parent.Insert(focusedLine_.Parent.IndexInParent + 1, focusedLine_);
+				}
+			}
+		}
+
+		if( Input.GetMouseButtonDown(0) )
+		{
+			if( selectionStartLine_ != null && selectionEndLine_ != null )
+			{
+				foreach( Line line in selectionStartLine_.GetBetween(selectionEndLine_) )
+				{
+					line.Field.IsSelected = false;
+				}
+				selectionStartLine_ = selectionEndLine_ = null;
+			}
+
+			if( focusedLine_ != null && focusedLine_.Field.Rect.Contains(Input.mousePosition) )
+			{
+				selectionStartLine_ = focusedLine_;
+			}
+		}
+		else if( Input.GetMouseButton(0) && selectionStartLine_ != null )
+		{
+			if( selectionEndLine_ == null )
+				selectionEndLine_ = selectionStartLine_;
+
+			int sign = 0;
+			Rect rect = selectionEndLine_.Field.Rect;
+			if( rect.yMin > Input.mousePosition.y )
+			{
+				sign = -1;
+			}
+			else if( rect.yMax < Input.mousePosition.y )
+			{
+				sign = 1;
+			}
+
+			if( sign != 0 )
+			{
+				int selectionSign = selectionStartLine_.Field.Rect.y < selectionEndLine_.Field.Rect.y ? 1 : -1;
+				selectionEndLine_.Field.IsSelected = sign * selectionSign > 0;
+
+				Line next = sign > 0 ? selectionEndLine_.PrevVisibleLine : selectionEndLine_.NextVisibleLine;
+				while( next != null && (Input.mousePosition.y < next.Field.Rect.yMin || next.Field.Rect.yMax < Input.mousePosition.y) )
+				{
+					next.Field.IsSelected = sign * selectionSign > 0;
+					next = sign > 0 ? next.PrevVisibleLine : next.NextVisibleLine;
+				}
+
+				if( next != null )
+				{
+					selectionEndLine_ = next;
+					selectionEndLine_.Field.IsSelected = true;
+				}
+				selectionStartLine_.Field.IsSelected = true;
+			}
 		}
 	}
 
-	// 長押しで連続入力可能なもの
-	protected void OnThrottleInput(KeyCode arrow)
+	protected void InstantiateLine(Line line)
+	{
+		line.Bind(Instantiate(FieldPrefab.gameObject));
+		Fields.Add(line.Field);
+	}
+
+	protected void OnThrottleInput(KeyCode key)
 	{
 		if( focusedLine_ == null ) return;
 
 		int caretPos = focusedLine_.Field.CaretPosision;
 
-		switch( arrow )
+		switch( key )
 		{
 		case KeyCode.Return:
 			{
@@ -122,11 +188,12 @@ public class Tree : MonoBehaviour {
 						focusedLine_.Parent.Insert(focusedLine_.IndexInParent + 1, line);
 					}
 				}
-				line.Bind(Instantiate(FieldPrefab.gameObject));
-				Fields.Add(line.Field);
+				InstantiateLine(line);
 				line.Field.IsFocused = (caretPos == 0 && focusedLine_.TextLength > 0) == false;
 			}
 			break;
+		
+		// backspace & delete
 		case KeyCode.Backspace:
 			if( caretPos == 0 )
 			{
@@ -171,6 +238,8 @@ public class Tree : MonoBehaviour {
 				}
 			}
 			break;
+		
+		// arrow keys
 		case KeyCode.DownArrow:
 			{
 				Line next = focusedLine_.NextVisibleLine;
@@ -214,14 +283,69 @@ public class Tree : MonoBehaviour {
 		}
 	}
 
+	protected static string Clipboard
+	{
+		get
+		{
+			return GUIUtility.systemCopyBuffer;
+		}
+		set
+		{
+			GUIUtility.systemCopyBuffer = value;
+		}
+	}
+	protected static string[] separator = new string[] { System.Environment.NewLine };
+	protected static string[] tabstrings = new string[] { "	", "    " };
+	protected void Paste()
+	{
+		string[] cilpboardLines = Clipboard.Split(separator, System.StringSplitOptions.None);
+		focusedLine_.Field.Paste(cilpboardLines[0]);
+
+		int oldLevel = 0;
+		int currentLevel = 0;
+		Line parent = focusedLine_.Parent;
+		Line brother = focusedLine_;
+		for( int i = 1; i < cilpboardLines.Length; ++i )
+		{
+			string text = cilpboardLines[i];
+			currentLevel = 0;
+			while( text.StartsWith("	") )
+			{
+				++currentLevel;
+				text = text.Remove(0, 1);
+			}
+
+			Line line = new Line(text);
+			if( currentLevel > oldLevel )
+			{
+				brother.Add(line);
+				parent = brother;
+			}
+			else if( currentLevel == oldLevel )
+			{
+				parent.Insert(brother.IndexInParent + 1, line);
+			}
+			else// currentLevel < oldLevel 
+			{
+				for( int level = oldLevel; level > currentLevel; --level )
+				{
+					if( parent.Parent == null ) break;
+
+					brother = parent;
+					parent = parent.Parent;
+				}
+				parent.Insert(brother.IndexInParent + 1, line);
+			}
+			InstantiateLine(line);
+			brother = line;
+			oldLevel = currentLevel;
+		}
+	}
+	
+
 	public void OnFocused(Line line)
 	{
 		focusedLine_ = line;
-	}
-
-	public void InstantiateLine(Line line)
-	{
-		line.Bind(Instantiate(FieldPrefab.gameObject));
-		Fields.Add(line.Field);
+		selectionStartLine_ = line;
 	}
 }

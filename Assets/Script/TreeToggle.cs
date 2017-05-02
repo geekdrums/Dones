@@ -14,8 +14,11 @@ public class TreeToggle : Toggle {
 		textField_ = GetComponentInParent<TextField>();
 		onValueChanged.AsObservable().Subscribe(x =>
 		{
-			if( textField_.BindedLine.IsFolded == !isOn ) return;
-			else textField_.BindedLine.IsFolded = !isOn;
+			if( textField_.BindedLine != null )
+			{
+				if( textField_.BindedLine.IsFolded == !isOn ) return;
+				else textField_.BindedLine.IsFolded = !isOn;
+			}
 
 			textField_.IsFocused = true;
 			AnimManager.AddAnim(targetGraphic, interactable && isOn ? 0 : 90, ParamType.RotationZ, AnimType.Time, GameContext.Config.AnimTime);

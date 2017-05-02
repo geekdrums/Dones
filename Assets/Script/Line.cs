@@ -155,6 +155,23 @@ public class Line : IEnumerable<Line>
 		return this.GetEnumerator();
 	}
 
+	public IEnumerable<Line> GetBetween(Line other)
+	{
+		if( other == null )
+		{
+			yield return this;
+		}
+		else
+		{
+			int sign = Field.Rect.y < other.Field.Rect.y ? 1 : -1;
+			for( Line line = this; line != other && line != null; line = (sign > 0 ? line.PrevVisibleLine : line.NextVisibleLine) )
+			{
+				yield return line;
+			}
+			yield return other;
+		}
+	}
+
 	public Line this[int index]
 	{
 		get
