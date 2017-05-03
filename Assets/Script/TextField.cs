@@ -22,6 +22,10 @@ public class TextField : InputField
 			{
 				ActivateInputField();
 			}
+			else
+			{
+				DeactivateInputField();
+			}
 		}
 	}
 
@@ -74,6 +78,13 @@ public class TextField : InputField
 		{
 			selectionAnchorPosition = selectionFocusPosition = caretPos_;
 			ownerTree_.OnFocused(BindedLine);
+		}
+		if( isFocused )
+		{
+			if( Input.GetKeyDown(KeyCode.DownArrow) == false && Input.GetKeyDown(KeyCode.UpArrow) == false )
+			{
+				caretPos_ = caretPosition;
+			}
 		}
 	}
 
@@ -146,10 +157,10 @@ public class TextField : InputField
 					break;
 				default:
 					KeyPressed(processingEvent_);
-					if( processingEvent_.keyCode != KeyCode.DownArrow && processingEvent_.keyCode != KeyCode.UpArrow )
-					{
-						caretPos_ = caretPosition;
-					}
+					//if( processingEvent_.keyCode != KeyCode.DownArrow && processingEvent_.keyCode != KeyCode.UpArrow )
+					//{
+					//	caretPos_ = caretPosition;
+					//}
 					break;
 				}
 			}

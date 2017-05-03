@@ -27,6 +27,8 @@ public class Tree : MonoBehaviour {
 		}
 	}
 
+	bool HasSelection { get { return selectedLines_.Count > 0; } }
+
 	// Use this for initialization
 	void Awake () {
 		// test
@@ -117,7 +119,7 @@ public class Tree : MonoBehaviour {
 			{
 				if( selectionStartLine_ != null )
 				{
-					int selectionSign = SelectionSign;
+					int selectionSign = selectionStartLine_.Field.Rect.y < Input.mousePosition.y ? 1 : -1;
 					Line next = selectionStartLine_;
 					while( next != null && (Input.mousePosition.y < next.Field.Rect.yMin || next.Field.Rect.yMax < Input.mousePosition.y) )
 					{
@@ -301,88 +303,116 @@ public class Tree : MonoBehaviour {
 		
 		// arrow keys
 		case KeyCode.DownArrow:
+			if( shift )
 			{
-				if( shift )
+				if( selectionEndLine_ == null )
 				{
-					if( selectionEndLine_ == null )
-					{
-						selectionStartLine_ = selectionEndLine_ = focusedLine_;
-					}
-					Line next = selectionEndLine_.NextVisibleLine;
-					if( next != null )
-					{
-						if( SelectionSign > 0 ) UpdateSelection(selectionEndLine_, false);
-						selectionEndLine_ = next;
-						if( SelectionSign < 0 ) UpdateSelection(next, true);
-					}
-					UpdateSelection(selectionStartLine_, true);
+					selectionStartLine_ = selectionEndLine_ = focusedLine_;
 				}
-				else
+				Line next = selectionEndLine_.NextVisibleLine;
+				if( next != null )
 				{
-					if( selectionEndLine_ != null )
-					{
-						focusedLine_ = selectionEndLine_;
-						ClearSelection();
-					}
+					if( SelectionSign > 0 ) UpdateSelection(selectionEndLine_, false);
+					selectionEndLine_ = next;
+					if( SelectionSign < 0 ) UpdateSelection(next, true);
+				}
+				UpdateSelection(selectionStartLine_, true);
+			}
+			else
+			{
+				if( selectionEndLine_ != null )
+				{
+					selectionEndLine_.Field.IsFocused = true;
+					ClearSelection();
+				}
+				Line next = focusedLine_.NextVisibleLine;
+				if( next != null )
+				{
+					next.Field.IsFocused = true;
+				}
+			}
+			break;
+		case KeyCode.UpArrow:
+			if( shift )
+			{
+				if( selectionEndLine_ == null )
+				{
+					selectionStartLine_ = selectionEndLine_ = focusedLine_;
+				}
+				Line prev = selectionEndLine_.PrevVisibleLine;
+				if( prev != null )
+				{
+					if( SelectionSign < 0 ) UpdateSelection(selectionEndLine_, false);
+					selectionEndLine_ = prev;
+					if( SelectionSign > 0 ) UpdateSelection(prev, true);
+				}
+				UpdateSelection(selectionStartLine_, true);
+			}
+			else
+			{
+				if( HasSelection )
+				{
+					selectionEndLine_.Field.IsFocused = true;
+					ClearSelection();
+				}
+				Line prev = focusedLine_.PrevVisibleLine;
+				if( prev != null )
+				{
+					prev.Field.IsFocused = true;
+				}
+			}
+			break;
+		case KeyCode.RightArrow:
+			if( shift )
+			{
+				if( selectionEndLine_ == null && caretPos >= focusedLine_.TextLength )
+				{
+					UpdateSelection(focusedLine_, true);
+					selectionStartLine_ = selectionEndLine_ = focusedLine_;
+				}
+			}
+			else
+			{
+				if( HasSelection )
+				{
+					selectionEndLine_.Field.IsFocused = true;
+					ClearSelection();
+				}
+				if( caretPos >= focusedLine_.TextLength )
+				{
 					Line next = focusedLine_.NextVisibleLine;
 					if( next != null )
 					{
+						next.Field.CaretPosision = 0;
 						next.Field.IsFocused = true;
 					}
 				}
 			}
 			break;
-		case KeyCode.UpArrow:
+		case KeyCode.LeftArrow:
+			if( shift )
 			{
-				if( shift )
+				if( selectionEndLine_ == null && caretPos <= 0 )
 				{
-					if( selectionEndLine_ == null )
-					{
-						selectionStartLine_ = selectionEndLine_ = focusedLine_;
-					}
-					Line prev = selectionEndLine_.PrevVisibleLine;
-					if( prev != null )
-					{
-						if( SelectionSign < 0 ) UpdateSelection(selectionEndLine_, false);
-						selectionEndLine_ = prev;
-						if( SelectionSign > 0 ) UpdateSelection(prev, true);
-					}
-					UpdateSelection(selectionStartLine_, true);
+					UpdateSelection(focusedLine_, true);
+					selectionStartLine_ = selectionEndLine_ = focusedLine_;
 				}
-				else
+			}
+			else
+			{
+				if( selectionEndLine_ != null )
 				{
-					if( selectionEndLine_ != null )
-					{
-						focusedLine_ = selectionEndLine_;
-						ClearSelection();
-					}
+					selectionEndLine_.Field.IsFocused = true;
+					ClearSelection();
+				}
+				if( caretPos <= 0 )
+				{
 					Line prev = focusedLine_.PrevVisibleLine;
 					if( prev != null )
 					{
+						prev.Field.CaretPosision = prev.TextLength;
 						prev.Field.IsFocused = true;
 					}
-				}
-			}
-			break;
-		case KeyCode.RightArrow:
-			if( caretPos >= focusedLine_.TextLength )
-			{
-				Line next = focusedLine_.NextVisibleLine;
-				if( next != null )
-				{
-					next.Field.CaretPosision = 0;
-					next.Field.IsFocused = true;
-				}
-			}
-			break;
-		case KeyCode.LeftArrow:
-			if( caretPos <= 0 )
-			{
-				Line prev = focusedLine_.PrevVisibleLine;
-				if( prev != null )
-				{
-					prev.Field.CaretPosision = prev.TextLength;
-					prev.Field.IsFocused = true;
 				}
 			}
 			break;
