@@ -13,6 +13,19 @@ public class Tree : MonoBehaviour {
 	Line rootLine_;
 	Line focusedLine_;
 	Line selectionStartLine_, selectionEndLine_;
+	List<Line> selectedLines_ = new List<Line>();
+
+	/// <summary>
+	/// startから見たendの方向。上(Prev)がプラス。下(Next)がマイナス。
+	/// </summary>
+	int SelectionSign
+	{
+		get
+		{
+			if( selectionStartLine_ == null || selectionEndLine_ == null || selectionStartLine_ == selectionEndLine_ ) return 0;
+			else return selectionStartLine_.Field.Rect.y < selectionEndLine_.Field.Rect.y ? 1 : -1;
+		}
+	}
 
 	// Use this for initialization
 	void Awake () {
@@ -32,7 +45,7 @@ public class Tree : MonoBehaviour {
 			InstantiateLine(line);
 		}
 
-		Fields[0].IsFocused = true;
+		OnFocused(Fields[0].BindedLine);
 
 		SubscribeKeyInput();
 	}
@@ -100,13 +113,29 @@ public class Tree : MonoBehaviour {
 
 		if( Input.GetMouseButtonDown(0) )
 		{
-			if( selectionStartLine_ != null && selectionEndLine_ != null )
+			if( shift )
 			{
-				foreach( Line line in selectionStartLine_.GetBetween(selectionEndLine_) )
+				if( selectionStartLine_ != null )
 				{
-					line.Field.IsSelected = false;
+					int selectionSign = SelectionSign;
+					Line next = selectionStartLine_;
+					while( next != null && (Input.mousePosition.y < next.Field.Rect.yMin || next.Field.Rect.yMax < Input.mousePosition.y) )
+					{
+						UpdateSelection(next, true);
+						next = selectionSign > 0 ? next.PrevVisibleLine : next.NextVisibleLine;
+					}
+
+					if( next != null )
+					{
+						selectionEndLine_ = next;
+						UpdateSelection(selectionEndLine_, true);
+					}
+					UpdateSelection(selectionStartLine_, true);
 				}
-				selectionStartLine_ = selectionEndLine_ = null;
+			}
+			else
+			{
+				ClearSelection();
 			}
 
 			if( focusedLine_ != null && focusedLine_.Field.Rect.Contains(Input.mousePosition) )
@@ -119,37 +148,64 @@ public class Tree : MonoBehaviour {
 			if( selectionEndLine_ == null )
 				selectionEndLine_ = selectionStartLine_;
 
-			int sign = 0;
+			// 現在の選択末尾から上に移動したか下に移動したかを見る
+			int moveSign = 0;
 			Rect rect = selectionEndLine_.Field.Rect;
 			if( rect.yMin > Input.mousePosition.y )
 			{
-				sign = -1;
+				moveSign = -1;
 			}
 			else if( rect.yMax < Input.mousePosition.y )
 			{
-				sign = 1;
+				moveSign = 1;
 			}
 
-			if( sign != 0 )
+			// 移動していたら
+			if( moveSign != 0 )
 			{
+				// 選択開始から上方向に選択しているか、下方向に選択しているか
 				int selectionSign = selectionStartLine_.Field.Rect.y < selectionEndLine_.Field.Rect.y ? 1 : -1;
-				selectionEndLine_.Field.IsSelected = sign * selectionSign > 0;
 
-				Line next = sign > 0 ? selectionEndLine_.PrevVisibleLine : selectionEndLine_.NextVisibleLine;
+				Line next = selectionEndLine_;
 				while( next != null && (Input.mousePosition.y < next.Field.Rect.yMin || next.Field.Rect.yMax < Input.mousePosition.y) )
 				{
-					next.Field.IsSelected = sign * selectionSign > 0;
-					next = sign > 0 ? next.PrevVisibleLine : next.NextVisibleLine;
+					UpdateSelection(next, moveSign * selectionSign > 0/* 移動方向と選択方向が逆なら選択解除 */);
+					next = moveSign > 0 ? next.PrevVisibleLine : next.NextVisibleLine;
 				}
 
 				if( next != null )
 				{
+					// 残ったものはマウスがちょうど乗っているLine
 					selectionEndLine_ = next;
-					selectionEndLine_.Field.IsSelected = true;
+					UpdateSelection(selectionEndLine_, true);
 				}
-				selectionStartLine_.Field.IsSelected = true;
+				// 選択開始、または選択方向が逆転しても開始行は選択するように
+				UpdateSelection(selectionStartLine_, true);
 			}
 		}
+	}
+
+	protected void UpdateSelection(Line line, bool isSelected)
+	{
+		line.Field.IsSelected = isSelected;
+		if( isSelected && selectedLines_.Contains(line) == false )
+		{
+			selectedLines_.Add(line);
+		}
+		else if( isSelected == false && selectedLines_.Contains(line) )
+		{
+			selectedLines_.Remove(line);
+		}
+	}
+
+	protected void ClearSelection()
+	{
+		foreach( Line line in selectedLines_ )
+		{
+			line.Field.IsSelected = false;
+		}
+		selectedLines_.Clear();
+		selectionStartLine_ = selectionEndLine_ = null;
 	}
 
 	protected void InstantiateLine(Line line)
@@ -163,6 +219,10 @@ public class Tree : MonoBehaviour {
 		if( focusedLine_ == null ) return;
 
 		int caretPos = focusedLine_.Field.CaretPosision;
+		bool ctrl = Input.GetKey(KeyCode.LeftControl);
+		bool shift = Input.GetKey(KeyCode.LeftShift);
+		bool alt = Input.GetKey(KeyCode.LeftAlt);
+		bool ctrlOnly = ctrl && !alt && !shift;
 
 		switch( key )
 		{
@@ -242,19 +302,65 @@ public class Tree : MonoBehaviour {
 		// arrow keys
 		case KeyCode.DownArrow:
 			{
-				Line next = focusedLine_.NextVisibleLine;
-				if( next != null )
+				if( shift )
 				{
-					next.Field.IsFocused = true;
+					if( selectionEndLine_ == null )
+					{
+						selectionStartLine_ = selectionEndLine_ = focusedLine_;
+					}
+					Line next = selectionEndLine_.NextVisibleLine;
+					if( next != null )
+					{
+						if( SelectionSign > 0 ) UpdateSelection(selectionEndLine_, false);
+						selectionEndLine_ = next;
+						if( SelectionSign < 0 ) UpdateSelection(next, true);
+					}
+					UpdateSelection(selectionStartLine_, true);
+				}
+				else
+				{
+					if( selectionEndLine_ != null )
+					{
+						focusedLine_ = selectionEndLine_;
+						ClearSelection();
+					}
+					Line next = focusedLine_.NextVisibleLine;
+					if( next != null )
+					{
+						next.Field.IsFocused = true;
+					}
 				}
 			}
 			break;
 		case KeyCode.UpArrow:
 			{
-				Line prev = focusedLine_.PrevVisibleLine;
-				if( prev != null )
+				if( shift )
 				{
-					prev.Field.IsFocused = true;
+					if( selectionEndLine_ == null )
+					{
+						selectionStartLine_ = selectionEndLine_ = focusedLine_;
+					}
+					Line prev = selectionEndLine_.PrevVisibleLine;
+					if( prev != null )
+					{
+						if( SelectionSign < 0 ) UpdateSelection(selectionEndLine_, false);
+						selectionEndLine_ = prev;
+						if( SelectionSign > 0 ) UpdateSelection(prev, true);
+					}
+					UpdateSelection(selectionStartLine_, true);
+				}
+				else
+				{
+					if( selectionEndLine_ != null )
+					{
+						focusedLine_ = selectionEndLine_;
+						ClearSelection();
+					}
+					Line prev = focusedLine_.PrevVisibleLine;
+					if( prev != null )
+					{
+						prev.Field.IsFocused = true;
+					}
 				}
 			}
 			break;
