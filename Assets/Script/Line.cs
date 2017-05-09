@@ -172,6 +172,28 @@ public class Line : IEnumerable<Line>
 		}
 	}
 
+	public IEnumerable<Line> GetUntil(float y)
+	{
+		Line line = null;
+		if( Field.RectY > y )
+		{
+			for( line = this; line != null && line.Field.Rect.yMin > y; line = line.NextVisibleLine )
+			{
+				yield return line;
+			}
+			if( line != null ) yield return line;
+		}
+		else
+		{
+			for( line = this; line != null && line.Field.Rect.yMax < y; line = line.PrevVisibleLine )
+			{
+				yield return line;
+			}
+			if( line != null ) yield return line;
+		}
+	}
+
+
 	public Line this[int index]
 	{
 		get

@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UniRx;
 using UniRx.Triggers;
 
@@ -23,7 +24,7 @@ public class Tree : MonoBehaviour {
 		get
 		{
 			if( selectionStartLine_ == null || selectionEndLine_ == null || selectionStartLine_ == selectionEndLine_ ) return 0;
-			else return selectionStartLine_.Field.Rect.y < selectionEndLine_.Field.Rect.y ? 1 : -1;
+			else return selectionStartLine_.Field.RectY < selectionEndLine_.Field.RectY ? 1 : -1;
 		}
 	}
 
@@ -117,22 +118,28 @@ public class Tree : MonoBehaviour {
 		{
 			if( shift )
 			{
+				if( ctrl == false )
+				{
+					ClearSelection(clearStartAndEnd: false);
+				}
 				if( selectionStartLine_ != null )
 				{
-					int selectionSign = selectionStartLine_.Field.Rect.y < Input.mousePosition.y ? 1 : -1;
-					Line next = selectionStartLine_;
-					while( next != null && (Input.mousePosition.y < next.Field.Rect.yMin || next.Field.Rect.yMax < Input.mousePosition.y) )
+					foreach( Line line in selectionStartLine_.GetUntil(Input.mousePosition.y) )
 					{
-						UpdateSelection(next, true);
-						next = selectionSign > 0 ? next.PrevVisibleLine : next.NextVisibleLine;
+						UpdateSelection(line, true);
+						selectionEndLine_ = line;
 					}
-
-					if( next != null )
-					{
-						selectionEndLine_ = next;
-						UpdateSelection(selectionEndLine_, true);
-					}
-					UpdateSelection(selectionStartLine_, true);
+				}
+			}
+			else if( ctrl )
+			{
+				Line line = null;
+				TextField field = EventSystem.current.currentSelectedGameObject.GetComponent<TextField>();
+				if( field != null ) line = field.BindedLine;
+				if( line != null )
+				{
+					UpdateSelection(line, true);
+					selectionStartLine_ = selectionEndLine_ = line;
 				}
 			}
 			else
@@ -165,24 +172,11 @@ public class Tree : MonoBehaviour {
 			// 移動していたら
 			if( moveSign != 0 )
 			{
-				// 選択開始から上方向に選択しているか、下方向に選択しているか
-				int selectionSign = selectionStartLine_.Field.Rect.y < selectionEndLine_.Field.Rect.y ? 1 : -1;
-
-				Line next = selectionEndLine_;
-				while( next != null && (Input.mousePosition.y < next.Field.Rect.yMin || next.Field.Rect.yMax < Input.mousePosition.y) )
+				foreach( Line line in selectionEndLine_.GetUntil(Input.mousePosition.y) )
 				{
-					UpdateSelection(next, moveSign * selectionSign > 0/* 移動方向と選択方向が逆なら選択解除 */);
-					next = moveSign > 0 ? next.PrevVisibleLine : next.NextVisibleLine;
+					UpdateSelection(line, moveSign * SelectionSign >= 0/* 移動方向と選択方向が逆なら選択解除 */ || line == selectionStartLine_);
+					selectionEndLine_ = line;
 				}
-
-				if( next != null )
-				{
-					// 残ったものはマウスがちょうど乗っているLine
-					selectionEndLine_ = next;
-					UpdateSelection(selectionEndLine_, true);
-				}
-				// 選択開始、または選択方向が逆転しても開始行は選択するように
-				UpdateSelection(selectionStartLine_, true);
 			}
 		}
 	}
@@ -200,14 +194,15 @@ public class Tree : MonoBehaviour {
 		}
 	}
 
-	protected void ClearSelection()
+	protected void ClearSelection(bool clearStartAndEnd = true)
 	{
 		foreach( Line line in selectedLines_ )
 		{
 			line.Field.IsSelected = false;
 		}
 		selectedLines_.Clear();
-		selectionStartLine_ = selectionEndLine_ = null;
+
+		if( clearStartAndEnd ) selectionStartLine_ = selectionEndLine_ = null;
 	}
 
 	protected void InstantiateLine(Line line)
@@ -323,6 +318,7 @@ public class Tree : MonoBehaviour {
 				if( selectionEndLine_ != null )
 				{
 					selectionEndLine_.Field.IsFocused = true;
+					focusedLine_ = selectionEndLine_;
 					ClearSelection();
 				}
 				Line next = focusedLine_.NextVisibleLine;
@@ -353,6 +349,7 @@ public class Tree : MonoBehaviour {
 				if( HasSelection )
 				{
 					selectionEndLine_.Field.IsFocused = true;
+					focusedLine_ = selectionEndLine_;
 					ClearSelection();
 				}
 				Line prev = focusedLine_.PrevVisibleLine;
@@ -376,6 +373,7 @@ public class Tree : MonoBehaviour {
 				if( HasSelection )
 				{
 					selectionEndLine_.Field.IsFocused = true;
+					focusedLine_ = selectionEndLine_;
 					ClearSelection();
 				}
 				if( caretPos >= focusedLine_.TextLength )
@@ -403,6 +401,7 @@ public class Tree : MonoBehaviour {
 				if( selectionEndLine_ != null )
 				{
 					selectionEndLine_.Field.IsFocused = true;
+					focusedLine_ = selectionEndLine_;
 					ClearSelection();
 				}
 				if( caretPos <= 0 )

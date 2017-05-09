@@ -46,6 +46,7 @@ public class TextField : InputField
 	public Color Background { get { return image_.color; } set { image_.color = value; } }
 	public Color Foreground { get { return textComponent.color; } set { textComponent.color = value; } }
 	public Rect Rect { get { return new Rect(image_.rectTransform.position, image_.rectTransform.sizeDelta); } }
+	public float RectY { get { return image_.rectTransform.position.y; } }
 
 	protected Image image_;
 	protected Tree ownerTree_;
