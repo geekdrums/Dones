@@ -16,8 +16,15 @@ public class TreeToggle : Toggle {
 		{
 			if( textField_.BindedLine != null )
 			{
-				if( textField_.BindedLine.IsFolded == !isOn ) return;
-				else textField_.BindedLine.IsFolded = !isOn;
+				if( textField_.BindedLine.IsFolded == !isOn )
+				{
+					return;
+				}
+				else
+				{
+					textField_.BindedLine.IsFolded = !isOn;
+					textField_.BindedLine.AdjustLayoutRecursive();
+				}
 			}
 
 			textField_.IsFocused = true;

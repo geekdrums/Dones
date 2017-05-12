@@ -102,14 +102,38 @@ public class Tree : MonoBehaviour {
 				int IndexInParent = focusedLine_.IndexInParent;
 				if( IndexInParent > 0 )
 				{
-					focusedLine_.Parent[IndexInParent - 1].Add(focusedLine_);
+					Line newParent = focusedLine_.Parent[IndexInParent - 1];
+					newParent.Add(focusedLine_);
+					
+					if( newParent.IsFolded )
+					{
+						newParent.IsFolded = false;
+						newParent.AdjustLayoutRecursive();
+					}
+					else
+					{
+						focusedLine_.AdjustLayout(Line.Direction.X);
+					}
 				}
 			}
 			else
 			{
 				if( focusedLine_.Parent != null && focusedLine_.Parent.Parent != null )
 				{
-					focusedLine_.Parent.Parent.Insert(focusedLine_.Parent.IndexInParent + 1, focusedLine_);
+					Line newParent = focusedLine_.Parent.Parent;
+					int insertIndex = focusedLine_.Parent.IndexInParent + 1;
+
+					int index = focusedLine_.IndexInParent + 1;
+					Line nextOfFocusedLine = focusedLine_.Parent[index];
+					newParent.Insert(insertIndex, focusedLine_);
+					if( nextOfFocusedLine != null )
+					{
+						nextOfFocusedLine.Parent.AdjustLayoutRecursive(index - 1);
+					}
+					else
+					{
+						focusedLine_.AdjustLayout(Line.Direction.X);
+					}
 				}
 			}
 		}
@@ -229,6 +253,7 @@ public class Tree : MonoBehaviour {
 				if( caretPos == 0 && focusedLine_.TextLength > 0 )
 				{
 					focusedLine_.Parent.Insert(focusedLine_.IndexInParent, line);
+					focusedLine_.Parent.AdjustLayoutRecursive(focusedLine_.IndexInParent);
 				}
 				else
 				{
@@ -239,10 +264,12 @@ public class Tree : MonoBehaviour {
 					if( focusedLine_.HasVisibleChild )
 					{
 						focusedLine_.Insert(0, line);
+						focusedLine_.AdjustLayoutRecursive();
 					}
 					else
 					{
 						focusedLine_.Parent.Insert(focusedLine_.IndexInParent + 1, line);
+						focusedLine_.Parent.AdjustLayoutRecursive(focusedLine_.IndexInParent + 1);
 					}
 				}
 				InstantiateLine(line);
@@ -260,17 +287,20 @@ public class Tree : MonoBehaviour {
 					prev.Field.CaretPosision = prev.TextLength;
 					prev.Text += focusedLine_.Text;
 					prev.Field.IsFocused = true;
-
+					
 					List<Line> children = new List<Line>(focusedLine_);
-
-					prev.EnableRecursiveLayout = false;
-					foreach( Line child in children )
+					for( int i = 0; i < children.Count; ++i )
 					{
-						prev.Insert(0, child);
+						prev.Insert(i, children[i]);
+						children[i].AdjustLayout();
 					}
-					prev.EnableRecursiveLayout = true;
 
+					Line layoutStart = focusedLine_.NextVisibleLine;
 					focusedLine_.Parent.Remove(focusedLine_);
+					if( layoutStart != null )
+					{
+						layoutStart.Parent.AdjustLayoutRecursive(layoutStart.IndexInParent);
+					}
 				}
 			}
 			break;
@@ -281,17 +311,20 @@ public class Tree : MonoBehaviour {
 				if( next != null )
 				{
 					focusedLine_.Text += next.Text;
-
+					
 					List<Line> children = new List<Line>(next);
-
-					focusedLine_.EnableRecursiveLayout = false;
-					foreach( Line child in children )
+					for( int i = 0; i < children.Count; ++i )
 					{
-						focusedLine_.Insert(0, child);
+						focusedLine_.Insert(i, children[i]);
+						children[i].AdjustLayout();
 					}
-					focusedLine_.EnableRecursiveLayout = true;
-
+					
+					Line layoutStart = next.NextVisibleLine;
 					next.Parent.Remove(next);
+					if( layoutStart != null )
+					{
+						layoutStart.Parent.AdjustLayoutRecursive(layoutStart.IndexInParent);
+					}
 				}
 			}
 			break;
@@ -440,6 +473,7 @@ public class Tree : MonoBehaviour {
 		int currentLevel = 0;
 		Line parent = focusedLine_.Parent;
 		Line brother = focusedLine_;
+		Line layoutStart = focusedLine_.NextVisibleLine;
 		for( int i = 1; i < cilpboardLines.Length; ++i )
 		{
 			string text = cilpboardLines[i];
@@ -474,6 +508,11 @@ public class Tree : MonoBehaviour {
 			InstantiateLine(line);
 			brother = line;
 			oldLevel = currentLevel;
+		}
+
+		if( layoutStart != null )
+		{
+			layoutStart.Parent.AdjustLayoutRecursive(layoutStart.IndexInParent);
 		}
 	}
 	

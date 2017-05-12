@@ -6,7 +6,7 @@ using UniRx;
 using UniRx.Triggers;
 using UnityEngine.EventSystems;
 
-public class TextField : InputField
+public class TextField : InputField, IColoredObject
 {
 	public Line BindedLine { get; set; }
 	
@@ -44,6 +44,8 @@ public class TextField : InputField
 	protected bool isSelected_;
 
 	public Color Background { get { return image_.color; } set { image_.color = value; } }
+	public void SetColor(Color color) { Background = color; }
+	public Color GetColor() { return Background;  }
 	public Color Foreground { get { return textComponent.color; } set { textComponent.color = value; } }
 	public Rect Rect { get { return new Rect(image_.rectTransform.position, image_.rectTransform.sizeDelta); } }
 	public float RectY { get { return image_.rectTransform.position.y; } }
@@ -154,6 +156,7 @@ public class TextField : InputField
 					if( ctrlOnly && BindedLine.Count > 0 )
 					{
 						BindedLine.IsFolded = !BindedLine.IsFolded;
+						BindedLine.AdjustLayoutRecursive();
 					}
 					break;
 				default:
@@ -173,5 +176,6 @@ public class TextField : InputField
 
 		eventData.Use();
 	}
+
 
 }

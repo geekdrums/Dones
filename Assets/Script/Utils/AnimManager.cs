@@ -330,18 +330,16 @@ public class PrimitiveAnimInfo : AnimInfoBase
 
 	protected override void InitValue()
 	{
+		primitive_ = Object.GetComponentInChildren<MidairPrimitive>();
 		switch( Param )
 		{
 		case ParamType.PrimitiveRadius:
-			primitive_ = Object.GetComponent<MidairPrimitive>();
 			initialValue_ = (float)primitive_.Radius;
 			break;
 		case ParamType.PrimitiveWidth:
-			primitive_ = Object.GetComponent<MidairPrimitive>();
 			initialValue_ = (float)primitive_.Width;
 			break;
 		case ParamType.PrimitiveArc:
-			primitive_ = Object.GetComponent<MidairPrimitive>();
 			initialValue_ = (float)primitive_.ArcRate;
 			break;
 		}
@@ -371,7 +369,6 @@ public class GaugeAnimInfo : AnimInfoBase
 	public GaugeAnimInfo(GameObject obj, object target, ParamType paramType, AnimType animType, float factor = 0.1f, float delay = 0.0f, AnimEndOption endOption = AnimEndOption.None)
 		: base(obj, target, paramType, animType, factor, delay, endOption)
 	{
-
 		if( paramType < ParamType.GaugeLength || ParamType.GaugeWidth < paramType )
 		{
 			throw new System.Exception("GaugeAnimInfo: wrong param type! paramType = " + paramType.ToString());
@@ -380,18 +377,16 @@ public class GaugeAnimInfo : AnimInfoBase
 
 	protected override void InitValue()
 	{
+		gauge_ = Object.GetComponentInChildren<GaugeRenderer>();
 		switch( Param )
 		{
 		case ParamType.GaugeLength:
-			gauge_ = Object.GetComponent<GaugeRenderer>();
 			initialValue_ = (float)gauge_.Length;
 			break;
 		case ParamType.GaugeRate:
-			gauge_ = Object.GetComponent<GaugeRenderer>();
 			initialValue_ = (float)gauge_.Rate;
 			break;
 		case ParamType.GaugeWidth:
-			gauge_ = Object.GetComponent<GaugeRenderer>();
 			initialValue_ = (float)gauge_.Width;
 			break;
 		}
@@ -430,7 +425,7 @@ public class ColorAnimInfo : AnimInfoBase
 
 	protected override void InitValue()
 	{
-		coloredObj_ = Object.GetComponent<IColoredObject>();
+		coloredObj_ = Object.GetComponentInChildren<IColoredObject>();
 		initialValue_ = coloredObj_.GetColor();
 		if( Param == ParamType.AlphaColor )
 		{
@@ -470,10 +465,10 @@ public class TextAnimInfo : AnimInfoBase
 
 	protected override void InitValue()
 	{
-		text_ = Object.GetComponent<TextMesh>();
-		if( text_ != null )
+		uitext_ = Object.GetComponentInChildren<Text>();
+		if( uitext_ != null )
 		{
-			initialValue_ = text_.color;
+			initialValue_ = uitext_.color;
 			if( Param == ParamType.TextAlphaColor )
 			{
 				baseColor_ = (Color)initialValue_;
@@ -482,10 +477,10 @@ public class TextAnimInfo : AnimInfoBase
 			}
 			return;
 		}
-		uitext_ = Object.GetComponent<Text>();
-		if( uitext_ != null )
+		text_ = Object.GetComponentInChildren<TextMesh>();
+		if( text_ != null )
 		{
-			initialValue_ = uitext_.color;
+			initialValue_ = text_.color;
 			if( Param == ParamType.TextAlphaColor )
 			{
 				baseColor_ = (Color)initialValue_;
@@ -500,22 +495,22 @@ public class TextAnimInfo : AnimInfoBase
 	{
 		if( text_ != null )
 		{
-			if( Param == ParamType.Color )
+			if( Param == ParamType.TextColor )
 			{
 				text_.color = Color.Lerp((Color)initialValue_, (Color)Target, animValue_);
 			}
-			else if( Param == ParamType.AlphaColor )
+			else if( Param == ParamType.TextAlphaColor )
 			{
 				text_.color = ColorManager.MakeAlpha(baseColor_, Mathf.Lerp((float)initialValue_, (float)Target, animValue_));
 			}
 		}
 		else if( uitext_ != null )
 		{
-			if( Param == ParamType.Color )
+			if( Param == ParamType.TextColor )
 			{
 				uitext_.color = Color.Lerp((Color)initialValue_, (Color)Target, animValue_);
 			}
-			else if( Param == ParamType.AlphaColor )
+			else if( Param == ParamType.TextAlphaColor )
 			{
 				uitext_.color = ColorManager.MakeAlpha(baseColor_, Mathf.Lerp((float)initialValue_, (float)Target, animValue_));
 			}
