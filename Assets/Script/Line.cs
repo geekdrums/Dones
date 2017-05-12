@@ -13,6 +13,7 @@ public class Line : IEnumerable<Line>
 
 	public string Text { get { return textRx_.Value; } set { textRx_.Value = value; } }
 	public int TextLength { get { return textRx_.Value.Length; } }
+	public override string ToString() { return Text; }
 	protected ReactiveProperty<string> textRx_ = new ReactiveProperty<string>();
 
 	public bool IsFolded
@@ -60,23 +61,6 @@ public class Line : IEnumerable<Line>
 	public TreeToggle Toggle { get; protected set; }
 
 	#endregion
-
-
-	static List<Line> suspendedLineList_ = new List<Line>();
-	static int suspendLayoutCount_;
-	public static void SuspenLayout()
-	{
-		suspendLayoutCount_++;
-	}
-	public static void ResumeLayout()
-	{
-		suspendLayoutCount_--;
-		if( suspendLayoutCount_ < 0 )
-		{
-			suspendLayoutCount_ = 0;
-		}
-	}
-
 
 	public Line(string text = "")
 	{

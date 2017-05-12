@@ -159,20 +159,23 @@ public class TextField : InputField, IColoredObject
 						BindedLine.AdjustLayoutRecursive();
 					}
 					break;
+				case KeyCode.Delete:
+					{
+						bool use = caretPos_ < text.Length;
+						KeyPressed(processingEvent_);
+						if( use ) ownerTree_.OnDeleteKeyConsumed();
+					}
+					break;
 				default:
 					KeyPressed(processingEvent_);
-					//if( processingEvent_.keyCode != KeyCode.DownArrow && processingEvent_.keyCode != KeyCode.UpArrow )
-					//{
-					//	caretPos_ = caretPosition;
-					//}
 					break;
 				}
 			}
 		}
 
-		// BackspaceのKeyDownが来ない問題（変換の最後の1文字問題）で、仕方なく毎回Update
+		// ひらがな入力で、変換の最後の1文字だけ、BackspaceのKeyDownが来ない問題で、仕方なく毎回Update
 		//if( consumedEvent )
-			UpdateLabel();
+		UpdateLabel();
 
 		eventData.Use();
 	}
