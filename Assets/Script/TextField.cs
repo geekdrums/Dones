@@ -152,6 +152,17 @@ public class TextField : InputField, IColoredObject
 						return;
 					}
 					break;
+				case KeyCode.C:
+					if( ctrlOnly && isSelected_ )
+					{
+						// process in ownerTree
+						return;
+					}
+					else
+					{
+						KeyPressed(processingEvent_);
+					}
+					break;
 				case KeyCode.M:
 					if( ctrlOnly && BindedLine.Count > 0 )
 					{

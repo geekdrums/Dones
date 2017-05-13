@@ -62,6 +62,10 @@ public class Tree : MonoBehaviour {
 		{
 			Paste();
 		}
+		else if( Input.GetKeyDown(KeyCode.C) && ctrlOnly )
+		{
+			Copy();
+		}
 		else if( Input.GetKeyDown(KeyCode.Tab) )
 		{
 			if( shift )
@@ -531,22 +535,47 @@ public class Tree : MonoBehaviour {
 		}
 	}
 	protected static string[] separator = new string[] { System.Environment.NewLine };
-	protected static string[] tabstrings = new string[] { "	", "    " };
+	protected static string tabstring = "	";
+	protected void Copy()
+	{
+		if( HasSelection )
+		{
+			string clipboardLines = "";
+			foreach( Line line in selectedLines_.Values )
+			{
+				int level = line.Level - 1;
+				for( int i = 0; i < level; ++i )
+				{
+					clipboardLines += tabstring;
+				}
+				clipboardLines += line.Text + System.Environment.NewLine;
+			}
+			Clipboard = clipboardLines;
+		}
+	}
 	protected void Paste()
 	{
 		string[] cilpboardLines = Clipboard.Split(separator, System.StringSplitOptions.None);
-		focusedLine_.Field.Paste(cilpboardLines[0]);
 
-		int oldLevel = 0;
+		string text = cilpboardLines[0];
 		int currentLevel = 0;
+		int oldLevel = 0;
+		while( text.StartsWith(tabstring) )
+		{
+			++currentLevel;
+			text = text.Remove(0, 1);
+		}
+		focusedLine_.Field.Paste(text);
+		oldLevel = currentLevel;
+
 		Line parent = focusedLine_.Parent;
 		Line brother = focusedLine_;
 		Line layoutStart = focusedLine_.NextVisibleLine;
 		for( int i = 1; i < cilpboardLines.Length; ++i )
 		{
-			string text = cilpboardLines[i];
+			text = cilpboardLines[i];
 			currentLevel = 0;
-			while( text.StartsWith("	") )
+			while( text.StartsWith(tabstring) )
 			{
 				++currentLevel;
 				text = text.Remove(0, 1);
