@@ -17,7 +17,7 @@ public class Tree : MonoBehaviour {
 	Line rootLine_;
 	Line focusedLine_;
 	Line selectionStartLine_, selectionEndLine_;
-	List<Line> selectedLines_ = new List<Line>();
+	SortedList<int, Line> selectedLines_ = new SortedList<int, Line>();
 
 	bool deleteKeyConsumed_ = false;
 
@@ -169,19 +169,19 @@ public class Tree : MonoBehaviour {
 	protected void UpdateSelection(Line line, bool isSelected)
 	{
 		line.Field.IsSelected = isSelected;
-		if( isSelected && selectedLines_.Contains(line) == false )
+		if( isSelected && selectedLines_.Values.Contains(line) == false )
 		{
-			selectedLines_.Add(line);
+			selectedLines_.Add(-(int)line.Binding.transform.position.y, line);
 		}
-		else if( isSelected == false && selectedLines_.Contains(line) )
+		else if( isSelected == false && selectedLines_.Values.Contains(line) )
 		{
-			selectedLines_.Remove(line);
+			selectedLines_.Remove(-(int)line.Binding.transform.position.y);
 		}
 	}
 
 	protected void ClearSelection(bool clearStartAndEnd = true)
 	{
-		foreach( Line line in selectedLines_ )
+		foreach( Line line in selectedLines_.Values )
 		{
 			line.Field.IsSelected = false;
 		}
@@ -250,43 +250,74 @@ public class Tree : MonoBehaviour {
 		}
 	}
 
-	protected void OnTabInput()
+	protected IEnumerable<Line> GetTargetLines(bool ascending = true)
 	{
-		int IndexInParent = focusedLine_.IndexInParent;
-		if( IndexInParent > 0 )
+		if( HasSelection )
 		{
-			Line newParent = focusedLine_.Parent[IndexInParent - 1];
-			newParent.Add(focusedLine_);
-
-			if( newParent.IsFolded )
+			if( ascending )
 			{
-				newParent.IsFolded = false;
-				newParent.AdjustLayoutRecursive();
+				foreach( Line line in selectedLines_.Values )
+				{
+					yield return line;
+				}
 			}
 			else
 			{
-				focusedLine_.AdjustLayout(Line.Direction.X);
+				for( int i = selectedLines_.Count - 1; i >= 0; --i )
+				{
+					yield return selectedLines_.Values[i];
+				}
+			}
+		}
+		else if( focusedLine_ != null )
+		{
+			yield return focusedLine_;
+		}
+	}
+
+	protected void OnTabInput()
+	{
+		foreach( Line line in GetTargetLines() )
+		{
+			int IndexInParent = line.IndexInParent;
+			if( IndexInParent > 0 )
+			{
+				Line newParent = line.Parent[IndexInParent - 1];
+				newParent.Add(line);
+
+				if( newParent.IsFolded )
+				{
+					newParent.IsFolded = false;
+					newParent.AdjustLayoutRecursive();
+				}
+				else
+				{
+					line.AdjustLayout(Line.Direction.X);
+				}
+			}
+			else
+			{
+				break;
 			}
 		}
 	}
 
 	protected void OnShiftTabInput()
 	{
-		if( focusedLine_.Parent != null && focusedLine_.Parent.Parent != null )
+		foreach( Line line in GetTargetLines(ascending: false) )
 		{
-			Line newParent = focusedLine_.Parent.Parent;
-			int insertIndex = focusedLine_.Parent.IndexInParent + 1;
+			if( line.Parent != null && line.Parent.Parent != null && ( line.Parent.Field.IsSelected == false || line.Parent.Level <= 1 ) )
+			{
+				Line nextLine = line.Parent[line.IndexInParent + 1];
+				
+				Line newParent = line.Parent.Parent;
+				newParent.Insert(line.Parent.IndexInParent + 1, line);
+				line.AdjustLayout(Line.Direction.XY);
 
-			int index = focusedLine_.IndexInParent + 1;
-			Line nextOfFocusedLine = focusedLine_.Parent[index];
-			newParent.Insert(insertIndex, focusedLine_);
-			if( nextOfFocusedLine != null )
-			{
-				nextOfFocusedLine.Parent.AdjustLayoutRecursive(index - 1);
-			}
-			else
-			{
-				focusedLine_.AdjustLayout(Line.Direction.X);
+				if( nextLine != null && nextLine.Field.IsSelected == false )
+				{
+					nextLine.Parent.AdjustLayoutRecursive(nextLine.IndexInParent);
+				}
 			}
 		}
 	}
@@ -456,12 +487,13 @@ public class Tree : MonoBehaviour {
 		case KeyCode.DownArrow:
 		case KeyCode.UpArrow:
 			// 選択行を上下に追加または削除
-			Line line = (key == KeyCode.DownArrow ? selectionEndLine_.NextVisibleLine : selectionEndLine_.PrevVisibleLine);
+			int sign = key == KeyCode.DownArrow ? 1 : -1;
+			Line line = (sign > 0 ? selectionEndLine_.NextVisibleLine : selectionEndLine_.PrevVisibleLine);
 			if( line != null )
 			{
-				if( SelectionSign > 0 ) UpdateSelection(selectionEndLine_, false);
+				if( SelectionSign * sign > 0 ) UpdateSelection(selectionEndLine_, false);
 				selectionEndLine_ = line;
-				if( SelectionSign < 0 ) UpdateSelection(line, true);
+				if( SelectionSign * sign < 0 ) UpdateSelection(line, true);
 			}
 			UpdateSelection(selectionStartLine_, true);
 			break;

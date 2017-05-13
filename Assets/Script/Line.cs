@@ -238,6 +238,9 @@ public class Line : IEnumerable<Line>
 					}
 
 					AnimManager.AddAnim(children_[i].Binding, target, ParamType.Position, AnimType.Time, GameContext.Config.AnimTime);
+					//debug
+					//children_[i].Field.Foreground = ColorManager.MakeAlpha(children_[i].Field.Foreground, 0);
+					//AnimManager.AddAnim(children_[i].Field.textComponent, 1, ParamType.TextAlphaColor, AnimType.Time, 0.5f);
 				}
 				target.y -= (1 + children_[i].VisibleChildCount) * GameContext.Config.HeightPerLine;
 			}
