@@ -25,21 +25,11 @@ public class Line : IEnumerable<Line>
 			{
 				isFolded_ = value;
 
-				if( isFolded_ )
+				foreach( Line line in children_ )
 				{
-					foreach( Line line in children_ )
+					if( line.Binding != null )
 					{
-						if( line.Binding != null )
-						{
-							line.Binding.SetActive(false);
-						}
-					}
-				}
-				else
-				{
-					if( Field != null )
-					{
-						Field.StartCoroutine(ActivateCoroutine(GameContext.Config.AnimTime / 2));
+						line.Binding.SetActive(isFolded_ == false);
 					}
 				}
 
@@ -290,23 +280,6 @@ public class Line : IEnumerable<Line>
 			return new Vector3(Binding.transform.localPosition.x, -IndexInLocalTree * GameContext.Config.HeightPerLine);
 		}
 		return Vector3.zero;
-	}
-
-	#endregion
-
-
-	#region coroutine
-
-	protected IEnumerator ActivateCoroutine(float delay)
-	{
-		yield return new WaitForSeconds(delay);
-		foreach( Line line in children_ )
-		{
-			if( line.Binding != null )
-			{
-				line.Binding.SetActive(true);
-			}
-		}
 	}
 
 	#endregion

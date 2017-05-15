@@ -19,7 +19,9 @@ public class Tree : MonoBehaviour {
 	Line selectionStartLine_, selectionEndLine_;
 	SortedList<int, Line> selectedLines_ = new SortedList<int, Line>();
 
-	bool deleteKeyConsumed_ = false;
+	bool wasDeleteKeyConsumed_ = false;
+	bool wasCtrlMInput_ = false;
+	bool isAllFolded_ = false;
 
 	#endregion
 
@@ -56,19 +58,31 @@ public class Tree : MonoBehaviour {
 		bool shift = Input.GetKey(KeyCode.LeftShift);
 		bool alt = Input.GetKey(KeyCode.LeftAlt);
 		bool ctrlOnly = ctrl && !alt && !shift;
-		
+
+
 		// keyboard input
-		if( Input.GetKeyDown(KeyCode.V) && ctrlOnly )
+		if( ctrlOnly )
 		{
-			Paste();
-		}
-		else if( Input.GetKeyDown(KeyCode.C) && ctrlOnly )
-		{
-			Copy();
-		}
-		else if( Input.GetKeyDown(KeyCode.X) && ctrlOnly )
-		{
-			Cut();
+			if( Input.GetKeyDown(KeyCode.V) )
+			{
+				Paste();
+			}
+			else if( Input.GetKeyDown(KeyCode.C) )
+			{
+				Copy();
+			}
+			else if( Input.GetKeyDown(KeyCode.X) )
+			{
+				Cut();
+			}
+			else if( Input.GetKeyDown(KeyCode.A) )
+			{
+				SelectAll();
+			}
+			else if( Input.GetKeyDown(KeyCode.M) )
+			{
+				wasCtrlMInput_ = true;
+			}
 		}
 		else if( Input.GetKeyDown(KeyCode.Tab) )
 		{
@@ -79,6 +93,18 @@ public class Tree : MonoBehaviour {
 			else
 			{
 				OnTabInput();
+			}
+		}
+
+		if( wasCtrlMInput_ && Input.anyKeyDown )
+		{
+			if( ( Input.GetKeyDown(KeyCode.M) && ctrlOnly ) == false )
+			{
+				wasCtrlMInput_ = false;
+			}
+			if( Input.GetKeyDown(KeyCode.L) && ctrlOnly )
+			{
+				OnCtrlMLInput();
 			}
 		}
 
@@ -202,6 +228,24 @@ public class Tree : MonoBehaviour {
 		if( clearStartAndEnd ) selectionStartLine_ = selectionEndLine_ = null;
 	}
 
+	protected void SelectAll()
+	{
+		ClearSelection();
+
+		selectionStartLine_ = rootLine_[0];
+		Line line = selectionStartLine_;
+		while( line != null )
+		{
+			line.Field.IsSelected = true;
+			selectedLines_.Add(-(int)line.Binding.transform.position.y, line);
+			selectionEndLine_ = line;
+			line = line.NextVisibleLine;
+		}
+
+		focusedLine_ = selectionStartLine_;
+		focusedLine_.Field.IsFocused = true;
+	}
+
 	/// <summary>
 	/// 選択部分を消して、新たに入力可能となった行を返す
 	/// </summary>
@@ -285,17 +329,18 @@ public class Tree : MonoBehaviour {
 			KeyCode.Delete
 		};
 
+		var updateStream = this.UpdateAsObservable();
+
 		foreach( KeyCode key in throttleKeys )
 		{
 			// 最初の入力
-			this.UpdateAsObservable()
-				.Where(x => Input.GetKeyDown(key))
+			updateStream.Where(x => Input.GetKeyDown(key))
 				.Merge(
 			// 押しっぱなしにした時の自動連打
-			this.UpdateAsObservable()
-				.Where(x => Input.GetKey(key))
+			updateStream.Where(x => Input.GetKey(key))
 				.Delay(TimeSpan.FromSeconds(GameContext.Config.ArrowStreamDelayTime))
-				.ThrottleFirst(TimeSpan.FromSeconds(GameContext.Config.ArrowStreamIntervalTime)))
+				.ThrottleFirst(TimeSpan.FromSeconds(GameContext.Config.ArrowStreamIntervalTime))
+				)
 				.TakeUntil(this.UpdateAsObservable().Where(x => Input.GetKeyUp(key)))
 				.RepeatUntilDestroy(this)
 				.Subscribe(_ => OnThrottleInput(key));
@@ -324,31 +369,6 @@ public class Tree : MonoBehaviour {
 			if( Input.GetKey(KeyCode.LeftShift) ) OnShiftArrowInput(key);
 			else OnArrowInput(key);
 			break;
-		}
-	}
-
-	protected IEnumerable<Line> GetSelectedOrFocusedLines(bool ascending = true)
-	{
-		if( HasSelection )
-		{
-			if( ascending )
-			{
-				foreach( Line line in selectedLines_.Values )
-				{
-					yield return line;
-				}
-			}
-			else
-			{
-				for( int i = selectedLines_.Count - 1; i >= 0; --i )
-				{
-					yield return selectedLines_.Values[i];
-				}
-			}
-		}
-		else if( focusedLine_ != null )
-		{
-			yield return focusedLine_;
 		}
 	}
 
@@ -474,9 +494,9 @@ public class Tree : MonoBehaviour {
 		{
 			DeleteSelection();
 		}
-		else if( deleteKeyConsumed_ )
+		else if( wasDeleteKeyConsumed_ )
 		{
-			deleteKeyConsumed_ = false;
+			wasDeleteKeyConsumed_ = false;
 			return;
 		}
 
@@ -596,6 +616,67 @@ public class Tree : MonoBehaviour {
 				UpdateSelection(focusedLine_, true);
 			}
 			break;
+		}
+	}
+	
+	protected void OnCtrlMLInput()
+	{
+		ClearSelection();
+
+		Line layoutStart = null;
+		if( isAllFolded_ )
+		{
+			Line line = rootLine_[0];
+			// unfold all
+			while( line != null )
+			{
+				if( line.Count > 0 && line.IsFolded )
+				{
+					line.IsFolded = false;
+					foreach( Line child in line )
+					{
+						child.AdjustLayout();
+					}
+					if( layoutStart == null ) layoutStart = line;
+				}
+				line = line.NextVisibleLine;
+			}
+			
+			isAllFolded_ = false;
+		}
+		else
+		{
+			Line line = rootLine_.LastVisibleLine;
+			// fold all
+			while( line != null )
+			{
+				if( line.Count > 0 && line.IsFolded == false )
+				{
+					line.IsFolded = true;
+					foreach( Line child in line )
+					{
+						child.AdjustLayout();
+					}
+					layoutStart = line;
+				}
+				line = line.PrevVisibleLine;
+			}
+
+			isAllFolded_ = true;
+
+			if( focusedLine_ != null )
+			{
+				while( focusedLine_.Parent.IsFolded )
+				{
+					focusedLine_ = focusedLine_.Parent;
+				}
+				focusedLine_.Field.IsFocused = true;
+			}
+		}
+
+		if( layoutStart != null )
+		{
+			layoutStart.AdjustLayoutRecursive();
 		}
 	}
 
@@ -735,6 +816,31 @@ public class Tree : MonoBehaviour {
 		fields_.Add(line.Field);
 	}
 
+	protected IEnumerable<Line> GetSelectedOrFocusedLines(bool ascending = true)
+	{
+		if( HasSelection )
+		{
+			if( ascending )
+			{
+				foreach( Line line in selectedLines_.Values )
+				{
+					yield return line;
+				}
+			}
+			else
+			{
+				for( int i = selectedLines_.Count - 1; i >= 0; --i )
+				{
+					yield return selectedLines_.Values[i];
+				}
+			}
+		}
+		else if( focusedLine_ != null )
+		{
+			yield return focusedLine_;
+		}
+	}
+
 	#endregion
 
 
@@ -748,7 +854,12 @@ public class Tree : MonoBehaviour {
 
 	public void OnDeleteKeyConsumed()
 	{
-		deleteKeyConsumed_ = true;
+		wasDeleteKeyConsumed_ = true;
+	}
+
+	public void OnTextFieldDestroy(TextField field)
+	{
+		fields_.Remove(field);
 	}
 
 	#endregion

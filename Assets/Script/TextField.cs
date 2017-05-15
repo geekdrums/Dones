@@ -43,14 +43,16 @@ public class TextField : InputField, IColoredObject
 	}
 	protected bool isSelected_;
 
+	public Color Foreground { get { return textComponent.color; } set { textComponent.color = value; } }
 	public Color Background { get { return image_.color; } set { image_.color = value; } }
 	public void SetColor(Color color) { Background = color; }
 	public Color GetColor() { return Background;  }
-	public Color Foreground { get { return textComponent.color; } set { textComponent.color = value; } }
+
 	public Rect Rect { get { return new Rect(image_.rectTransform.position, image_.rectTransform.sizeDelta); } }
 	public float RectY { get { return image_.rectTransform.position.y; } }
-
 	protected Image image_;
+
+	public Tree OwnerTree { get { return ownerTree_; } }
 	protected Tree ownerTree_;
 
 	// Use this for initialization
@@ -69,6 +71,11 @@ public class TextField : InputField, IColoredObject
 	// Update is called once per frame
 	void Update()
 	{
+	}
+
+	protected override void OnDestroy()
+	{
+		ownerTree_.OnTextFieldDestroy(this);
 	}
 
 	protected override void LateUpdate()
@@ -123,7 +130,6 @@ public class TextField : InputField, IColoredObject
 		Append(text);
 		UpdateLabel();
 	}
-
 	
 	protected Event processingEvent_ = new Event();
 	public override void OnUpdateSelected(BaseEventData eventData)
@@ -201,6 +207,4 @@ public class TextField : InputField, IColoredObject
 
 		eventData.Use();
 	}
-
-
 }
