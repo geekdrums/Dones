@@ -39,7 +39,7 @@ public class Tree : MonoBehaviour {
 		rootLine_.Add(new Line("Hello6"));
 		rootLine_.Bind(this.gameObject);
 
-		foreach( Line line in rootLine_.VisibleTree )
+		foreach( Line line in rootLine_.GetAllChildren() )
 		{
 			InstantiateLine(line);
 		}
@@ -65,6 +65,10 @@ public class Tree : MonoBehaviour {
 		else if( Input.GetKeyDown(KeyCode.C) && ctrlOnly )
 		{
 			Copy();
+		}
+		else if( Input.GetKeyDown(KeyCode.X) && ctrlOnly )
+		{
+			Cut();
 		}
 		else if( Input.GetKeyDown(KeyCode.Tab) )
 		{
@@ -149,6 +153,10 @@ public class Tree : MonoBehaviour {
 				}
 			}
 		}
+		else if( Input.GetMouseButtonUp(0) )
+		{
+			selectionEndLine_ = null;
+		}
 	}
 
 	#endregion
@@ -192,6 +200,50 @@ public class Tree : MonoBehaviour {
 		selectedLines_.Clear();
 
 		if( clearStartAndEnd ) selectionStartLine_ = selectionEndLine_ = null;
+	}
+
+	protected void DeleteSelection()
+	{
+		Line prevSelection = selectedLines_.Values[0].PrevVisibleLine;
+		if( prevSelection == null ) prevSelection = rootLine_;
+		foreach( Line line in GetSelectedOrFocusedLines(ascending: false) )
+		{
+			if( line.HasVisibleChild )
+			{
+				Line prev = line.PrevVisibleLine;
+				while( prev.Field.IsSelected )
+				{
+					prev = prev.PrevVisibleLine;
+					if( prev == null ) prev = rootLine_;
+				}
+				
+				List<Line> children = new List<Line>(focusedLine_);
+				for( int i = 0; i < children.Count; ++i )
+				{
+					prev.Insert(i, children[i]);
+					children[i].AdjustLayout();
+				}
+			}
+			
+			Line layoutStart = line.NextVisibleLine;
+			line.Parent.Remove(line);
+			if( layoutStart != null && layoutStart.Field.IsSelected == false )
+			{
+				layoutStart.Parent.AdjustLayoutRecursive(layoutStart.IndexInParent);
+			}
+		}
+		selectedLines_.Clear();
+		selectionStartLine_ = selectionEndLine_ = focusedLine_ = null;
+
+		focusedLine_ = prevSelection.NextVisibleLine;
+		if( focusedLine_ == null )
+		{
+			// 入力可能な行が無くなると困るので、作る
+			focusedLine_ = new Line("");
+			prevSelection.Parent.Add(focusedLine_);
+			InstantiateLine(focusedLine_);
+		}
+		focusedLine_.Field.IsFocused = true;
 	}
 
 	#endregion
@@ -254,7 +306,7 @@ public class Tree : MonoBehaviour {
 		}
 	}
 
-	protected IEnumerable<Line> GetTargetLines(bool ascending = true)
+	protected IEnumerable<Line> GetSelectedOrFocusedLines(bool ascending = true)
 	{
 		if( HasSelection )
 		{
@@ -281,7 +333,7 @@ public class Tree : MonoBehaviour {
 
 	protected void OnTabInput()
 	{
-		foreach( Line line in GetTargetLines() )
+		foreach( Line line in GetSelectedOrFocusedLines() )
 		{
 			int IndexInParent = line.IndexInParent;
 			if( IndexInParent > 0 )
@@ -308,19 +360,19 @@ public class Tree : MonoBehaviour {
 
 	protected void OnShiftTabInput()
 	{
-		foreach( Line line in GetTargetLines(ascending: false) )
+		foreach( Line line in GetSelectedOrFocusedLines(ascending: false) )
 		{
 			if( line.Parent != null && line.Parent.Parent != null && ( line.Parent.Field.IsSelected == false || line.Parent.Level <= 1 ) )
 			{
-				Line nextLine = line.Parent[line.IndexInParent + 1];
+				Line layoutStart = line.Parent[line.IndexInParent + 1];
 				
 				Line newParent = line.Parent.Parent;
 				newParent.Insert(line.Parent.IndexInParent + 1, line);
 				line.AdjustLayout(Line.Direction.XY);
 
-				if( nextLine != null && nextLine.Field.IsSelected == false )
+				if( layoutStart != null && layoutStart.Field.IsSelected == false )
 				{
-					nextLine.Parent.AdjustLayoutRecursive(nextLine.IndexInParent);
+					layoutStart.Parent.AdjustLayoutRecursive(layoutStart.IndexInParent);
 				}
 			}
 		}
@@ -358,7 +410,11 @@ public class Tree : MonoBehaviour {
 
 	protected void OnBackspaceInput()
 	{
-		if( focusedLine_.Field.CaretPosision == 0 )
+		if( HasSelection )
+		{
+			DeleteSelection();
+		}
+		else if( focusedLine_.Field.CaretPosision == 0 )
 		{
 			Line prev = focusedLine_.PrevVisibleLine;
 			if( prev == null ) return;
@@ -393,7 +449,11 @@ public class Tree : MonoBehaviour {
 
 	protected void OnDeleteInput()
 	{
-		if( deleteKeyConsumed_ )
+		if( HasSelection )
+		{
+			DeleteSelection();
+		}
+		else if( deleteKeyConsumed_ )
 		{
 			deleteKeyConsumed_ = false;
 			return;
@@ -549,12 +609,40 @@ public class Tree : MonoBehaviour {
 					clipboardLines += tabstring;
 				}
 				clipboardLines += line.Text + System.Environment.NewLine;
+
+				if( line.IsFolded )
+				{
+					foreach( Line child in line.GetAllChildren() )
+					{
+						level = child.Level - 1;
+						for( int i = 0; i < level; ++i )
+						{
+							clipboardLines += tabstring;
+						}
+						clipboardLines += child.Text + System.Environment.NewLine;
+					}
+				}
 			}
-			Clipboard = clipboardLines;
+			Clipboard = clipboardLines.Remove(clipboardLines.Length - 1);
 		}
 	}
 	protected void Paste()
 	{
+		if( focusedLine_ == null )
+			return;
+
+		Line pasteStart = focusedLine_;
+		if( HasSelection )
+		{
+			DeleteSelection();
+			
+			Line line = new Line();
+			focusedLine_.Parent.Insert(focusedLine_.IndexInParent, line);
+			focusedLine_.Parent.AdjustLayoutRecursive(focusedLine_.IndexInParent);
+			InstantiateLine(line);
+			pasteStart = line;
+		}
+
 		string[] cilpboardLines = Clipboard.Split(separator, System.StringSplitOptions.None);
 
 		string text = cilpboardLines[0];
@@ -565,12 +653,12 @@ public class Tree : MonoBehaviour {
 			++currentLevel;
 			text = text.Remove(0, 1);
 		}
-		focusedLine_.Field.Paste(text);
+		pasteStart.Field.Paste(text);
 		oldLevel = currentLevel;
 
-		Line parent = focusedLine_.Parent;
-		Line brother = focusedLine_;
-		Line layoutStart = focusedLine_.NextVisibleLine;
+		Line parent = pasteStart.Parent;
+		Line brother = pasteStart;
+		Line layoutStart = pasteStart.NextVisibleLine;
 		for( int i = 1; i < cilpboardLines.Length; ++i )
 		{
 			text = cilpboardLines[i];
@@ -610,6 +698,14 @@ public class Tree : MonoBehaviour {
 		if( layoutStart != null )
 		{
 			layoutStart.Parent.AdjustLayoutRecursive(layoutStart.IndexInParent);
+		}
+	}
+	protected void Cut()
+	{
+		if( HasSelection )
+		{
+			Copy();
+			DeleteSelection();
 		}
 	}
 

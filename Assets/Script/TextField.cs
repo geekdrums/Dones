@@ -121,6 +121,7 @@ public class TextField : InputField, IColoredObject
 	public void Paste(string text)
 	{
 		Append(text);
+		UpdateLabel();
 	}
 
 	
@@ -153,6 +154,7 @@ public class TextField : InputField, IColoredObject
 					}
 					break;
 				case KeyCode.C:
+				case KeyCode.X:
 					if( ctrlOnly && isSelected_ )
 					{
 						// process in ownerTree

@@ -200,7 +200,33 @@ public class Line : IEnumerable<Line>
 			if( line != null ) yield return line;
 		}
 	}
+	
+	public IEnumerable<Line> GetVisibleChildren()
+	{
+		if( this.IsFolded == false )
+		{
+			foreach( Line child in children_ )
+			{
+				yield return child;
+				foreach( Line visibleLine in child.GetVisibleChildren() )
+				{
+					yield return visibleLine;
+				}
+			}
+		}
+	}
 
+	public IEnumerable<Line> GetAllChildren()
+	{
+		foreach( Line child in children_ )
+		{
+			yield return child;
+			foreach( Line grandchild in child.GetAllChildren() )
+			{
+				yield return grandchild;
+			}
+		}
+	}
 	#endregion
 
 
@@ -231,7 +257,7 @@ public class Line : IEnumerable<Line>
 			{
 				if( children_[i].Binding != null )
 				{
-					if( target == children_[i].Binding.transform.localPosition )
+					if( target == children_[i].Binding.transform.localPosition && AnimManager.IsAnimating(children_[i].Binding) == false )
 					{
 						// これ以下は高さが変わっていないので、再計算は不要
 						return;
@@ -353,27 +379,6 @@ public class Line : IEnumerable<Line>
 				index = parent_.IndexInTree + IndexInLocalTree;
 			}
 			return index;
-		}
-	}
-
-	public IEnumerable<Line> VisibleTree
-	{
-		get
-		{
-			if( parent_ != null )
-			{
-				yield return this;
-			}
-			if( this.IsFolded == false )
-			{
-				foreach( Line child in children_ )
-				{
-					foreach( Line visibleLine in child.VisibleTree )
-					{
-						yield return visibleLine;
-					}
-				}
-			}
 		}
 	}
 
