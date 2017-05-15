@@ -549,6 +549,7 @@ public class Tree : MonoBehaviour {
 			Line line = (key == KeyCode.DownArrow ? focusedLine_.NextVisibleLine : focusedLine_.PrevVisibleLine);
 			if( line != null )
 			{
+				focusedLine_.Field.IsFocused = false;
 				line.Field.IsFocused = true;
 			}
 			break;
@@ -559,6 +560,7 @@ public class Tree : MonoBehaviour {
 				Line next = focusedLine_.NextVisibleLine;
 				if( next != null )
 				{
+					focusedLine_.Field.IsFocused = false;
 					next.Field.CaretPosision = 0;
 					next.Field.IsFocused = true;
 				}
@@ -571,6 +573,7 @@ public class Tree : MonoBehaviour {
 				Line prev = focusedLine_.PrevVisibleLine;
 				if( prev != null )
 				{
+					focusedLine_.Field.IsFocused = false;
 					prev.Field.CaretPosision = prev.TextLength;
 					prev.Field.IsFocused = true;
 				}

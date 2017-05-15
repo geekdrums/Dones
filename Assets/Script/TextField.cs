@@ -8,10 +8,17 @@ using UnityEngine.EventSystems;
 
 public class TextField : InputField, IColoredObject
 {
+	#region properties
+
 	public Line BindedLine { get; set; }
 	
-	public int CaretPosision { get { return caretPos_; } set { caretPos_ = value; } }
+	public int CaretPosision
+	{
+		get { return caretPos_; }
+		set { caretPos_ = desiredCaretPos_ = value; }
+	}
 	protected int caretPos_;
+	protected static int desiredCaretPos_;
 
 	public bool IsFocused
 	{
@@ -55,6 +62,11 @@ public class TextField : InputField, IColoredObject
 	public Tree OwnerTree { get { return ownerTree_; } }
 	protected Tree ownerTree_;
 
+	#endregion
+
+
+	#region unity functions
+
 	// Use this for initialization
 	protected override void Awake()
 	{
@@ -73,6 +85,22 @@ public class TextField : InputField, IColoredObject
 	{
 	}
 
+	#endregion
+
+
+	#region public functions
+
+	public void Paste(string text)
+	{
+		Append(text);
+		UpdateLabel();
+	}
+
+	#endregion
+
+
+	#region override functions
+
 	protected override void OnDestroy()
 	{
 		ownerTree_.OnTextFieldDestroy(this);
@@ -86,14 +114,19 @@ public class TextField : InputField, IColoredObject
 
 		if( oldIsFocused != isFocused )
 		{
+			caretPos_ = desiredCaretPos_;
+			if( caretPos_ > text.Length )
+			{
+				caretPos_ = text.Length;
+			}
 			selectionAnchorPosition = selectionFocusPosition = caretPos_;
 			ownerTree_.OnFocused(BindedLine);
 		}
 		if( isFocused )
 		{
-			if( Input.GetKeyDown(KeyCode.DownArrow) == false && Input.GetKeyDown(KeyCode.UpArrow) == false )
+			if( Input.GetKey(KeyCode.LeftArrow) || Input.GetKey(KeyCode.RightArrow) )
 			{
-				caretPos_ = caretPosition;
+				desiredCaretPos_ = caretPos_ = caretPosition;
 			}
 		}
 	}
@@ -118,17 +151,11 @@ public class TextField : InputField, IColoredObject
 		//{
 		Vector2 localMousePos;
 		RectTransformUtility.ScreenPointToLocalPointInRectangle(textComponent.rectTransform, eventData.position, eventData.pressEventCamera, out localMousePos);
-		caretPos_ = caretSelectPositionInternal = caretPositionInternal = GetCharacterIndexFromPosition(localMousePos) + m_DrawStart;
+		desiredCaretPos_ = caretPos_ = caretSelectPositionInternal = caretPositionInternal = GetCharacterIndexFromPosition(localMousePos) + m_DrawStart;
 		//}
 
 		UpdateLabel();
 		eventData.Use();
-	}
-
-	public void Paste(string text)
-	{
-		Append(text);
-		UpdateLabel();
 	}
 	
 	protected Event processingEvent_ = new Event();
@@ -156,7 +183,6 @@ public class TextField : InputField, IColoredObject
 					if( ctrlOnly )
 					{
 						// process in ownerTree
-						return;
 					}
 					break;
 				case KeyCode.C:
@@ -164,7 +190,6 @@ public class TextField : InputField, IColoredObject
 					if( ctrlOnly && isSelected_ )
 					{
 						// process in ownerTree
-						return;
 					}
 					else
 					{
@@ -183,6 +208,30 @@ public class TextField : InputField, IColoredObject
 						bool use = caretPos_ < text.Length;
 						KeyPressed(processingEvent_);
 						if( use ) ownerTree_.OnDeleteKeyConsumed();
+					}
+					break;
+				case KeyCode.DownArrow:
+					{
+						if( BindedLine.NextVisibleLine != null )
+						{
+							// process in ownerTree
+						}
+						else
+						{
+							KeyPressed(processingEvent_);
+						}
+					}
+					break;
+				case KeyCode.UpArrow:
+					{
+						if( BindedLine.PrevVisibleLine != null )
+						{
+							// process in ownerTree
+						}
+						else
+						{
+							KeyPressed(processingEvent_);
+						}
 					}
 					break;
 				default:
@@ -207,4 +256,6 @@ public class TextField : InputField, IColoredObject
 
 		eventData.Use();
 	}
+
+	#endregion
 }
