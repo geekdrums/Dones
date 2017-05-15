@@ -180,7 +180,16 @@ public class TextField : InputField, IColoredObject
 					}
 					break;
 				default:
-					KeyPressed(processingEvent_);
+					if( processingEvent_.keyCode == KeyCode.None && ownerTree_.HasSelection )
+					{
+						TextField newField = ownerTree_.DeleteSelection(true).Field;
+						newField.KeyPressed(processingEvent_);
+						newField.CaretPosision = newField.text.Length;
+					}
+					else
+					{
+						KeyPressed(processingEvent_);
+					}
 					break;
 				}
 			}

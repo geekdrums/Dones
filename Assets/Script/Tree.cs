@@ -176,7 +176,7 @@ public class Tree : MonoBehaviour {
 		}
 	}
 
-	bool HasSelection { get { return selectedLines_.Count > 0; } }
+	public bool HasSelection { get { return selectedLines_.Count > 0; } }
 
 	protected void UpdateSelection(Line line, bool isSelected)
 	{
@@ -202,7 +202,11 @@ public class Tree : MonoBehaviour {
 		if( clearStartAndEnd ) selectionStartLine_ = selectionEndLine_ = null;
 	}
 
-	protected void DeleteSelection()
+	/// <summary>
+	/// 選択部分を消して、新たに入力可能となった行を返す
+	/// </summary>
+	/// <returns></returns>
+	public Line DeleteSelection(bool createNewLine = false)
 	{
 		Line prevSelection = selectedLines_.Values[0].PrevVisibleLine;
 		if( prevSelection == null ) prevSelection = rootLine_;
@@ -240,10 +244,27 @@ public class Tree : MonoBehaviour {
 		{
 			// 入力可能な行が無くなると困るので、作る
 			focusedLine_ = new Line("");
-			prevSelection.Parent.Add(focusedLine_);
+			if( prevSelection.Parent != null )
+			{
+				prevSelection.Parent.Add(focusedLine_);
+			}
+			else //prevSelection == rootLine_
+			{
+				prevSelection.Add(focusedLine_);
+			}
 			InstantiateLine(focusedLine_);
 		}
+		else if( createNewLine )
+		{
+			Line newLine = new Line();
+			focusedLine_.Parent.Insert(focusedLine_.IndexInParent, newLine);
+			focusedLine_.Parent.AdjustLayoutRecursive(focusedLine_.IndexInParent);
+			InstantiateLine(newLine);
+			focusedLine_ = newLine;
+		}
+
 		focusedLine_.Field.IsFocused = true;
+		return focusedLine_;
 	}
 
 	#endregion
@@ -634,13 +655,7 @@ public class Tree : MonoBehaviour {
 		Line pasteStart = focusedLine_;
 		if( HasSelection )
 		{
-			DeleteSelection();
-			
-			Line line = new Line();
-			focusedLine_.Parent.Insert(focusedLine_.IndexInParent, line);
-			focusedLine_.Parent.AdjustLayoutRecursive(focusedLine_.IndexInParent);
-			InstantiateLine(line);
-			pasteStart = line;
+			pasteStart = DeleteSelection(true);
 		}
 
 		string[] cilpboardLines = Clipboard.Split(separator, System.StringSplitOptions.None);
