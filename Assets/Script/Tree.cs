@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.UI;
 using UniRx;
 using UniRx.Triggers;
 
@@ -22,6 +23,8 @@ public class Tree : MonoBehaviour {
 	bool wasDeleteKeyConsumed_ = false;
 	bool wasCtrlMInput_ = false;
 	bool isAllFolded_ = false;
+	
+	LayoutElement layout_;
 
 	#endregion
 
@@ -30,6 +33,10 @@ public class Tree : MonoBehaviour {
 
 	// Use this for initialization
 	void Awake () {
+		
+		layout_ = GetComponentInParent<LayoutElement>();
+		GetComponentInParent<ScrollRect>().movementType = ScrollRect.MovementType.Clamped;
+
 		// test
 		rootLine_ = new Line("CategoryName");
 		rootLine_.Add(new Line("Hello World"));
@@ -446,6 +453,7 @@ public class Tree : MonoBehaviour {
 			}
 		}
 		InstantiateLine(line);
+		line.Field.CaretPosision = 0;
 		line.Field.IsFocused = (caretPos == 0 && focusedLine_.TextLength > 0) == false;
 	}
 
@@ -817,6 +825,16 @@ public class Tree : MonoBehaviour {
 	{
 		line.Bind(Instantiate(FieldPrefab.gameObject));
 		fields_.Add(line.Field);
+		UpdateRectSize();
+	}
+
+	protected void UpdateRectSize()
+	{
+		TextField lastLine = rootLine_.LastVisibleLine.Field;
+		if( lastLine != null )
+		{
+			layout_.preferredHeight = -(lastLine.transform.position.y - this.transform.position.y) + GameContext.Config.HeightPerLine * 1.5f;
+		}
 	}
 
 	protected IEnumerable<Line> GetSelectedOrFocusedLines(bool ascending = true)
@@ -863,6 +881,7 @@ public class Tree : MonoBehaviour {
 	public void OnTextFieldDestroy(TextField field)
 	{
 		fields_.Remove(field);
+		UpdateRectSize();
 	}
 
 	#endregion

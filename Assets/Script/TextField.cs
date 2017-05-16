@@ -122,13 +122,6 @@ public class TextField : InputField, IColoredObject
 			selectionAnchorPosition = selectionFocusPosition = caretPos_;
 			ownerTree_.OnFocused(BindedLine);
 		}
-		if( isFocused )
-		{
-			if( Input.GetKey(KeyCode.LeftArrow) || Input.GetKey(KeyCode.RightArrow) )
-			{
-				desiredCaretPos_ = caretPos_ = caretPosition;
-			}
-		}
 	}
 
 	public override void OnPointerDown(PointerEventData eventData)
@@ -177,6 +170,7 @@ public class TextField : InputField, IColoredObject
 				bool alt = (currentEventModifiers & EventModifiers.Alt) != 0;
 				bool ctrlOnly = ctrl && !alt && !shift;
 
+				desiredCaretPos_ = caretPos_ = caretPosition;
 				switch( processingEvent_.keyCode )
 				{
 				case KeyCode.V:

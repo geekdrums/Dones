@@ -92,7 +92,7 @@ public abstract class AnimInfoBase
 	protected float currentValueFloat { get { return (float)initialValue_ + ((float)Target - (float)initialValue_) * animValue_; } }
 	protected Vector3 currentValueVector3 { get { return (Vector3)initialValue_ + ((Vector3)Target - (Vector3)initialValue_) * animValue_; } }
 
-	protected static float overshoot = 1.70158f;
+	public static float overshoot = 1.70158f;
 
 	public AnimInfoBase(GameObject obj, object target, ParamType paramType, AnimType animType, float factor = 0.1f, float delay = 0.0f, AnimEndOption endOption = AnimEndOption.None)
 	{
