@@ -229,7 +229,7 @@ public class TextField : InputField, IColoredObject
 					}
 					break;
 				default:
-					if( processingEvent_.keyCode == KeyCode.None && ownerTree_.HasSelection )
+					if( processingEvent_.keyCode == KeyCode.None && ownerTree_.HasSelection && processingEvent_.character.ToString() != Tree.TabString )
 					{
 						TextField newField = ownerTree_.DeleteSelection(true).Field;
 						newField.KeyPressed(processingEvent_);

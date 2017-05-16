@@ -23,8 +23,10 @@ public class Tree : MonoBehaviour {
 	bool wasDeleteKeyConsumed_ = false;
 	bool wasCtrlMInput_ = false;
 	bool isAllFolded_ = false;
-	
+	int suspendLayoutCount_ = 0;
+
 	LayoutElement layout_;
+	ScrollRect scrollRect_;
 
 	#endregion
 
@@ -35,7 +37,7 @@ public class Tree : MonoBehaviour {
 	void Awake () {
 		
 		layout_ = GetComponentInParent<LayoutElement>();
-		GetComponentInParent<ScrollRect>().movementType = ScrollRect.MovementType.Clamped;
+		scrollRect_ = GetComponentInParent<ScrollRect>();
 
 		// test
 		rootLine_ = new Line("CategoryName");
@@ -216,11 +218,11 @@ public class Tree : MonoBehaviour {
 		line.Field.IsSelected = isSelected;
 		if( isSelected && selectedLines_.Values.Contains(line) == false )
 		{
-			selectedLines_.Add(-(int)line.Binding.transform.position.y, line);
+			selectedLines_.Add(-(int)(line.Binding.transform.position.y - this.transform.position.y), line);
 		}
 		else if( isSelected == false && selectedLines_.Values.Contains(line) )
 		{
-			selectedLines_.Remove(-(int)line.Binding.transform.position.y);
+			selectedLines_.Remove(-(int)(line.Binding.transform.position.y - this.transform.position.y));
 		}
 	}
 
@@ -244,13 +246,10 @@ public class Tree : MonoBehaviour {
 		while( line != null )
 		{
 			line.Field.IsSelected = true;
-			selectedLines_.Add(-(int)line.Binding.transform.position.y, line);
+			selectedLines_.Add(-(int)(line.Binding.transform.position.y - this.transform.position.y), line);
 			selectionEndLine_ = line;
 			line = line.NextVisibleLine;
 		}
-
-		focusedLine_ = selectionStartLine_;
-		focusedLine_.Field.IsFocused = true;
 	}
 
 	/// <summary>
@@ -259,6 +258,7 @@ public class Tree : MonoBehaviour {
 	/// <returns></returns>
 	public Line DeleteSelection(bool createNewLine = false)
 	{
+		SuspendLayout();
 		Line prevSelection = selectedLines_.Values[0].PrevVisibleLine;
 		if( prevSelection == null ) prevSelection = rootLine_;
 		foreach( Line line in GetSelectedOrFocusedLines(ascending: false) )
@@ -287,6 +287,8 @@ public class Tree : MonoBehaviour {
 				layoutStart.Parent.AdjustLayoutRecursive(layoutStart.IndexInParent);
 			}
 		}
+		ResumeLayout();
+		UpdateScrollRectSize();
 		selectedLines_.Clear();
 		selectionStartLine_ = selectionEndLine_ = focusedLine_ = null;
 
@@ -393,6 +395,7 @@ public class Tree : MonoBehaviour {
 				{
 					newParent.IsFolded = false;
 					newParent.AdjustLayoutRecursive();
+					UpdateScrollRectSize();
 				}
 				else
 				{
@@ -634,7 +637,7 @@ public class Tree : MonoBehaviour {
 	{
 		ClearSelection();
 
-		Line layoutStart = null;
+		SuspendLayout();
 		if( isAllFolded_ )
 		{
 			Line line = rootLine_[0];
@@ -644,11 +647,8 @@ public class Tree : MonoBehaviour {
 				if( line.Count > 0 && line.IsFolded )
 				{
 					line.IsFolded = false;
-					foreach( Line child in line )
-					{
-						child.AdjustLayout();
-					}
-					if( layoutStart == null ) layoutStart = line;
+					line.AdjustLayout(Line.Direction.XY);
+					line.AdjustLayoutRecursive(0, (Line l) => l.Count > 0 && l.IsFolded);
 				}
 				line = line.NextVisibleLine;
 			}
@@ -657,6 +657,7 @@ public class Tree : MonoBehaviour {
 		}
 		else
 		{
+			Line layoutStart = null;
 			Line line = rootLine_.LastVisibleLine;
 			// fold all
 			while( line != null )
@@ -683,12 +684,14 @@ public class Tree : MonoBehaviour {
 				}
 				focusedLine_.Field.IsFocused = true;
 			}
-		}
 
-		if( layoutStart != null )
-		{
-			layoutStart.AdjustLayoutRecursive();
+			if( layoutStart != null )
+			{
+				layoutStart.AdjustLayoutRecursive();
+			}
 		}
+		ResumeLayout();
+		UpdateScrollRectSize();
 	}
 
 	#endregion
@@ -696,7 +699,7 @@ public class Tree : MonoBehaviour {
 
 	#region clipboard
 
-	protected static string Clipboard
+	public static string Clipboard
 	{
 		get
 		{
@@ -707,8 +710,8 @@ public class Tree : MonoBehaviour {
 			GUIUtility.systemCopyBuffer = value;
 		}
 	}
-	protected static string[] separator = new string[] { System.Environment.NewLine };
-	protected static string tabstring = "	";
+	public static string[] LineSeparator = new string[] { System.Environment.NewLine };
+	public static string TabString = "	";
 	protected void Copy()
 	{
 		if( HasSelection )
@@ -719,7 +722,7 @@ public class Tree : MonoBehaviour {
 				int level = line.Level - 1;
 				for( int i = 0; i < level; ++i )
 				{
-					clipboardLines += tabstring;
+					clipboardLines += TabString;
 				}
 				clipboardLines += line.Text + System.Environment.NewLine;
 
@@ -730,7 +733,7 @@ public class Tree : MonoBehaviour {
 						level = child.Level - 1;
 						for( int i = 0; i < level; ++i )
 						{
-							clipboardLines += tabstring;
+							clipboardLines += TabString;
 						}
 						clipboardLines += child.Text + System.Environment.NewLine;
 					}
@@ -750,12 +753,12 @@ public class Tree : MonoBehaviour {
 			pasteStart = DeleteSelection(true);
 		}
 
-		string[] cilpboardLines = Clipboard.Split(separator, System.StringSplitOptions.None);
+		string[] cilpboardLines = Clipboard.Split(LineSeparator, System.StringSplitOptions.None);
 
 		string text = cilpboardLines[0];
 		int currentLevel = 0;
 		int oldLevel = 0;
-		while( text.StartsWith(tabstring) )
+		while( text.StartsWith(TabString) )
 		{
 			++currentLevel;
 			text = text.Remove(0, 1);
@@ -763,6 +766,7 @@ public class Tree : MonoBehaviour {
 		pasteStart.Field.Paste(text);
 		oldLevel = currentLevel;
 
+		SuspendLayout();
 		Line parent = pasteStart.Parent;
 		Line brother = pasteStart;
 		Line layoutStart = pasteStart.NextVisibleLine;
@@ -770,7 +774,7 @@ public class Tree : MonoBehaviour {
 		{
 			text = cilpboardLines[i];
 			currentLevel = 0;
-			while( text.StartsWith(tabstring) )
+			while( text.StartsWith(TabString) )
 			{
 				++currentLevel;
 				text = text.Remove(0, 1);
@@ -806,6 +810,8 @@ public class Tree : MonoBehaviour {
 		{
 			layoutStart.Parent.AdjustLayoutRecursive(layoutStart.IndexInParent);
 		}
+		ResumeLayout();
+		UpdateScrollRectSize();
 	}
 	protected void Cut()
 	{
@@ -825,15 +831,40 @@ public class Tree : MonoBehaviour {
 	{
 		line.Bind(Instantiate(FieldPrefab.gameObject));
 		fields_.Add(line.Field);
-		UpdateRectSize();
+		UpdateScrollRectSize();
 	}
 
-	protected void UpdateRectSize()
+	public void UpdateScrollRectSize()
 	{
-		TextField lastLine = rootLine_.LastVisibleLine.Field;
-		if( lastLine != null )
+		if( suspendLayoutCount_ <= 0 )
 		{
-			layout_.preferredHeight = -(lastLine.transform.position.y - this.transform.position.y) + GameContext.Config.HeightPerLine * 1.5f;
+			Line lastLine = rootLine_.LastVisibleLine;
+			if( lastLine != null && lastLine.Field != null )
+			{
+				layout_.preferredHeight = -(lastLine.TargetAbsolutePosition.y - this.transform.position.y) + GameContext.Config.HeightPerLine * 1.5f;
+			}
+		}
+	}
+
+	protected void UpdateScrollFocusPosition()
+	{
+		if( focusedLine_ != null )
+		{
+			float scrollHeight = scrollRect_.GetComponent<RectTransform>().sizeDelta.y;
+			float focusHeight = -(focusedLine_.Field.transform.position.y - this.transform.position.y);
+			// focusLineが下側に出て見えなくなった場合
+			float focusUnderHeight = -(focusedLine_.Field.transform.position.y - scrollRect_.transform.position.y) - scrollHeight;
+			if( focusUnderHeight > 0 )
+			{
+				scrollRect_.verticalScrollbar.value = 1.0f - (focusHeight + GameContext.Config.HeightPerLine - scrollHeight) / (layout_.preferredHeight - scrollHeight);
+			}
+
+			// focusLineが上側に出て見えなくなった場合
+			float focusOverHeight = (focusedLine_.Field.transform.position.y + GameContext.Config.HeightPerLine - scrollRect_.transform.position.y);
+			if( focusOverHeight > 0 )
+			{
+				scrollRect_.verticalScrollbar.value = (layout_.preferredHeight - scrollHeight - focusHeight + GameContext.Config.HeightPerLine) / (layout_.preferredHeight - scrollHeight);
+			}
 		}
 	}
 
@@ -871,6 +902,7 @@ public class Tree : MonoBehaviour {
 	{
 		focusedLine_ = line;
 		selectionStartLine_ = line;
+		UpdateScrollFocusPosition();
 	}
 
 	public void OnDeleteKeyConsumed()
@@ -881,7 +913,18 @@ public class Tree : MonoBehaviour {
 	public void OnTextFieldDestroy(TextField field)
 	{
 		fields_.Remove(field);
-		UpdateRectSize();
+		UpdateScrollRectSize();
+	}
+
+	public void SuspendLayout()
+	{
+		++suspendLayoutCount_;
+	}
+
+	public void ResumeLayout()
+	{
+		--suspendLayoutCount_;
+		if( suspendLayoutCount_ < 0 ) suspendLayoutCount_ = 0;
 	}
 
 	#endregion

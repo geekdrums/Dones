@@ -32,7 +32,10 @@ public class Line : IEnumerable<Line>
 						line.Binding.SetActive(isFolded_ == false);
 					}
 				}
-
+				if( Field != null )
+				{
+					Field.OwnerTree.UpdateScrollRectSize();
+				}
 				if( Toggle != null && Toggle.isOn != !IsFolded )
 				{
 					Toggle.isOn = !IsFolded;
@@ -45,6 +48,8 @@ public class Line : IEnumerable<Line>
 
 	public bool IsDone { get { return isDone_; } set { isDone_ = value; } }
 	protected bool isDone_ = false;
+
+	public Vector3 TargetPosition { get; protected set; }
 
 	public GameObject Binding { get; protected set; }
 	public TextField Field { get; protected set; }
@@ -238,13 +243,17 @@ public class Line : IEnumerable<Line>
 		}
 	}
 
-	public void AdjustLayoutRecursive(int startIndex = 0)
+	public void AdjustLayoutRecursive(int startIndex = 0, Predicate<Line> predToBreak = null)
 	{
 		if( startIndex < Count )
 		{
 			Vector3 target = children_[startIndex].CalcTargetPosition();
 			for( int i = startIndex; i < Count; ++i )
 			{
+				if( predToBreak != null && predToBreak(children_[i]) )
+				{
+					return;
+				}
 				if( children_[i].Binding != null )
 				{
 					if( target == children_[i].Binding.transform.localPosition && AnimManager.IsAnimating(children_[i].Binding) == false )
@@ -253,6 +262,7 @@ public class Line : IEnumerable<Line>
 						return;
 					}
 
+					children_[i].TargetPosition = target;
 					AnimManager.AddAnim(children_[i].Binding, target, ParamType.Position, AnimType.Time, GameContext.Config.AnimTime);
 					//debug
 					//children_[i].Field.Foreground = ColorManager.MakeAlpha(children_[i].Field.Foreground, 0);
@@ -264,7 +274,7 @@ public class Line : IEnumerable<Line>
 
 		if( parent_ != null )
 		{
-			parent_.AdjustLayoutRecursive(IndexInParent + 1);
+			parent_.AdjustLayoutRecursive(IndexInParent + 1, predToBreak);
 		}
 	}
 
@@ -273,13 +283,16 @@ public class Line : IEnumerable<Line>
 		switch(dir)
 		{
 		case Direction.XY:
-			return new Vector3(GameContext.Config.WidthPerLevel, -IndexInLocalTree * GameContext.Config.HeightPerLine);
+			TargetPosition = new Vector3(GameContext.Config.WidthPerLevel, -IndexInLocalTree * GameContext.Config.HeightPerLine);
+			break;
 		case Direction.X:
-			return new Vector3(GameContext.Config.WidthPerLevel, Binding.transform.localPosition.y);
+			TargetPosition = new Vector3(GameContext.Config.WidthPerLevel, Binding.transform.localPosition.y);
+			break;
 		case Direction.Y:
-			return new Vector3(Binding.transform.localPosition.x, -IndexInLocalTree * GameContext.Config.HeightPerLine);
+			TargetPosition = new Vector3(Binding.transform.localPosition.x, -IndexInLocalTree * GameContext.Config.HeightPerLine);
+			break;
 		}
-		return Vector3.zero;
+		return TargetPosition;
 	}
 
 	#endregion
@@ -413,6 +426,16 @@ public class Line : IEnumerable<Line>
 		}
 	}
 	
+	public Vector3 TargetAbsolutePosition
+	{
+		get
+		{
+			if( parent_.parent_ != null ) return TargetPosition + parent_.TargetAbsolutePosition;
+			else if( Field != null ) return TargetPosition + Field.transform.parent.position;
+			else return TargetPosition;
+		}
+	}
+
 	#endregion
 
 }
