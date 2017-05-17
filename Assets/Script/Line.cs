@@ -34,7 +34,7 @@ public class Line : IEnumerable<Line>
 				}
 				if( Field != null )
 				{
-					Field.OwnerTree.UpdateScrollRectSize();
+					Field.OwnerTree.OnLayoutChanged();
 				}
 				if( Toggle != null && Toggle.isOn != !IsFolded )
 				{

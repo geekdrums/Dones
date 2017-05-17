@@ -4,12 +4,12 @@ using UnityEngine;
 
 public class Config : MonoBehaviour
 {
-	public float WidthPerLevel = 2.0f;
-	public float HeightPerLine = 1.0f;
-	public float AnimTime = 0.07f;
+	public float WidthPerLevel = 60.0f;
+	public float HeightPerLine = 30.0f;
+	public float AnimTime = 0.05f;
 	public float AnimOvershoot = 1.70158f;
-	public float ArrowStreamDelayTime = 0.5f;
-	public float ArrowStreamIntervalTime = 0.05f;
+	public float ArrowStreamDelayTime = 0.3f;
+	public float ArrowStreamIntervalTime = 0.03f;
 
 	// Use this for initialization
 	void Awake()
