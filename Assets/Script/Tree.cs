@@ -9,9 +9,9 @@ using UniRx.Triggers;
 
 public class Tree : MonoBehaviour {
 	
+	// editor params
 	public TextField FieldPrefab;
-
-
+	
 	#region params
 
 	List<TextField> fields_ = new List<TextField>();
@@ -21,11 +21,13 @@ public class Tree : MonoBehaviour {
 	SortedList<int, Line> selectedLines_ = new SortedList<int, Line>();
 	ActionManager actionManager_ = new ActionManager();
 
+	// input states
 	bool wasDeleteKeyConsumed_ = false;
 	bool wasCtrlMInput_ = false;
 	bool isAllFolded_ = false;
 	int suspendLayoutCount_ = 0;
 
+	// components
 	LayoutElement layout_;
 	ScrollRect scrollRect_;
 
@@ -192,10 +194,6 @@ public class Tree : MonoBehaviour {
 				}
 			}
 		}
-		else if( Input.GetMouseButtonUp(0) )
-		{
-			selectionEndLine_ = null;
-		}
 	}
 
 	#endregion
@@ -288,7 +286,7 @@ public class Tree : MonoBehaviour {
 			line.Parent.Remove(line);
 			if( layoutStart != null && layoutStart.Field.IsSelected == false )
 			{
-				layoutStart.Parent.AdjustLayoutRecursive(layoutStart.IndexInParent);
+				layoutStart.Parent.AdjustLayoutRecursive(layoutStart.Index);
 			}
 		}
 		ResumeLayout();
@@ -314,8 +312,8 @@ public class Tree : MonoBehaviour {
 		else if( createNewLine )
 		{
 			Line newLine = new Line();
-			focusedLine_.Parent.Insert(focusedLine_.IndexInParent, newLine);
-			focusedLine_.Parent.AdjustLayoutRecursive(focusedLine_.IndexInParent);
+			focusedLine_.Parent.Insert(focusedLine_.Index, newLine);
+			focusedLine_.Parent.AdjustLayoutRecursive(focusedLine_.Index);
 			InstantiateLine(newLine);
 			focusedLine_ = newLine;
 		}
@@ -390,11 +388,11 @@ public class Tree : MonoBehaviour {
 		actionManager_.StartChain();
 		foreach( Line line in GetSelectedOrFocusedLines() )
 		{
-			int IndexInParent = line.IndexInParent;
-			if( IndexInParent > 0 )
+			int index = line.Index;
+			if( index > 0 )
 			{
 				Line oldParent = line.Parent;
-				Line newParent = line.Parent[IndexInParent - 1];
+				Line newParent = line.Parent[index - 1];
 				actionManager_.Execute(new Action(
 					execute: ()=>
 					{
@@ -412,7 +410,7 @@ public class Tree : MonoBehaviour {
 					},
 					undo: ()=>
 					{
-						oldParent.Insert(IndexInParent, line);
+						oldParent.Insert(index, line);
 						line.AdjustLayout(Line.Direction.X);
 					}
 					));
@@ -427,53 +425,104 @@ public class Tree : MonoBehaviour {
 
 	protected void OnShiftTabInput()
 	{
+		actionManager_.StartChain();
+		// 逆順で下から処理
 		foreach( Line line in GetSelectedOrFocusedLines(ascending: false) )
 		{
-			if( line.Parent != null && line.Parent.Parent != null && ( line.Parent.Field.IsSelected == false || line.Parent.Level <= 1 ) )
+			if( line.Parent.Parent != null && ( line.Parent.Field.IsSelected == false || line.Parent.Level <= 1 ) )
 			{
-				Line layoutStart = line.Parent[line.IndexInParent + 1];
-				
+				int index = line.Index;
+				Line oldParent = line.Parent;
 				Line newParent = line.Parent.Parent;
-				newParent.Insert(line.Parent.IndexInParent + 1, line);
-				line.AdjustLayout(Line.Direction.XY);
+				actionManager_.Execute(new Action(
+					execute: () =>
+					{
+						Line layoutStart = line.Parent[index + 1];
 
-				if( layoutStart != null && layoutStart.Field.IsSelected == false )
-				{
-					layoutStart.Parent.AdjustLayoutRecursive(layoutStart.IndexInParent);
-				}
+						newParent.Insert(line.Parent.Index + 1, line);
+						line.AdjustLayout(Line.Direction.XY);
+
+						if( layoutStart != null && layoutStart.Field.IsSelected == false )
+						{
+							layoutStart.Parent.AdjustLayoutRecursive(layoutStart.Index);
+						}
+					},
+					undo: () =>
+					{
+						oldParent.Insert(index, line);
+						line.AdjustLayout(Line.Direction.XY);
+						oldParent.AdjustLayoutRecursive(index);
+					}
+					));
 			}
 		}
+		actionManager_.EndChain();
 	}
 
 	protected void OnEnterInput()
 	{
 		int caretPos = focusedLine_.Field.CaretPosision;
+		Line target = focusedLine_;
+		Line parent = focusedLine_.Parent;
+		int index = focusedLine_.Index;
 		Line line = new Line();
-		if( caretPos == 0 && focusedLine_.TextLength > 0 )
+
+		if( caretPos == 0 && target.TextLength > 0 )
 		{
-			focusedLine_.Parent.Insert(focusedLine_.IndexInParent, line);
-			focusedLine_.Parent.AdjustLayoutRecursive(focusedLine_.IndexInParent);
+			// 行頭でEnterしたので行の上にLineを追加
+			actionManager_.Execute(new Action(
+				execute: () =>
+				{
+					parent.Insert(index, line);
+					parent.AdjustLayoutRecursive(index);
+					InstantiateLine(line);
+				},
+				undo: () =>
+				{
+					parent.Remove(line);
+					parent.AdjustLayoutRecursive(index);
+					target.Field.CaretPosision = caretPos;
+				}
+				));
 		}
 		else
 		{
-			string subString = focusedLine_.Text.Substring(0, caretPos);
-			string newString = focusedLine_.Text.Substring(caretPos, focusedLine_.TextLength - caretPos);
-			focusedLine_.Text = subString;
-			line.Text = newString;
-			if( focusedLine_.HasVisibleChild )
+			// 行の途中（または最後）でEnterしたので行の下にLineを追加して文字を分割
+			string oldString = target.Text;
+			string subString = target.Text.Substring(0, caretPos);
+			string newString = target.Text.Substring(caretPos, target.TextLength - caretPos);
+
+			// 基本はすぐ下の兄弟にする
+			Line insertParent = parent;
+			int insertIndex = index + 1;
+			// Childがいる場合はChildにする
+			if( target.HasVisibleChild )
 			{
-				focusedLine_.Insert(0, line);
-				focusedLine_.AdjustLayoutRecursive();
+				insertParent = target;
+				insertIndex = 0;
 			}
-			else
-			{
-				focusedLine_.Parent.Insert(focusedLine_.IndexInParent + 1, line);
-				focusedLine_.Parent.AdjustLayoutRecursive(focusedLine_.IndexInParent + 1);
-			}
+
+			actionManager_.Execute(new Action(
+				execute: () =>
+				{
+					target.Text = subString;
+					line.Text = newString;
+					insertParent.Insert(insertIndex, line);
+					insertParent.AdjustLayoutRecursive(insertIndex);
+					InstantiateLine(line);
+					line.Field.CaretPosision = 0;
+					line.Field.IsFocused = true;
+				},
+				undo: () =>
+				{
+					target.Text = oldString;
+					insertParent.Remove(line);
+					insertParent.AdjustLayoutRecursive(insertIndex);
+					target.Field.CaretPosision = caretPos;
+					target.Field.IsFocused = true;
+				}
+				));
 		}
-		InstantiateLine(line);
-		line.Field.CaretPosision = 0;
-		line.Field.IsFocused = (caretPos == 0 && focusedLine_.TextLength > 0) == false;
 	}
 
 	protected void OnBackspaceInput()
@@ -490,7 +539,7 @@ public class Tree : MonoBehaviour {
 			if( prev.Parent == focusedLine_.Parent && prev.TextLength == 0 )
 			{
 				prev.Parent.Remove(prev);
-				focusedLine_.Parent.AdjustLayoutRecursive(focusedLine_.IndexInParent);
+				focusedLine_.Parent.AdjustLayoutRecursive(focusedLine_.Index);
 			}
 			else
 			{
@@ -509,7 +558,7 @@ public class Tree : MonoBehaviour {
 				focusedLine_.Parent.Remove(focusedLine_);
 				if( layoutStart != null )
 				{
-					layoutStart.Parent.AdjustLayoutRecursive(layoutStart.IndexInParent);
+					layoutStart.Parent.AdjustLayoutRecursive(layoutStart.Index);
 				}
 			}
 		}
@@ -535,7 +584,7 @@ public class Tree : MonoBehaviour {
 			if( next.Parent == focusedLine_.Parent && next.TextLength == 0 )
 			{
 				next.Parent.Remove(next);
-				focusedLine_.Parent.AdjustLayoutRecursive(focusedLine_.IndexInParent + 1);
+				focusedLine_.Parent.AdjustLayoutRecursive(focusedLine_.Index + 1);
 			}
 			else
 			{
@@ -552,7 +601,7 @@ public class Tree : MonoBehaviour {
 				next.Parent.Remove(next);
 				if( layoutStart != null )
 				{
-					layoutStart.Parent.AdjustLayoutRecursive(layoutStart.IndexInParent);
+					layoutStart.Parent.AdjustLayoutRecursive(layoutStart.Index);
 				}
 			}
 		}
@@ -806,7 +855,7 @@ public class Tree : MonoBehaviour {
 			}
 			else if( currentLevel == oldLevel )
 			{
-				parent.Insert(brother.IndexInParent + 1, line);
+				parent.Insert(brother.Index + 1, line);
 			}
 			else// currentLevel < oldLevel 
 			{
@@ -817,7 +866,7 @@ public class Tree : MonoBehaviour {
 					brother = parent;
 					parent = parent.Parent;
 				}
-				parent.Insert(brother.IndexInParent + 1, line);
+				parent.Insert(brother.Index + 1, line);
 			}
 			InstantiateLine(line);
 			brother = line;
@@ -826,7 +875,7 @@ public class Tree : MonoBehaviour {
 
 		if( layoutStart != null )
 		{
-			layoutStart.Parent.AdjustLayoutRecursive(layoutStart.IndexInParent);
+			layoutStart.Parent.AdjustLayoutRecursive(layoutStart.Index);
 		}
 		ResumeLayout();
 		OnLayoutChanged();

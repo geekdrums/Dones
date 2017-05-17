@@ -274,7 +274,7 @@ public class Line : IEnumerable<Line>
 
 		if( parent_ != null )
 		{
-			parent_.AdjustLayoutRecursive(IndexInParent + 1, predToBreak);
+			parent_.AdjustLayoutRecursive(Index + 1, predToBreak);
 		}
 	}
 
@@ -332,7 +332,7 @@ public class Line : IEnumerable<Line>
 		}
 	}
 
-	public int IndexInParent { get { return parent_ != null ? parent_.children_.IndexOf(this) : -1; } }
+	public int Index { get { return parent_ != null ? parent_.children_.IndexOf(this) : -1; } }
 
 	public int IndexInLocalTree
 	{
@@ -343,7 +343,7 @@ public class Line : IEnumerable<Line>
 			{
 				if( parent_.IsFolded == false )
 				{
-					int indexInParent = IndexInParent;
+					int indexInParent = Index;
 					index += indexInParent + 1;
 					for( int i = 0; i < indexInParent; ++i )
 					{
@@ -382,9 +382,9 @@ public class Line : IEnumerable<Line>
 				Line child = this;
 				while( parent != null )
 				{
-					if( parent.Count > child.IndexInParent + 1 )
+					if( parent.Count > child.Index + 1 )
 					{
-						return parent[child.IndexInParent + 1];
+						return parent[child.Index + 1];
 					}
 					child = parent;
 					parent = parent.parent_;
@@ -402,7 +402,7 @@ public class Line : IEnumerable<Line>
 			{
 				if( parent_.children_[0] != this )
 				{
-					return parent_[IndexInParent - 1].LastVisibleLine;
+					return parent_[Index - 1].LastVisibleLine;
 				}
 				else if( parent_.parent_ != null )
 				{
