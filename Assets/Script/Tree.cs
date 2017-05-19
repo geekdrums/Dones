@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -25,6 +26,7 @@ public class Tree : MonoBehaviour {
 	bool wasDeleteKeyConsumed_ = false;
 	bool wasCtrlMInput_ = false;
 	bool isAllFolded_ = false;
+	List<Line> requestLayoutLines_ = new List<Line>();
 	int suspendLayoutCount_ = 0;
 
 	// components
@@ -42,6 +44,8 @@ public class Tree : MonoBehaviour {
 		layout_ = GetComponentInParent<LayoutElement>();
 		scrollRect_ = GetComponentInParent<ScrollRect>();
 
+		actionManager_.ChainStarted += this.actionManager__ChainStarted;
+		actionManager_.ChainEnded += this.actionManager__ChainEnded;
 		// todo: 複数ツリーで切り替え
 		GameContext.CurrentActionManager = actionManager_;
 
@@ -161,7 +165,7 @@ public class Tree : MonoBehaviour {
 				ClearSelection();
 			}
 
-			if( focusedLine_ != null && focusedLine_.Field.Rect.Contains(Input.mousePosition) )
+			if( focusedLine_ != null && focusedLine_.Field != null && focusedLine_.Field.Rect.Contains(Input.mousePosition) )
 			{
 				selectionStartLine_ = focusedLine_;
 			}
@@ -197,7 +201,7 @@ public class Tree : MonoBehaviour {
 	}
 
 	#endregion
-
+	
 
 	#region selections
 
@@ -258,68 +262,149 @@ public class Tree : MonoBehaviour {
 	/// 選択部分を消して、新たに入力可能となった行を返す
 	/// </summary>
 	/// <returns></returns>
-	public Line DeleteSelection(bool createNewLine = false)
+	public Line DeleteSelection()
 	{
-		SuspendLayout();
-		Line prevSelection = selectedLines_.Values[0].PrevVisibleLine;
-		if( prevSelection == null ) prevSelection = rootLine_;
+		actionManager_.StartChain();
+
+		SortedList<int, Line> oldSelection = new SortedList<int, Line>(selectedLines_);
+		Line oldSelectStart = selectionStartLine_;
+		Line oldSelectEnd = selectionEndLine_;
+
+		Line oldSelectTop = selectedLines_.Values[0];
+		Line oldParent = oldSelectTop.Parent;
+		int oldIndex = oldSelectTop.Index;
+
+		// （入力のために）新しい行を作る
+		Line newLine = new Line();
+		actionManager_.Execute(new Action(
+			execute: () =>
+			{
+				oldParent.Insert(oldIndex, newLine);
+				InstantiateLine(newLine);
+				newLine.Field.IsFocused = true;
+			},
+			undo: () =>
+			{
+				oldParent.Remove(newLine);
+			}
+			));
+
+		List<Action> reparentActions = new List<Action>();
+		List<Action> deleteActions = new List<Action>();
+
 		foreach( Line line in GetSelectedOrFocusedLines(ascending: false) )
 		{
 			if( line.HasVisibleChild )
 			{
-				Line prev = line.PrevVisibleLine;
-				while( prev.Field.IsSelected )
+				List<Line> lostChildren = new List<Line>(from lostChild in line where lostChild.Field.IsSelected == false select lostChild);
+				// Childがいたら、それを上の親に切り替える
+				if( lostChildren.Count > 0 )
 				{
-					prev = prev.PrevVisibleLine;
-					if( prev == null ) prev = rootLine_;
-				}
-				
-				List<Line> children = new List<Line>(focusedLine_);
-				for( int i = 0; i < children.Count; ++i )
-				{
-					prev.Insert(i, children[i]);
-					children[i].AdjustLayout();
+					Line prev = line.PrevVisibleLine;
+					while( prev.Field.IsSelected )
+					{
+						// 選択中のやつは消されるので、消されないものの中で一番近いものを選ぶ
+						prev = prev.PrevVisibleLine;
+						if( prev == null ) prev = rootLine_;
+					}
+					Line lostParent = line;
+					reparentActions.Add(new Action(
+						execute: () =>
+						{
+							for( int i = 0; i < lostChildren.Count; ++i )
+							{
+								prev.Insert(i, lostChildren[i]);
+								lostChildren[i].AdjustLayout();
+							}
+						},
+						undo: () =>
+						{
+							for( int i = 0; i < lostChildren.Count; ++i )
+							{
+								lostParent.Add(lostChildren[i]);
+								lostChildren[i].AdjustLayout();
+							}
+						}
+						));
 				}
 			}
-			
-			Line layoutStart = line.NextVisibleLine;
-			line.Parent.Remove(line);
-			if( layoutStart != null && layoutStart.Field.IsSelected == false )
-			{
-				layoutStart.Parent.AdjustLayoutRecursive(layoutStart.Index);
-			}
+
+			Line parent = line.Parent;
+			int index = line.Index;
+			Line layoutStart = line.PrevVisibleLine;
+			deleteActions.Add(new Action(
+				execute: () =>
+				{
+					line.Parent.Remove(line);
+					if( layoutStart != null && layoutStart.Field.IsSelected == false )
+					{
+						requestLayoutLines_.Add(layoutStart);
+					}
+				},
+				undo: () =>
+				{
+					parent.Insert(index, line);
+					InstantiateLine(line);
+					line.Field.IsSelected = true;
+					if( line == oldSelectEnd )
+					{
+						focusedLine_ = line;
+						line.Field.IsFocused = true;
+					}
+					Line undoLayoutStart = layoutStart;
+					if( undoLayoutStart == newLine ) undoLayoutStart = layoutStart.PrevVisibleLine;// これはUndo時に最終的に消されるので、さらに前のにする
+					if( undoLayoutStart == null ) undoLayoutStart = rootLine_;
+					if( undoLayoutStart != null && ( undoLayoutStart == rootLine_ || undoLayoutStart.Field.IsSelected == false ) )
+					{
+						requestLayoutLines_.Add(undoLayoutStart);
+					}
+				}
+				));
 		}
+
+		// 親の切り替え→削除の順で全体を実行
+		foreach( Action action in reparentActions )
+		{
+			actionManager_.Execute(action);
+		}
+		foreach( Action action in deleteActions )
+		{
+			actionManager_.Execute(action);
+		}
+
+		// 選択解除
+		actionManager_.Execute(new Action(
+			execute: () =>
+			{
+				selectedLines_.Clear();
+				selectionStartLine_ = selectionEndLine_ = null;
+			},
+			undo: () =>
+			{
+				selectedLines_ = oldSelection;
+				selectionStartLine_ = oldSelectStart;
+				selectionEndLine_ = oldSelectEnd;
+			}
+			));
+		
+		actionManager_.EndChain();
+
+		return newLine;
+	}
+
+	#endregion
+
+
+	#region actionManager
+
+	void actionManager__ChainStarted(object sender, EventArgs e)
+	{
+		SuspendLayout();
+	}
+
+	void actionManager__ChainEnded(object sender, EventArgs e)
+	{
 		ResumeLayout();
-		OnLayoutChanged();
-		selectedLines_.Clear();
-		selectionStartLine_ = selectionEndLine_ = focusedLine_ = null;
-
-		focusedLine_ = prevSelection.NextVisibleLine;
-		if( focusedLine_ == null )
-		{
-			// 入力可能な行が無くなると困るので、作る
-			focusedLine_ = new Line("");
-			if( prevSelection.Parent != null )
-			{
-				prevSelection.Parent.Add(focusedLine_);
-			}
-			else //prevSelection == rootLine_
-			{
-				prevSelection.Add(focusedLine_);
-			}
-			InstantiateLine(focusedLine_);
-		}
-		else if( createNewLine )
-		{
-			Line newLine = new Line();
-			focusedLine_.Parent.Insert(focusedLine_.Index, newLine);
-			focusedLine_.Parent.AdjustLayoutRecursive(focusedLine_.Index);
-			InstantiateLine(newLine);
-			focusedLine_ = newLine;
-		}
-
-		focusedLine_.Field.IsFocused = true;
-		return focusedLine_;
 	}
 
 	#endregion
@@ -817,7 +902,7 @@ public class Tree : MonoBehaviour {
 		Line pasteStart = focusedLine_;
 		if( HasSelection )
 		{
-			pasteStart = DeleteSelection(true);
+			pasteStart = DeleteSelection();
 		}
 
 		string[] cilpboardLines = Clipboard.Split(LineSeparator, System.StringSplitOptions.None);
@@ -987,7 +1072,19 @@ public class Tree : MonoBehaviour {
 	public void ResumeLayout()
 	{
 		--suspendLayoutCount_;
-		if( suspendLayoutCount_ < 0 ) suspendLayoutCount_ = 0;
+		if( suspendLayoutCount_ <= 0 )
+		{
+			suspendLayoutCount_ = 0;
+			if( requestLayoutLines_.Count > 0 )
+			{
+				foreach( Line line in requestLayoutLines_ )
+				{
+					line.AdjustLayoutRecursive();
+				}
+				requestLayoutLines_.Clear();
+				OnLayoutChanged();
+			}
+		}
 	}
 
 	#endregion

@@ -199,9 +199,28 @@ public class TextField : InputField, IColoredObject
 					break;
 				case KeyCode.Delete:
 					{
-						bool use = caretPos_ < text.Length;
-						KeyPressed(processingEvent_);
-						if( use ) ownerTree_.OnDeleteKeyConsumed();
+						if( ownerTree_.HasSelection )
+						{
+							// process in ownerTree
+						}
+						else
+						{
+							bool use = caretPos_ < text.Length;
+							KeyPressed(processingEvent_);
+							if( use ) ownerTree_.OnDeleteKeyConsumed();
+						}
+					}
+					break;
+				case KeyCode.Backspace:
+					{
+						if( ownerTree_.HasSelection )
+						{
+							// process in ownerTree
+						}
+						else
+						{
+							KeyPressed(processingEvent_);
+						}
 					}
 					break;
 				case KeyCode.DownArrow:
@@ -231,7 +250,7 @@ public class TextField : InputField, IColoredObject
 				default:
 					if( processingEvent_.keyCode == KeyCode.None && ownerTree_.HasSelection && processingEvent_.character.ToString() != Tree.TabString )
 					{
-						TextField newField = ownerTree_.DeleteSelection(true).Field;
+						TextField newField = ownerTree_.DeleteSelection().Field;
 						newField.KeyPressed(processingEvent_);
 						newField.CaretPosision = newField.text.Length;
 					}
