@@ -331,10 +331,10 @@ public class Tree : MonoBehaviour {
 
 			Line parent = line.Parent;
 			int index = line.Index;
-			Line layoutStart = line.PrevVisibleLine;
 			deleteActions.Add(new Action(
 				execute: () =>
 				{
+					Line layoutStart = line.NextVisibleLine;
 					line.Parent.Remove(line);
 					if( layoutStart != null && layoutStart.Field.IsSelected == false )
 					{
@@ -351,12 +351,10 @@ public class Tree : MonoBehaviour {
 						focusedLine_ = line;
 						line.Field.IsFocused = true;
 					}
-					Line undoLayoutStart = layoutStart;
-					if( undoLayoutStart == newLine ) undoLayoutStart = layoutStart.PrevVisibleLine;// これはUndo時に最終的に消されるので、さらに前のにする
-					if( undoLayoutStart == null ) undoLayoutStart = rootLine_;
-					if( undoLayoutStart != null && ( undoLayoutStart == rootLine_ || undoLayoutStart.Field.IsSelected == false ) )
+					Line layoutStart = line.PrevVisibleLine;
+					if( layoutStart != null && layoutStart.Field.IsSelected == false )
 					{
-						requestLayoutLines_.Add(undoLayoutStart);
+						requestLayoutLines_.Add(line);
 					}
 				}
 				));
@@ -621,30 +619,95 @@ public class Tree : MonoBehaviour {
 			Line prev = focusedLine_.PrevVisibleLine;
 			if( prev == null ) return;
 
+			Line line = focusedLine_;
 			if( prev.Parent == focusedLine_.Parent && prev.TextLength == 0 )
 			{
-				prev.Parent.Remove(prev);
-				focusedLine_.Parent.AdjustLayoutRecursive(focusedLine_.Index);
+				Line parent = prev.Parent;
+				int index = prev.Index;
+				actionManager_.Execute(new Action(
+				   execute: () =>
+				   {
+					   parent.Remove(prev);
+					   line.Parent.AdjustLayoutRecursive(line.Index);
+				   },
+				   undo: () =>
+				   {
+					   parent.Insert(index, prev);
+					   parent.AdjustLayoutRecursive(index);
+				   }
+				   ));
 			}
 			else
 			{
-				prev.Field.CaretPosision = prev.TextLength;
-				prev.Text += focusedLine_.Text;
-				prev.Field.IsFocused = true;
+				actionManager_.StartChain();
+				Line parent = line.Parent;
+				int index = line.Index;
+				string oldText = prev.Text;
+				// テキスト合体してキャレット移動
+				actionManager_.Execute(new Action(
+				   execute: () =>
+				   {
+					   prev.Field.CaretPosision = prev.TextLength;
+					   prev.Text += line.Text;
+					   prev.Field.IsFocused = true;
+				   },
+				   undo: () =>
+				   {
+					   prev.Text = oldText;
+					   line.Field.CaretPosision = 0;
+					   line.Field.IsFocused = true;
+				   }
+				   ));
 
-				List<Line> children = new List<Line>(focusedLine_);
-				for( int i = 0; i < children.Count; ++i )
+				// 子供がいたら親を変更
+				if( line.Count > 0 )
 				{
-					prev.Insert(i, children[i]);
-					children[i].AdjustLayout();
+					List<Line> children = new List<Line>(line);
+					actionManager_.Execute(new Action(
+						execute: () =>
+						{
+							line.IsFolded = false;
+							for( int i = 0; i < children.Count; ++i )
+							{
+								prev.Insert(i, children[i]);
+								children[i].AdjustLayout();
+							}
+							prev.IsFolded = false;
+						},
+						undo: () =>
+						{
+							for( int i = 0; i < children.Count; ++i )
+							{
+								line.Add(children[i]);
+								children[i].AdjustLayout();
+							}
+							requestLayoutLines_.Add(line);
+						}
+						));
 				}
 
-				Line layoutStart = focusedLine_.NextVisibleLine;
-				focusedLine_.Parent.Remove(focusedLine_);
-				if( layoutStart != null )
-				{
-					layoutStart.Parent.AdjustLayoutRecursive(layoutStart.Index);
-				}
+				// 削除
+				Line layoutStart = line.NextVisibleLine;
+				actionManager_.Execute(new Action(
+					execute: () =>
+					{
+						line.Parent.Remove(line);
+						if( layoutStart != null )
+						{
+							requestLayoutLines_.Add(layoutStart);
+						}
+					},
+					undo: () =>
+					{
+						parent.Insert(index, line);
+						InstantiateLine(line);
+						if( layoutStart != null )
+						{
+							requestLayoutLines_.Add(layoutStart);
+						}
+					}
+					));
+				actionManager_.EndChain();
 			}
 		}
 	}
@@ -1079,7 +1142,7 @@ public class Tree : MonoBehaviour {
 			{
 				foreach( Line line in requestLayoutLines_ )
 				{
-					line.AdjustLayoutRecursive();
+					line.Parent.AdjustLayoutRecursive(line.Index);
 				}
 				requestLayoutLines_.Clear();
 				OnLayoutChanged();
