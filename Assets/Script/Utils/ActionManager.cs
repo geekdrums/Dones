@@ -22,14 +22,14 @@ public class ActionManager
 	ChainAction lastChainAction_;
 
 	public event EventHandler<ActionEventArgs> Executed;
-	public event EventHandler<ActionEventArgs> Undid;
-	public event EventHandler<ActionEventArgs> Redid;
 	public event EventHandler ChainStarted;
 	public event EventHandler ChainEnded;
 
 	public void Execute(IAction action)
 	{
 		action.Execute();
+		if( Executed != null )
+			Executed(this, new ActionEventArgs(action));
 
 		if( isChain_ )
 		{
@@ -44,9 +44,6 @@ public class ActionManager
 			++currentIndex_;
 			actions_.Add(action);
 		}
-
-		if( Executed != null )
-			Executed(this, new ActionEventArgs(action));
 	}
 
 	public void Undo()
@@ -63,8 +60,8 @@ public class ActionManager
 			else
 			{
 				action.Undo();
-				if( Undid != null )
-					Undid(this, new ActionEventArgs(action));
+				if( Executed != null )
+					Executed(this, new ActionEventArgs(action));
 			}
 		}
 	}
@@ -83,8 +80,8 @@ public class ActionManager
 			else
 			{
 				action.Redo();
-				if( Redid != null )
-					Redid(this, new ActionEventArgs(action));
+				if( Executed != null )
+					Executed(this, new ActionEventArgs(action));
 			}
 		}
 	}

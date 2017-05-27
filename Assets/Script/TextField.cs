@@ -58,8 +58,7 @@ public class TextField : InputField, IColoredObject
 	public Rect Rect { get { return new Rect(image_.rectTransform.position, image_.rectTransform.sizeDelta); } }
 	public float RectY { get { return image_.rectTransform.position.y; } }
 	protected Image image_;
-
-	public Tree OwnerTree { get { return ownerTree_; } }
+	
 	protected Tree ownerTree_;
 
 	#endregion
@@ -103,7 +102,8 @@ public class TextField : InputField, IColoredObject
 
 	protected override void OnDestroy()
 	{
-		ownerTree_.OnTextFieldDestroy(this);
+		if( ownerTree_ != null )
+			ownerTree_.OnTextFieldDestroy(this);
 	}
 
 	protected override void LateUpdate()

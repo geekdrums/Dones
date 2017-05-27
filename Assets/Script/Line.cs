@@ -32,9 +32,9 @@ public class Line : IEnumerable<Line>
 						line.Binding.SetActive(isFolded_ == false);
 					}
 				}
-				if( Field != null )
+				if( Tree != null )
 				{
-					Field.OwnerTree.OnLayoutChanged();
+					Tree.OnLayoutChanged();
 				}
 				if( Toggle != null && Toggle.isOn != !IsFolded )
 				{
@@ -49,11 +49,16 @@ public class Line : IEnumerable<Line>
 	public bool IsDone { get { return isDone_; } set { isDone_ = value; } }
 	protected bool isDone_ = false;
 
+
 	public Vector3 TargetPosition { get; protected set; }
 
 	public GameObject Binding { get; protected set; }
+	public Tree Tree { get; protected set; }
 	public TextField Field { get; protected set; }
 	public TreeToggle Toggle { get; protected set; }
+
+	protected IDisposable textSubscription_;
+	protected IDisposable toggleSubscription_;
 
 	#endregion
 
@@ -72,24 +77,40 @@ public class Line : IEnumerable<Line>
 		{
 			if( parent_ != null && parent_.Binding != null )
 			{
-				Binding.transform.SetParent(parent_.Binding.transform);
+				Field.transform.SetParent(parent_.Binding.transform);
 				Field.transform.localPosition = CalcTargetPosition();
 			}
 
 			Field.BindedLine = this;
 			Field.text = textRx_.Value;
 			Field.onValueChanged.AsObservable().Subscribe(text => textRx_.Value = text).AddTo(Field);
-			textRx_.Subscribe(text => Field.text = text).AddTo(Field);
+			textSubscription_ = textRx_.Subscribe(text => Field.text = text);
 
 			Toggle = Field.GetComponentInChildren<TreeToggle>();
-			children_.ObserveCountChanged(true).Select(x => x > 0).DistinctUntilChanged().Subscribe(hasChild =>
+			toggleSubscription_ = children_.ObserveCountChanged(true).Select(x => x > 0).DistinctUntilChanged().Subscribe(hasChild =>
 			{
 				Toggle.interactable = hasChild;
 				AnimManager.AddAnim(Toggle.targetGraphic, Toggle.interactable && Toggle.isOn ? 0 : 90, ParamType.RotationZ, AnimType.Time, GameContext.Config.AnimTime);
 			}).AddTo(Field);
 		}
+		else
+		{
+			Tree = Binding.GetComponent<Tree>();
+		}
 	}
 
+	public void ReBind()
+	{
+		Binding.SetActive(true);
+		Bind(Binding);
+	}
+
+	public void UnBind()
+	{
+		Field.BindedLine = null;
+		Binding = null;
+		Field = null;
+	}
 
 	#region Tree params
 
@@ -117,6 +138,7 @@ public class Line : IEnumerable<Line>
 	public void Insert(int index, Line child)
 	{
 		children_.Insert(index, child);
+		child.Tree = Tree;
 
 		Line oldParent = child.parent_;
 		child.parent_ = this;
@@ -125,9 +147,18 @@ public class Line : IEnumerable<Line>
 			oldParent.children_.Remove(child);
 		}
 
-		if( child.Binding != null && this.Binding != null )
+		if( child.Field == null || child.Field.BindedLine != child )
+		{
+			Tree.Bind(child);
+		}
+		else if( child.Field.BindedLine == child && child.Field.gameObject.activeInHierarchy == false )
+		{
+			child.ReBind();
+		}
+		else
 		{
 			child.Binding.transform.SetParent(this.Binding.transform, worldPositionStays: true);
+			child.AdjustLayout();
 		}
 	}
 	public void Remove(Line child)
@@ -135,7 +166,9 @@ public class Line : IEnumerable<Line>
 		children_.Remove(child);
 		if( child.parent_ == this && child.Binding != null )
 		{
-			MonoBehaviour.Destroy(child.Binding);
+			Tree.OnRemove(child);
+			child.textSubscription_.Dispose();
+			child.toggleSubscription_.Dispose();
 			child.parent_ = null;
 		}
 	}

@@ -12,10 +12,13 @@ public class Tree : MonoBehaviour {
 	
 	// editor params
 	public TextField FieldPrefab;
+	public int FieldCount = 100;
 	
 	#region params
 
-	List<TextField> fields_ = new List<TextField>();
+	List<TextField> usingFields_ = new List<TextField>();
+	Queue<TextField> fieldHeap_ = new Queue<TextField>();
+	GameObject heapParent_;
 	Line rootLine_;
 	Line focusedLine_;
 	Line selectionStartLine_, selectionEndLine_;
@@ -46,11 +49,25 @@ public class Tree : MonoBehaviour {
 
 		actionManager_.ChainStarted += this.actionManager__ChainStarted;
 		actionManager_.ChainEnded += this.actionManager__ChainEnded;
+		actionManager_.Executed += this.actionManager__Executed;
 		// todo: 複数ツリーで切り替え
 		GameContext.CurrentActionManager = actionManager_;
 
+		heapParent_ = new GameObject("heap");
+		heapParent_.transform.parent = this.transform;
+		for( int i = 0; i < FieldCount; ++i )
+		{
+			TextField field = Instantiate(FieldPrefab.gameObject).GetComponent<TextField>();
+			field.transform.parent = heapParent_.transform;
+			fieldHeap_.Enqueue(field);
+		}
+		heapParent_.SetActive(false);
+
 		// test
 		rootLine_ = new Line("CategoryName");
+		rootLine_.Bind(this.gameObject);
+
+		SuspendLayout();
 		rootLine_.Add(new Line("Hello World"));
 		rootLine_.Add(new Line("Hello1"));
 		rootLine_.Add(new Line("Hello2"));
@@ -58,14 +75,9 @@ public class Tree : MonoBehaviour {
 		rootLine_.Add(new Line("Hello4"));
 		rootLine_.Add(new Line("Hello5"));
 		rootLine_.Add(new Line("Hello6"));
-		rootLine_.Bind(this.gameObject);
+		ResumeLayout();
 
-		foreach( Line line in rootLine_.GetAllChildren() )
-		{
-			InstantiateLine(line);
-		}
-
-		OnFocused(fields_[0].BindedLine);
+		OnFocused(usingFields_[0].BindedLine);
 
 		SubscribeKeyInput();
 	}
@@ -196,7 +208,12 @@ public class Tree : MonoBehaviour {
 					UpdateSelection(line, moveSign * SelectionSign >= 0/* 移動方向と選択方向が逆なら選択解除 */ || line == selectionStartLine_);
 					selectionEndLine_ = line;
 				}
+				UpdateSelection(selectionEndLine_, true);
 			}
+		}
+		else if( Input.GetMouseButtonUp(0) && HasSelection == false )
+		{
+			selectionStartLine_ = selectionEndLine_ = null;
 		}
 	}
 
@@ -257,6 +274,7 @@ public class Tree : MonoBehaviour {
 			line = line.NextVisibleLine;
 		}
 	}
+	
 
 	/// <summary>
 	/// 選択部分を消して、新たに入力可能となった行を返す
@@ -280,7 +298,6 @@ public class Tree : MonoBehaviour {
 			execute: () =>
 			{
 				oldParent.Insert(oldIndex, newLine);
-				InstantiateLine(newLine);
 				newLine.Field.IsFocused = true;
 			},
 			undo: () =>
@@ -314,7 +331,6 @@ public class Tree : MonoBehaviour {
 							for( int i = 0; i < lostChildren.Count; ++i )
 							{
 								prev.Insert(i, lostChildren[i]);
-								lostChildren[i].AdjustLayout();
 							}
 						},
 						undo: () =>
@@ -322,7 +338,6 @@ public class Tree : MonoBehaviour {
 							for( int i = 0; i < lostChildren.Count; ++i )
 							{
 								lostParent.Add(lostChildren[i]);
-								lostChildren[i].AdjustLayout();
 							}
 						}
 						));
@@ -338,13 +353,12 @@ public class Tree : MonoBehaviour {
 					line.Parent.Remove(line);
 					if( layoutStart != null && layoutStart.Field.IsSelected == false )
 					{
-						requestLayoutLines_.Add(layoutStart);
+						RequestLayout(layoutStart);
 					}
 				},
 				undo: () =>
 				{
 					parent.Insert(index, line);
-					InstantiateLine(line);
 					line.Field.IsSelected = true;
 					if( line == oldSelectEnd )
 					{
@@ -354,7 +368,7 @@ public class Tree : MonoBehaviour {
 					Line layoutStart = line.PrevVisibleLine;
 					if( layoutStart != null && layoutStart.Field.IsSelected == false )
 					{
-						requestLayoutLines_.Add(line);
+						RequestLayout(line);
 					}
 				}
 				));
@@ -403,6 +417,14 @@ public class Tree : MonoBehaviour {
 	void actionManager__ChainEnded(object sender, EventArgs e)
 	{
 		ResumeLayout();
+	}
+
+	void actionManager__Executed(object sender, ActionEventArgs e)
+	{
+		if( suspendLayoutCount_ <= 0 )
+		{
+			AdjustRequestedLayouts();
+		}
 	}
 
 	#endregion
@@ -486,15 +508,10 @@ public class Tree : MonoBehaviour {
 							newParent.AdjustLayoutRecursive();
 							OnLayoutChanged();
 						}
-						else
-						{
-							line.AdjustLayout(Line.Direction.X);
-						}
 					},
 					undo: ()=>
 					{
 						oldParent.Insert(index, line);
-						line.AdjustLayout(Line.Direction.X);
 					}
 					));
 			}
@@ -521,10 +538,7 @@ public class Tree : MonoBehaviour {
 					execute: () =>
 					{
 						Line layoutStart = line.Parent[index + 1];
-
 						newParent.Insert(line.Parent.Index + 1, line);
-						line.AdjustLayout(Line.Direction.XY);
-
 						if( layoutStart != null && layoutStart.Field.IsSelected == false )
 						{
 							layoutStart.Parent.AdjustLayoutRecursive(layoutStart.Index);
@@ -533,7 +547,6 @@ public class Tree : MonoBehaviour {
 					undo: () =>
 					{
 						oldParent.Insert(index, line);
-						line.AdjustLayout(Line.Direction.XY);
 						oldParent.AdjustLayoutRecursive(index);
 					}
 					));
@@ -557,8 +570,7 @@ public class Tree : MonoBehaviour {
 				execute: () =>
 				{
 					parent.Insert(index, line);
-					parent.AdjustLayoutRecursive(index);
-					InstantiateLine(line);
+					parent.AdjustLayoutRecursive(index + 1);
 				},
 				undo: () =>
 				{
@@ -591,8 +603,7 @@ public class Tree : MonoBehaviour {
 					target.Text = subString;
 					line.Text = newString;
 					insertParent.Insert(insertIndex, line);
-					insertParent.AdjustLayoutRecursive(insertIndex);
-					InstantiateLine(line);
+					insertParent.AdjustLayoutRecursive(insertIndex + 1);
 					line.Field.CaretPosision = 0;
 					line.Field.IsFocused = true;
 				},
@@ -616,11 +627,11 @@ public class Tree : MonoBehaviour {
 		}
 		else if( focusedLine_.Field.CaretPosision == 0 )
 		{
-			Line prev = focusedLine_.PrevVisibleLine;
+			Line line = focusedLine_;
+			Line prev = line.PrevVisibleLine;
 			if( prev == null ) return;
 
-			Line line = focusedLine_;
-			if( prev.Parent == focusedLine_.Parent && prev.TextLength == 0 )
+			if( prev.Parent == line.Parent && prev.TextLength == 0 )
 			{
 				Line parent = prev.Parent;
 				int index = prev.Index;
@@ -628,12 +639,34 @@ public class Tree : MonoBehaviour {
 				   execute: () =>
 				   {
 					   parent.Remove(prev);
-					   line.Parent.AdjustLayoutRecursive(line.Index);
+					   RequestLayout(line);
 				   },
 				   undo: () =>
 				   {
 					   parent.Insert(index, prev);
-					   parent.AdjustLayoutRecursive(index);
+					   RequestLayout(line);
+				   }
+				   ));
+			}
+			else if( prev.Parent == line.Parent && line.TextLength == 0 )
+			{
+				Line parent = line.Parent;
+				int index = line.Index;
+				Line layoutStart = line.NextVisibleLine;
+				actionManager_.Execute(new Action(
+				   execute: () =>
+				   {
+					   parent.Remove(line);
+					   RequestLayout(layoutStart);
+					   prev.Field.CaretPosision = prev.TextLength;
+					   prev.Field.IsFocused = true;
+				   },
+				   undo: () =>
+				   {
+					   parent.Insert(index, line);
+					   RequestLayout(layoutStart);
+					   line.Field.CaretPosision = 0;
+					   line.Field.IsFocused = true;
 				   }
 				   ));
 			}
@@ -642,8 +675,9 @@ public class Tree : MonoBehaviour {
 				actionManager_.StartChain();
 				Line parent = line.Parent;
 				int index = line.Index;
-				string oldText = prev.Text;
+
 				// テキスト合体してキャレット移動
+				string oldText = prev.Text;
 				actionManager_.Execute(new Action(
 				   execute: () =>
 				   {
@@ -667,21 +701,19 @@ public class Tree : MonoBehaviour {
 						execute: () =>
 						{
 							line.IsFolded = false;
+							prev.IsFolded = false;
 							for( int i = 0; i < children.Count; ++i )
 							{
 								prev.Insert(i, children[i]);
-								children[i].AdjustLayout();
 							}
-							prev.IsFolded = false;
 						},
 						undo: () =>
 						{
 							for( int i = 0; i < children.Count; ++i )
 							{
 								line.Add(children[i]);
-								children[i].AdjustLayout();
 							}
-							requestLayoutLines_.Add(line);
+							RequestLayout(line);
 						}
 						));
 				}
@@ -692,19 +724,12 @@ public class Tree : MonoBehaviour {
 					execute: () =>
 					{
 						line.Parent.Remove(line);
-						if( layoutStart != null )
-						{
-							requestLayoutLines_.Add(layoutStart);
-						}
+						RequestLayout(layoutStart);
 					},
 					undo: () =>
 					{
 						parent.Insert(index, line);
-						InstantiateLine(line);
-						if( layoutStart != null )
-						{
-							requestLayoutLines_.Add(layoutStart);
-						}
+						RequestLayout(layoutStart);
 					}
 					));
 				actionManager_.EndChain();
@@ -726,31 +751,104 @@ public class Tree : MonoBehaviour {
 
 		if( focusedLine_.Field.CaretPosision == focusedLine_.TextLength )
 		{
-			Line next = focusedLine_.NextVisibleLine;
+			Line line = focusedLine_;
+			Line next = line.NextVisibleLine;
 			if( next == null ) return;
 
-			if( next.Parent == focusedLine_.Parent && next.TextLength == 0 )
+			if( next.Parent == line.Parent && next.TextLength == 0 )
 			{
-				next.Parent.Remove(next);
-				focusedLine_.Parent.AdjustLayoutRecursive(focusedLine_.Index + 1);
+				Line parent = next.Parent;
+				int index = next.Index;
+				actionManager_.Execute(new Action(
+				   execute: () =>
+				   {
+					   parent.Remove(next);
+					   parent.AdjustLayoutRecursive(index);
+				   },
+				   undo: () =>
+				   {
+					   parent.Insert(index, next);
+					   parent.AdjustLayoutRecursive(index + 1);
+				   }
+				   ));
+			}
+			else if( next.Parent == line.Parent && line.TextLength == 0 )
+			{
+				Line parent = line.Parent;
+				int index = line.Index;
+				actionManager_.Execute(new Action(
+				   execute: () =>
+				   {
+					   parent.Remove(line);
+					   RequestLayout(next);
+					   next.Field.IsFocused = true;
+				   },
+				   undo: () =>
+				   {
+					   parent.Insert(index, line);
+					   RequestLayout(next);
+					   line.Field.IsFocused = true;
+				   }
+				   ));
 			}
 			else
 			{
-				focusedLine_.Text += next.Text;
+				actionManager_.StartChain();
+				Line parent = next.Parent;
+				int index = next.Index;
 
-				List<Line> children = new List<Line>(next);
-				for( int i = 0; i < children.Count; ++i )
+				// テキスト合体
+				string oldText = line.Text;
+				actionManager_.Execute(new Action(
+				   execute: () =>
+				   {
+					   line.Text += next.Text;
+				   },
+				   undo: () =>
+				   {
+					   line.Text = oldText;
+				   }
+				   ));
+
+				// 子供がいたら親を変更
+				if( next.Count > 0 )
 				{
-					focusedLine_.Insert(i, children[i]);
-					children[i].AdjustLayout();
+					List<Line> children = new List<Line>(next);
+					actionManager_.Execute(new Action(
+						execute: () =>
+						{
+							next.IsFolded = false;
+							line.IsFolded = false;
+							for( int i = 0; i < children.Count; ++i )
+							{
+								line.Insert(i, children[i]);
+							}
+						},
+						undo: () =>
+						{
+							for( int i = 0; i < children.Count; ++i )
+							{
+								next.Add(children[i]);
+							}
+							RequestLayout(line);
+						}
+						));
 				}
 
 				Line layoutStart = next.NextVisibleLine;
-				next.Parent.Remove(next);
-				if( layoutStart != null )
-				{
-					layoutStart.Parent.AdjustLayoutRecursive(layoutStart.Index);
-				}
+				actionManager_.Execute(new Action(
+					execute: () =>
+					{
+						parent.Remove(next);
+						RequestLayout(layoutStart);
+					},
+					undo: () =>
+					{
+						parent.Insert(index, next);
+						RequestLayout(layoutStart);
+					}
+					));
+				actionManager_.EndChain();
 			}
 		}
 	}
@@ -811,7 +909,8 @@ public class Tree : MonoBehaviour {
 		// とりあえず選択開始する
 		if( selectionStartLine_ == null || selectionEndLine_ == null )
 		{
-			selectionStartLine_ = selectionEndLine_ = focusedLine_;
+			selectionStartLine_ = focusedLine_;
+			selectionEndLine_ = focusedLine_;
 		}
 
 		switch( key )
@@ -1016,7 +1115,6 @@ public class Tree : MonoBehaviour {
 				}
 				parent.Insert(brother.Index + 1, line);
 			}
-			InstantiateLine(line);
 			brother = line;
 			oldLevel = currentLevel;
 		}
@@ -1042,13 +1140,6 @@ public class Tree : MonoBehaviour {
 
 
 	#region utils
-
-	protected void InstantiateLine(Line line)
-	{
-		line.Bind(Instantiate(FieldPrefab.gameObject));
-		fields_.Add(line.Field);
-		OnLayoutChanged();
-	}
 
 	protected IEnumerable<Line> GetSelectedOrFocusedLines(bool ascending = true)
 	{
@@ -1079,6 +1170,46 @@ public class Tree : MonoBehaviour {
 
 
 	#region events
+
+
+	public void Bind(Line line)
+	{
+		TextField field = null;
+		if( fieldHeap_.Count > 0 )
+		{
+			field = fieldHeap_.Dequeue();
+		}
+		else
+		{
+			for( int i = 0; i < FieldCount; ++i )
+			{
+				field = Instantiate(FieldPrefab.gameObject).GetComponent<TextField>();
+				field.transform.parent = heapParent_.transform;
+				fieldHeap_.Enqueue(field);
+			}
+			field = fieldHeap_.Dequeue();
+		}
+		if( field.BindedLine != null && field.BindedLine != line )
+		{
+			field.BindedLine.UnBind();
+		}
+		field.gameObject.SetActive(true);
+		line.Bind(field.gameObject);
+		usingFields_.Add(field);
+		OnLayoutChanged();
+	}
+
+	public void OnRemove(Line line)
+	{
+		TextField field = line.Field;
+		if( field != null && field.gameObject.activeSelf )
+		{
+			usingFields_.Remove(field);
+			field.transform.parent = heapParent_.transform;
+			fieldHeap_.Enqueue(field);
+			field.gameObject.SetActive(false);
+		}
+	}
 
 	public void OnFocused(Line line)
 	{
@@ -1111,10 +1242,15 @@ public class Tree : MonoBehaviour {
 
 	public void OnTextFieldDestroy(TextField field)
 	{
-		fields_.Remove(field);
+		usingFields_.Remove(field);
 		OnLayoutChanged();
 	}
-	
+
+	#endregion
+
+
+	#region layout
+
 	public void OnLayoutChanged()
 	{
 		if( suspendLayoutCount_ <= 0 )
@@ -1127,26 +1263,45 @@ public class Tree : MonoBehaviour {
 		}
 	}
 
-	public void SuspendLayout()
+	protected void SuspendLayout()
 	{
 		++suspendLayoutCount_;
 	}
 
-	public void ResumeLayout()
+	protected void ResumeLayout()
 	{
 		--suspendLayoutCount_;
 		if( suspendLayoutCount_ <= 0 )
 		{
 			suspendLayoutCount_ = 0;
-			if( requestLayoutLines_.Count > 0 )
+			AdjustRequestedLayouts();
+		}
+	}
+
+	protected void RequestLayout(Line line)
+	{
+		if( line == null ) return;
+
+		if( suspendLayoutCount_ > 0 )
+		{
+			requestLayoutLines_.Add(line);
+		}
+		else
+		{
+			line.Parent.AdjustLayoutRecursive(line.Index);
+		}
+	}
+
+	protected void AdjustRequestedLayouts()
+	{
+		if( requestLayoutLines_.Count > 0 )
+		{
+			foreach( Line line in requestLayoutLines_ )
 			{
-				foreach( Line line in requestLayoutLines_ )
-				{
-					line.Parent.AdjustLayoutRecursive(line.Index);
-				}
-				requestLayoutLines_.Clear();
-				OnLayoutChanged();
+				line.Parent.AdjustLayoutRecursive(line.Index);
 			}
+			requestLayoutLines_.Clear();
+			OnLayoutChanged();
 		}
 	}
 
