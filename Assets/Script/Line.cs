@@ -32,13 +32,10 @@ public class Line : IEnumerable<Line>
 						line.Binding.SetActive(isFolded_ == false);
 					}
 				}
-				if( Tree != null )
+				if( Toggle != null )
 				{
-					Tree.OnLayoutChanged();
-				}
-				if( Toggle != null && Toggle.isOn != !IsFolded )
-				{
-					Toggle.isOn = !IsFolded;
+					if( Toggle.isOn != !IsFolded )
+						Toggle.isOn = !IsFolded;
 					AnimManager.AddAnim(Toggle.targetGraphic, Toggle.interactable && Toggle.isOn ? 0 : 90, ParamType.RotationZ, AnimType.Time, GameContext.Config.AnimTime);
 				}
 			}
@@ -65,8 +62,6 @@ public class Line : IEnumerable<Line>
 	public Line(string text = "")
 	{
 		textRx_.Value = text;
-		IsFolded = false;
-		IsDone = false;
 	}
 
 	public void Bind(GameObject binding)
@@ -308,6 +303,23 @@ public class Line : IEnumerable<Line>
 		if( parent_ != null )
 		{
 			parent_.AdjustLayoutRecursive(Index + 1, predToBreak);
+		}
+	}
+
+	public void AdjustLayoutInChildren()
+	{
+		if( Count > 0 )
+		{
+			Vector3 target = children_[0].CalcTargetPosition();
+			for( int i = 0; i < Count; ++i )
+			{
+				if( children_[i].Binding != null )
+				{
+					children_[i].TargetPosition = target;
+					AnimManager.AddAnim(children_[i].Binding, target, ParamType.Position, AnimType.Time, GameContext.Config.AnimTime);
+				}
+				target.y -= (1 + children_[i].VisibleChildCount) * GameContext.Config.HeightPerLine;
+			}
 		}
 	}
 

@@ -193,8 +193,7 @@ public class TextField : InputField, IColoredObject
 				case KeyCode.M:
 					if( ctrlOnly && BindedLine.Count > 0 )
 					{
-						BindedLine.IsFolded = !BindedLine.IsFolded;
-						BindedLine.AdjustLayoutRecursive();
+						ownerTree_.OnFoldUpdated(BindedLine, !BindedLine.IsFolded);
 					}
 					break;
 				case KeyCode.Delete:

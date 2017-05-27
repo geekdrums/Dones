@@ -506,7 +506,7 @@ public class Tree : MonoBehaviour {
 						{
 							newParent.IsFolded = false;
 							newParent.AdjustLayoutRecursive();
-							OnLayoutChanged();
+							UpdateLayoutElement();
 						}
 					},
 					undo: ()=>
@@ -949,44 +949,99 @@ public class Tree : MonoBehaviour {
 	{
 		ClearSelection();
 
-		SuspendLayout();
+		actionManager_.StartChain();
 		if( isAllFolded_ )
 		{
-			Line line = rootLine_[0];
 			// unfold all
+			Line line = rootLine_[0];
+			Line layoutStart = null;
 			while( line != null )
 			{
 				if( line.Count > 0 && line.IsFolded )
 				{
-					line.IsFolded = false;
-					line.AdjustLayout(Line.Direction.XY);
-					line.AdjustLayoutRecursive(0, (Line l) => l.Count > 0 && l.IsFolded);
+					if( layoutStart == null )
+						layoutStart = line.NextVisibleLine;
+
+					Line unfoldLine = line;
+					actionManager_.Execute(new Action(
+						execute: () =>
+						{
+							unfoldLine.IsFolded = false;
+							unfoldLine.AdjustLayout();
+							unfoldLine.AdjustLayoutRecursive(0, (Line l) => l.Count > 0 && l.IsFolded);
+						},
+						undo: () =>
+						{
+							unfoldLine.IsFolded = true;
+							unfoldLine.AdjustLayoutInChildren();
+						}
+						));
 				}
 				line = line.NextVisibleLine;
 			}
-			
-			isAllFolded_ = false;
+
+			actionManager_.Execute(new Action(
+				execute: () =>
+				{
+					isAllFolded_ = false;
+				},
+				undo: () =>
+				{
+					isAllFolded_ = true;
+					if( layoutStart != null )
+					{
+						RequestLayout(layoutStart);
+					}
+				}
+				));
 		}
 		else
 		{
-			Line layoutStart = null;
-			Line line = rootLine_.LastVisibleLine;
 			// fold all
-			while( line != null )
+			Line addLine = rootLine_.LastVisibleLine;
+			List<Line> foldLines = new List<Line>();
+			while( addLine != null )
 			{
-				if( line.Count > 0 && line.IsFolded == false )
+				if( addLine.Count > 0 && addLine.IsFolded == false )
 				{
-					line.IsFolded = true;
-					foreach( Line child in line )
-					{
-						child.AdjustLayout();
-					}
-					layoutStart = line;
+					foldLines.Add(addLine);
 				}
-				line = line.PrevVisibleLine;
+				addLine = addLine.PrevVisibleLine;
 			}
 
-			isAllFolded_ = true;
+			foreach(Line line in foldLines)
+			{
+				Line foldLine = line;
+				actionManager_.Execute(new Action(
+					execute: () =>
+					{
+						foldLine.IsFolded = true;
+						foldLine.AdjustLayoutInChildren();
+					},
+					undo: () =>
+					{
+						foldLine.IsFolded = false;
+						foldLine.AdjustLayout();
+						foldLine.AdjustLayoutRecursive(0, (Line l) => l.Count > 0 && foldLines.Contains(l));
+					}
+					));
+			}
+
+			Line foldStart = (foldLines.Count > 0 ? foldLines[foldLines.Count - 1] : null);
+			actionManager_.Execute(new Action(
+				execute: () =>
+				{
+					isAllFolded_ = true;
+					if( foldStart != null )
+					{
+						RequestLayout(foldStart.NextVisibleLine);
+					}
+				},
+				undo: () =>
+				{
+					isAllFolded_ = false;
+				}
+				));
 
 			if( focusedLine_ != null )
 			{
@@ -996,14 +1051,8 @@ public class Tree : MonoBehaviour {
 				}
 				focusedLine_.Field.IsFocused = true;
 			}
-
-			if( layoutStart != null )
-			{
-				layoutStart.AdjustLayoutRecursive();
-			}
 		}
-		ResumeLayout();
-		OnLayoutChanged();
+		actionManager_.EndChain();
 	}
 
 	#endregion
@@ -1124,7 +1173,7 @@ public class Tree : MonoBehaviour {
 			layoutStart.Parent.AdjustLayoutRecursive(layoutStart.Index);
 		}
 		ResumeLayout();
-		OnLayoutChanged();
+		UpdateLayoutElement();
 	}
 
 	protected void Cut()
@@ -1196,7 +1245,7 @@ public class Tree : MonoBehaviour {
 		field.gameObject.SetActive(true);
 		line.Bind(field.gameObject);
 		usingFields_.Add(field);
-		OnLayoutChanged();
+		UpdateLayoutElement();
 	}
 
 	public void OnRemove(Line line)
@@ -1235,6 +1284,26 @@ public class Tree : MonoBehaviour {
 		}
 	}
 
+	public void OnFoldUpdated(Line line, bool isFolded)
+	{
+		if( line.IsFolded != isFolded )
+		{
+			actionManager_.Execute(new Action(
+				execute: () =>
+				{
+					line.IsFolded = isFolded;
+					line.AdjustLayoutRecursive();
+				},
+				undo: () =>
+				{
+					line.IsFolded = !isFolded;
+					line.AdjustLayoutRecursive();
+				}
+				));
+			UpdateLayoutElement();
+		}
+	}
+
 	public void OnDeleteKeyConsumed()
 	{
 		wasDeleteKeyConsumed_ = true;
@@ -1243,7 +1312,7 @@ public class Tree : MonoBehaviour {
 	public void OnTextFieldDestroy(TextField field)
 	{
 		usingFields_.Remove(field);
-		OnLayoutChanged();
+		UpdateLayoutElement();
 	}
 
 	#endregion
@@ -1251,7 +1320,7 @@ public class Tree : MonoBehaviour {
 
 	#region layout
 
-	public void OnLayoutChanged()
+	protected void UpdateLayoutElement()
 	{
 		if( suspendLayoutCount_ <= 0 )
 		{
@@ -1301,7 +1370,7 @@ public class Tree : MonoBehaviour {
 				line.Parent.AdjustLayoutRecursive(line.Index);
 			}
 			requestLayoutLines_.Clear();
-			OnLayoutChanged();
+			UpdateLayoutElement();
 		}
 	}
 

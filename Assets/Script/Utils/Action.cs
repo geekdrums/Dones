@@ -16,6 +16,14 @@ public class Action : IAction
 	System.Action undo_;
 	System.Action redo_;
 
+
+	public Action(System.Action execute)
+	{
+		execute_ = execute;
+		undo_ = execute;
+		redo_ = execute;
+	}
+
 	public Action(System.Action execute, System.Action undo)
 	{
 		execute_ = execute;
