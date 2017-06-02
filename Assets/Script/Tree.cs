@@ -1108,6 +1108,8 @@ public class Tree : MonoBehaviour {
 		if( focusedLine_ == null )
 			return;
 
+		actionManager_.StartChain();
+
 		Line pasteStart = focusedLine_;
 		if( HasSelection )
 		{
@@ -1124,13 +1126,35 @@ public class Tree : MonoBehaviour {
 			++currentLevel;
 			text = text.Remove(0, 1);
 		}
-		pasteStart.Field.Paste(text);
-		oldLevel = currentLevel;
 
-		SuspendLayout();
+		string oldText = pasteStart.Text;
+		string pasteText = text;
+		int oldCaretPos = pasteStart.Field.CaretPosision;
+		Line layoutStart = (cilpboardLines.Length > 1 ? pasteStart.NextVisibleLine : null);
+		actionManager_.Execute(new Action(
+			execute: () =>
+			{
+				pasteStart.Field.Paste(pasteText);
+				if( layoutStart != null )
+				{
+					RequestLayout(layoutStart);
+				}
+			},
+			undo: () =>
+			{
+				pasteStart.Text = oldText;
+				pasteStart.Field.CaretPosision = oldCaretPos;
+				if( layoutStart != null )
+				{
+					RequestLayout(layoutStart);
+				}
+			}
+			));
+
+		oldLevel = currentLevel;
+		
 		Line parent = pasteStart.Parent;
 		Line brother = pasteStart;
-		Line layoutStart = pasteStart.NextVisibleLine;
 		for( int i = 1; i < cilpboardLines.Length; ++i )
 		{
 			text = cilpboardLines[i];
@@ -1142,14 +1166,20 @@ public class Tree : MonoBehaviour {
 			}
 
 			Line line = new Line(text);
+
+			Line insertParent;
+			int insertIndex;
+
 			if( currentLevel > oldLevel )
 			{
-				brother.Add(line);
+				insertParent = brother;
+				insertIndex = brother.Count;
 				parent = brother;
 			}
 			else if( currentLevel == oldLevel )
 			{
-				parent.Insert(brother.Index + 1, line);
+				insertParent = parent;
+				insertIndex = brother.Index + 1;
 			}
 			else// currentLevel < oldLevel 
 			{
@@ -1160,18 +1190,27 @@ public class Tree : MonoBehaviour {
 					brother = parent;
 					parent = parent.Parent;
 				}
-				parent.Insert(brother.Index + 1, line);
+				insertParent = parent;
+				insertIndex = brother.Index + 1;
 			}
+
+			actionManager_.Execute(new Action(
+				execute: () =>
+				{
+					insertParent.Insert(insertIndex, line);
+				},
+				undo: () =>
+				{
+					insertParent.Remove(line);
+				}
+				));
+
 			brother = line;
 			oldLevel = currentLevel;
 		}
 
-		if( layoutStart != null )
-		{
-			layoutStart.Parent.AdjustLayoutRecursive(layoutStart.Index);
-		}
-		ResumeLayout();
-		UpdateLayoutElement();
+
+		actionManager_.EndChain();
 	}
 
 	protected void Cut()

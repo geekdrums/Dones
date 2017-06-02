@@ -18,8 +18,7 @@ public class ActionManager
 {
 	List<IAction> actions_ = new List<IAction>();
 	int currentIndex_ = -1;
-	bool isChain_ = false;
-	ChainAction lastChainAction_;
+	Stack<ChainAction> chainStack_ = new Stack<ChainAction>();
 
 	public event EventHandler<ActionEventArgs> Executed;
 	public event EventHandler ChainStarted;
@@ -31,9 +30,9 @@ public class ActionManager
 		if( Executed != null )
 			Executed(this, new ActionEventArgs(action));
 
-		if( isChain_ )
+		if( chainStack_.Count > 0 )
 		{
-			lastChainAction_.AddChain(action);
+			chainStack_.Peek().AddChain(action);
 		}
 		else
 		{
@@ -90,42 +89,44 @@ public class ActionManager
 	{
 		actions_.Clear();
 		currentIndex_ = -1;
-		isChain_ = false;
-		lastChainAction_ = null;
+		chainStack_.Clear();
 	}
 
 	public void StartChain()
 	{
-		if( isChain_ )
+		if( chainStack_.Count == 0 )
 		{
-			UnityEngine.Debug.LogError("前のチェインが終了していません");
-			actions_.Add(lastChainAction_);
+			OnChainStarted();
 		}
-		isChain_ = true;
-		lastChainAction_ = new ChainAction();
-		OnChainStarted();
+		chainStack_.Push(new ChainAction());
 	}
 
 	public void EndChain()
 	{
-		if( isChain_ == false || lastChainAction_ == null )
+		if( chainStack_.Count == 0 )
 		{
 			UnityEngine.Debug.LogError("チェインが開始していません");
-			lastChainAction_ = new ChainAction();
-		}
-		isChain_ = false;
-		if( lastChainAction_.HasAction() )
-		{
-			if( currentIndex_ + 1 < actions_.Count )
-			{
-				actions_.RemoveRange(currentIndex_ + 1, actions_.Count - (currentIndex_ + 1));
-			}
-			++currentIndex_;
-			actions_.Add(lastChainAction_);
+			return;
 		}
 
-		OnChainEnded();
-		lastChainAction_ = null;
+		ChainAction lastChainAction = chainStack_.Pop();
+		if( lastChainAction.HasAction() )
+		{
+			if( chainStack_.Count > 0 )
+			{
+				chainStack_.Peek().AddChain(lastChainAction);
+			}
+			else
+			{
+				if( currentIndex_ + 1 < actions_.Count )
+				{
+					actions_.RemoveRange(currentIndex_ + 1, actions_.Count - (currentIndex_ + 1));
+				}
+				++currentIndex_;
+				actions_.Add(lastChainAction);
+				OnChainEnded();
+			}
+		}
 	}
 
 	private void OnChainStarted()

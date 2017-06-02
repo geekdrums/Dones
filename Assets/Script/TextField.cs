@@ -15,7 +15,7 @@ public class TextField : InputField, IColoredObject
 	public int CaretPosision
 	{
 		get { return caretPos_; }
-		set { caretPos_ = desiredCaretPos_ = value; }
+		set { selectionAnchorPosition = selectionFocusPosition = caretPos_ = desiredCaretPos_ = value; }
 	}
 	protected int caretPos_;
 	protected static int desiredCaretPos_;
