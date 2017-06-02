@@ -17,7 +17,6 @@ public class Tree : MonoBehaviour {
 	#region params
 
 	List<TextField> usingFields_ = new List<TextField>();
-	Queue<TextField> fieldHeap_ = new Queue<TextField>();
 	GameObject heapParent_;
 	Line rootLine_;
 	Line focusedLine_;
@@ -58,8 +57,7 @@ public class Tree : MonoBehaviour {
 		for( int i = 0; i < FieldCount; ++i )
 		{
 			TextField field = Instantiate(FieldPrefab.gameObject).GetComponent<TextField>();
-			field.transform.parent = heapParent_.transform;
-			fieldHeap_.Enqueue(field);
+			field.transform.SetParent(heapParent_.transform);
 		}
 		heapParent_.SetActive(false);
 
@@ -292,20 +290,6 @@ public class Tree : MonoBehaviour {
 		Line oldParent = oldSelectTop.Parent;
 		int oldIndex = oldSelectTop.Index;
 
-		// （入力のために）新しい行を作る
-		Line newLine = new Line();
-		actionManager_.Execute(new Action(
-			execute: () =>
-			{
-				oldParent.Insert(oldIndex, newLine);
-				newLine.Field.IsFocused = true;
-			},
-			undo: () =>
-			{
-				oldParent.Remove(newLine);
-			}
-			));
-
 		List<Action> reparentActions = new List<Action>();
 		List<Action> deleteActions = new List<Action>();
 
@@ -339,6 +323,8 @@ public class Tree : MonoBehaviour {
 							{
 								lostParent.Add(lostChildren[i]);
 							}
+							RequestLayout(lostParent);
+							RequestLayout(prev.NextVisibleLine);
 						}
 						));
 				}
@@ -346,10 +332,10 @@ public class Tree : MonoBehaviour {
 
 			Line parent = line.Parent;
 			int index = line.Index;
+			Line layoutStart = line.NextVisibleLine;
 			deleteActions.Add(new Action(
 				execute: () =>
 				{
-					Line layoutStart = line.NextVisibleLine;
 					line.Parent.Remove(line);
 					if( layoutStart != null && layoutStart.Field.IsSelected == false )
 					{
@@ -365,16 +351,14 @@ public class Tree : MonoBehaviour {
 						focusedLine_ = line;
 						line.Field.IsFocused = true;
 					}
-					Line layoutStart = line.PrevVisibleLine;
 					if( layoutStart != null && layoutStart.Field.IsSelected == false )
 					{
-						RequestLayout(line);
+						RequestLayout(layoutStart);
 					}
 				}
 				));
 		}
-
-		// 親の切り替え→削除の順で全体を実行
+		
 		foreach( Action action in reparentActions )
 		{
 			actionManager_.Execute(action);
@@ -393,12 +377,26 @@ public class Tree : MonoBehaviour {
 			},
 			undo: () =>
 			{
-				selectedLines_ = oldSelection;
+				selectedLines_ = new SortedList<int, Line>(oldSelection);
 				selectionStartLine_ = oldSelectStart;
 				selectionEndLine_ = oldSelectEnd;
 			}
 			));
-		
+
+		// （入力のために）新しい行を作る
+		Line newLine = new Line();
+		actionManager_.Execute(new Action(
+			execute: () =>
+			{
+				oldParent.Insert(oldIndex, newLine);
+				newLine.Field.IsFocused = true;
+			},
+			undo: () =>
+			{
+				oldParent.Remove(newLine);
+			}
+			));
+
 		actionManager_.EndChain();
 
 		return newLine;
@@ -1223,20 +1221,14 @@ public class Tree : MonoBehaviour {
 
 	public void Bind(Line line)
 	{
-		TextField field = null;
-		if( fieldHeap_.Count > 0 )
-		{
-			field = fieldHeap_.Dequeue();
-		}
-		else
+		TextField field = heapParent_.GetComponentInChildren<TextField>();
+		if( field == null )
 		{
 			for( int i = 0; i < FieldCount; ++i )
 			{
 				field = Instantiate(FieldPrefab.gameObject).GetComponent<TextField>();
-				field.transform.parent = heapParent_.transform;
-				fieldHeap_.Enqueue(field);
+				field.transform.SetParent(heapParent_.transform);
 			}
-			field = fieldHeap_.Dequeue();
 		}
 		if( field.BindedLine != null && field.BindedLine != line )
 		{
@@ -1248,14 +1240,22 @@ public class Tree : MonoBehaviour {
 		UpdateLayoutElement();
 	}
 
+	public void OnReBind(Line line)
+	{
+		TextField field = line.Field;
+		if( field != null && field.gameObject.activeInHierarchy )
+		{
+			usingFields_.Add(field);
+		}
+	}
+
 	public void OnRemove(Line line)
 	{
 		TextField field = line.Field;
-		if( field != null && field.gameObject.activeSelf )
+		if( field != null && field.gameObject.activeInHierarchy )
 		{
 			usingFields_.Remove(field);
-			field.transform.parent = heapParent_.transform;
-			fieldHeap_.Enqueue(field);
+			field.transform.SetParent(heapParent_.transform);
 			field.gameObject.SetActive(false);
 		}
 	}
@@ -1349,11 +1349,15 @@ public class Tree : MonoBehaviour {
 
 	protected void RequestLayout(Line line)
 	{
-		if( line == null ) return;
+		if( line == null || line.Parent == null ) return;
+
 
 		if( suspendLayoutCount_ > 0 )
 		{
-			requestLayoutLines_.Add(line);
+			if( requestLayoutLines_.Contains(line) == false )
+			{
+				requestLayoutLines_.Add(line);
+			}
 		}
 		else
 		{
@@ -1367,7 +1371,10 @@ public class Tree : MonoBehaviour {
 		{
 			foreach( Line line in requestLayoutLines_ )
 			{
-				line.Parent.AdjustLayoutRecursive(line.Index);
+				if( line.Parent != null )
+				{
+					line.Parent.AdjustLayoutRecursive(line.Index);
+				}
 			}
 			requestLayoutLines_.Clear();
 			UpdateLayoutElement();

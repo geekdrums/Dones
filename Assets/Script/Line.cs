@@ -55,6 +55,7 @@ public class Line : IEnumerable<Line>
 	public TreeToggle Toggle { get; protected set; }
 
 	protected IDisposable textSubscription_;
+	protected IDisposable fieldSubscription_;
 	protected IDisposable toggleSubscription_;
 
 	#endregion
@@ -78,7 +79,7 @@ public class Line : IEnumerable<Line>
 
 			Field.BindedLine = this;
 			Field.text = textRx_.Value;
-			Field.onValueChanged.AsObservable().Subscribe(text => textRx_.Value = text).AddTo(Field);
+			fieldSubscription_ = Field.onValueChanged.AsObservable().Subscribe(text => textRx_.Value = text);
 			textSubscription_ = textRx_.Subscribe(text => Field.text = text);
 
 			Toggle = Field.GetComponentInChildren<TreeToggle>();
@@ -98,6 +99,7 @@ public class Line : IEnumerable<Line>
 	{
 		Binding.SetActive(true);
 		Bind(Binding);
+		Tree.OnReBind(this);
 	}
 
 	public void UnBind()
@@ -146,7 +148,7 @@ public class Line : IEnumerable<Line>
 		{
 			Tree.Bind(child);
 		}
-		else if( child.Field.BindedLine == child && child.Field.gameObject.activeInHierarchy == false )
+		else if( child.Field.BindedLine == child && child.Field.gameObject.activeSelf == false )
 		{
 			child.ReBind();
 		}
@@ -161,10 +163,11 @@ public class Line : IEnumerable<Line>
 		children_.Remove(child);
 		if( child.parent_ == this && child.Binding != null )
 		{
-			Tree.OnRemove(child);
+			child.fieldSubscription_.Dispose();
 			child.textSubscription_.Dispose();
 			child.toggleSubscription_.Dispose();
 			child.parent_ = null;
+			Tree.OnRemove(child);
 		}
 	}
 
