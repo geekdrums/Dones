@@ -10,11 +10,22 @@ using UniRx;
 public class Line : IEnumerable<Line>
 {
 	#region params
-
-	public string Text { get { return textRx_.Value; } set { textRx_.Value = value; } }
-	public int TextLength { get { return textRx_.Value.Length; } }
+	
+	public string Text
+	{
+		get { return text_; }
+		set
+		{
+			text_ = value;
+			if( Field != null )
+			{
+				Field.SetTextDirectly(text_);
+			}
+		}
+	}
+	protected string text_;
+	public int TextLength { get { return text_.Length; } }
 	public override string ToString() { return Text; }
-	protected ReactiveProperty<string> textRx_ = new ReactiveProperty<string>();
 
 	public bool IsFolded
 	{
@@ -53,17 +64,142 @@ public class Line : IEnumerable<Line>
 	public Tree Tree { get; protected set; }
 	public TextField Field { get; protected set; }
 	public TreeToggle Toggle { get; protected set; }
-
-	protected IDisposable textSubscription_;
+	
 	protected IDisposable fieldSubscription_;
 	protected IDisposable toggleSubscription_;
-
+	
 	#endregion
 
 	public Line(string text = "")
 	{
-		textRx_.Value = text;
+		text_ = text;
 	}
+
+	#region TextInputAction
+
+	public abstract class TextAction : IAction
+	{
+		public StringBuilder Text = new StringBuilder();
+		public int CaretPos;
+
+		protected Line line_;
+
+		public TextAction(Line line)
+		{
+			line_ = line;
+			CaretPos = line.Field.CaretPosision;
+		}
+
+		public abstract void Execute();
+		public abstract void Undo();
+		public abstract void Redo();
+	}
+
+	public class TextInputAction : TextAction
+	{
+		public TextInputAction(Line line) : base(line)
+		{
+		}
+
+		public override void Execute()
+		{
+
+		}
+
+		public override void Undo()
+		{
+			line_.Field.CaretPosision = CaretPos;
+			line_.Text = line_.text_.Remove(CaretPos, Text.Length);
+		}
+
+		public override void Redo()
+		{
+			line_.Text = line_.text_.Insert(CaretPos, Text.ToString());
+			line_.Field.CaretPosision = CaretPos + Text.Length;
+		}
+	}
+
+	public class TextDeleteAction : TextAction
+	{
+		public TextDeleteAction(Line line) : base(line)
+		{
+		}
+
+		public override void Execute()
+		{
+
+		}
+
+		public override void Undo()
+		{
+			line_.Text = line_.text_.Insert(CaretPos, Text.ToString());
+			line_.Field.CaretPosision = CaretPos + Text.Length;
+		}
+
+		public override void Redo()
+		{
+			line_.Field.CaretPosision = CaretPos;
+			line_.Text = line_.text_.Remove(CaretPos, Text.Length);
+		}
+	}
+
+	protected TextAction textAction_ = null;
+	protected float lastTextActionTime_ = 0;
+
+	protected void OnTextChanged(string newText)
+	{
+		int oldCaretPos = Field.CaretPosision;
+		int currentCaretPos = Field.caretPosition;
+
+		if( oldCaretPos < currentCaretPos )
+		{
+			if( textAction_ == null || textAction_ is TextInputAction == false || Time.time - lastTextActionTime_ > GameContext.Config.TextInputFixIntervalTime )
+			{
+				textAction_ = new TextInputAction(this);
+				Tree.ActionManager.Execute(textAction_);
+			}
+			string appendText = newText.Substring(oldCaretPos, currentCaretPos - oldCaretPos);
+			textAction_.Text.Append(appendText);
+			if( appendText == " " )
+			{
+				FixTextInputAction();
+			}
+		}
+		else
+		{
+			if( textAction_ == null || textAction_ is TextDeleteAction == false || Time.time - lastTextActionTime_ > GameContext.Config.TextInputFixIntervalTime )
+			{
+				textAction_ = new TextDeleteAction(this);
+				Tree.ActionManager.Execute(textAction_);
+			}
+
+			int deletedCount = text_.Length - newText.Length;
+			if( oldCaretPos > currentCaretPos )	// backspace
+			{
+				string deletedText = text_.Substring(currentCaretPos, deletedCount);
+				textAction_.Text.Insert(0, deletedText);
+			}
+			else // if( oldCaretPos == currentCaretPos ) delete
+			{
+				string deletedText = text_.Substring(oldCaretPos, deletedCount);
+				textAction_.Text.Append(deletedText);
+			}
+			textAction_.CaretPos = currentCaretPos;
+		}
+
+		lastTextActionTime_ = Time.time;
+		text_ = newText;
+	}
+
+	public void FixTextInputAction()
+	{
+		textAction_ = null;
+	}
+
+	#endregion
+
+
+	#region Binding
 
 	public void Bind(GameObject binding)
 	{
@@ -78,9 +214,11 @@ public class Line : IEnumerable<Line>
 			}
 
 			Field.BindedLine = this;
-			Field.text = textRx_.Value;
-			fieldSubscription_ = Field.onValueChanged.AsObservable().Subscribe(text => textRx_.Value = text);
-			textSubscription_ = textRx_.Subscribe(text => Field.text = text);
+			Field.text = text_;
+			fieldSubscription_ = Field.onValueChanged.AsObservable().Subscribe(text =>
+			{
+				OnTextChanged(text);
+			});
 
 			Toggle = Field.GetComponentInChildren<TreeToggle>();
 			toggleSubscription_ = children_.ObserveCountChanged(true).Select(x => x > 0).DistinctUntilChanged().Subscribe(hasChild =>
@@ -108,6 +246,9 @@ public class Line : IEnumerable<Line>
 		Binding = null;
 		Field = null;
 	}
+
+	#endregion
+
 
 	#region Tree params
 
@@ -164,7 +305,6 @@ public class Line : IEnumerable<Line>
 		if( child.parent_ == this && child.Binding != null )
 		{
 			child.fieldSubscription_.Dispose();
-			child.textSubscription_.Dispose();
 			child.toggleSubscription_.Dispose();
 			child.parent_ = null;
 			Tree.OnRemove(child);

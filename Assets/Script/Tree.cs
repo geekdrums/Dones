@@ -35,9 +35,11 @@ public class Tree : MonoBehaviour {
 	LayoutElement layout_;
 	ScrollRect scrollRect_;
 
+	// properties
+	public ActionManager ActionManager { get { return actionManager_; } }
+
 	#endregion
-
-
+	
 	#region unity functions
 
 	// Use this for initialization
@@ -348,8 +350,8 @@ public class Tree : MonoBehaviour {
 					line.Field.IsSelected = true;
 					if( line == oldSelectEnd )
 					{
-						focusedLine_ = line;
 						line.Field.IsFocused = true;
+						OnFocused(line);
 					}
 					if( layoutStart != null && layoutStart.Field.IsSelected == false )
 					{
@@ -390,6 +392,7 @@ public class Tree : MonoBehaviour {
 			{
 				oldParent.Insert(oldIndex, newLine);
 				newLine.Field.IsFocused = true;
+				OnFocused(newLine);
 			},
 			undo: () =>
 			{
@@ -419,6 +422,11 @@ public class Tree : MonoBehaviour {
 
 	void actionManager__Executed(object sender, ActionEventArgs e)
 	{
+		if( focusedLine_ != null && e.Action is Line.TextAction == false )
+		{
+			focusedLine_.FixTextInputAction();
+		}
+
 		if( suspendLayoutCount_ <= 0 )
 		{
 			AdjustRequestedLayouts();
@@ -857,7 +865,7 @@ public class Tree : MonoBehaviour {
 		if( HasSelection )
 		{
 			selectionEndLine_.Field.IsFocused = true;
-			focusedLine_ = selectionEndLine_;
+			OnFocused(selectionEndLine_);
 			ClearSelection();
 		}
 
@@ -1043,11 +1051,13 @@ public class Tree : MonoBehaviour {
 
 			if( focusedLine_ != null )
 			{
-				while( focusedLine_.Parent.IsFolded )
+				Line newFocusLine = focusedLine_;
+				while( newFocusLine.Parent.IsFolded )
 				{
-					focusedLine_ = focusedLine_.Parent;
+					newFocusLine = newFocusLine.Parent;
 				}
-				focusedLine_.Field.IsFocused = true;
+				newFocusLine.Field.IsFocused = true;
+				OnFocused(newFocusLine);
 			}
 		}
 		actionManager_.EndChain();
@@ -1301,6 +1311,16 @@ public class Tree : MonoBehaviour {
 
 	public void OnFocused(Line line)
 	{
+		if( focusedLine_ == line )
+		{
+			return;
+		}
+
+		if( focusedLine_ != null )
+		{
+			focusedLine_.FixTextInputAction();
+		}
+
 		focusedLine_ = line;
 		selectionStartLine_ = line;
 

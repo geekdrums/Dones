@@ -10,6 +10,7 @@ public class Config : MonoBehaviour
 	public float AnimOvershoot = 1.70158f;
 	public float ArrowStreamDelayTime = 0.3f;
 	public float ArrowStreamIntervalTime = 0.03f;
+	public float TextInputFixIntervalTime = 1.0f;
 
 	// Use this for initialization
 	void Awake()

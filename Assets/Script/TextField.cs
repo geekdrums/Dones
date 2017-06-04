@@ -95,6 +95,16 @@ public class TextField : InputField, IColoredObject
 		UpdateLabel();
 	}
 
+	public void SetTextDirectly(string text)
+	{
+		// onValueChangedを発生させないテキスト設定。
+		// Fieldからのユーザーの入力のみをイベントとして取得したいので、
+		// Lineクラスからシステム的に設定される場合（Undoや改行など）は、
+		// この関数でイベント呼び出しを避ける。
+		m_Text = text;
+		UpdateLabel();
+	}
+
 	#endregion
 
 
@@ -231,6 +241,7 @@ public class TextField : InputField, IColoredObject
 						else
 						{
 							KeyPressed(processingEvent_);
+							BindedLine.FixTextInputAction();
 						}
 					}
 					break;
@@ -243,7 +254,15 @@ public class TextField : InputField, IColoredObject
 						else
 						{
 							KeyPressed(processingEvent_);
+							BindedLine.FixTextInputAction();
 						}
+					}
+					break;
+				case KeyCode.RightArrow:
+				case KeyCode.LeftArrow:
+					{
+						KeyPressed(processingEvent_);
+						BindedLine.FixTextInputAction();
 					}
 					break;
 				default:
