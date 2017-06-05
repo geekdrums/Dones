@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Text;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -7,7 +8,11 @@ using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using UniRx;
 using UniRx.Triggers;
+using System.IO;
+using System.Runtime.InteropServices;
+using System.Windows.Forms;
 
+// Window - [ Tree ] - Line
 public class Tree : MonoBehaviour {
 	
 	// editor params
@@ -35,16 +40,46 @@ public class Tree : MonoBehaviour {
 	LayoutElement layout_;
 	ScrollRect scrollRect_;
 
+	// file
+	FileInfo file_ = null;
+
 	// properties
 	public ActionManager ActionManager { get { return actionManager_; } }
 
+	// utils
+	protected IEnumerable<Line> GetSelectedOrFocusedLines(bool ascending = true)
+	{
+		if( HasSelection )
+		{
+			if( ascending )
+			{
+				foreach( Line line in selectedLines_.Values )
+				{
+					yield return line;
+				}
+			}
+			else
+			{
+				for( int i = selectedLines_.Count - 1; i >= 0; --i )
+				{
+					yield return selectedLines_.Values[i];
+				}
+			}
+		}
+		else if( focusedLine_ != null )
+		{
+			yield return focusedLine_;
+		}
+	}
+
+
 	#endregion
-	
+
+
 	#region unity functions
 
 	// Use this for initialization
 	void Awake () {
-		
 		layout_ = GetComponentInParent<LayoutElement>();
 		scrollRect_ = GetComponentInParent<ScrollRect>();
 
@@ -64,27 +99,29 @@ public class Tree : MonoBehaviour {
 		heapParent_.SetActive(false);
 
 		// test
-		rootLine_ = new Line("CategoryName");
-		rootLine_.Bind(this.gameObject);
+		//rootLine_ = new Line("CategoryName");
+		//rootLine_.Bind(this.gameObject);
 
-		SuspendLayout();
-		rootLine_.Add(new Line("Hello World"));
-		rootLine_.Add(new Line("Hello1"));
-		rootLine_.Add(new Line("Hello2"));
-		rootLine_.Add(new Line("Hello3"));
-		rootLine_.Add(new Line("Hello4"));
-		rootLine_.Add(new Line("Hello5"));
-		rootLine_.Add(new Line("Hello6"));
-		ResumeLayout();
+		//SuspendLayout();
+		//rootLine_.Add(new Line("Hello World"));
+		//rootLine_.Add(new Line("Hello1"));
+		//rootLine_.Add(new Line("Hello2"));
+		//rootLine_.Add(new Line("Hello3"));
+		//rootLine_.Add(new Line("Hello4"));
+		//rootLine_.Add(new Line("Hello5"));
+		//rootLine_.Add(new Line("Hello6"));
+		//ResumeLayout();
 
-		OnFocused(usingFields_[0].BindedLine);
+		//OnFocused(usingFields_[0].BindedLine);
 
-		SubscribeKeyInput();
+		//SubscribeKeyInput();
 	}
 	
 	// Update is called once per frame
 	void Update()
 	{
+		if( rootLine_ == null ) return;
+
 		bool ctrl = Input.GetKey(KeyCode.LeftControl);
 		bool shift = Input.GetKey(KeyCode.LeftShift);
 		bool alt = Input.GetKey(KeyCode.LeftAlt);
@@ -113,6 +150,14 @@ public class Tree : MonoBehaviour {
 			else if( Input.GetKeyDown(KeyCode.M) )
 			{
 				wasCtrlMInput_ = true;
+			}
+#if UNITY_EDITOR
+			else if( Input.GetKeyDown(KeyCode.W) )
+#else
+			else if( Input.GetKeyDown(KeyCode.S) )
+#endif
+			{
+				Save();
 			}
 		}
 		else if( Input.GetKeyDown(KeyCode.Tab) )
@@ -1081,16 +1126,15 @@ public class Tree : MonoBehaviour {
 	{
 		if( HasSelection )
 		{
-			string clipboardLines = "";
+			StringBuilder clipboardLines = new StringBuilder();
 			foreach( Line line in selectedLines_.Values )
 			{
 				int level = line.Level - 1;
 				for( int i = 0; i < level; ++i )
 				{
-					clipboardLines += TabString;
+					clipboardLines.Append(TabString);
 				}
-				clipboardLines += line.Text + System.Environment.NewLine;
-
+				clipboardLines.AppendLine(line.Text);
 				if( line.IsFolded )
 				{
 					foreach( Line child in line.GetAllChildren() )
@@ -1098,13 +1142,13 @@ public class Tree : MonoBehaviour {
 						level = child.Level - 1;
 						for( int i = 0; i < level; ++i )
 						{
-							clipboardLines += TabString;
+							clipboardLines.Append(TabString);
 						}
-						clipboardLines += child.Text + System.Environment.NewLine;
+						clipboardLines.AppendLine(child.Text);
 					}
 				}
 			}
-			Clipboard = clipboardLines.Remove(clipboardLines.Length - 1);
+			Clipboard = clipboardLines.ToString();
 		}
 	}
 
@@ -1230,39 +1274,8 @@ public class Tree : MonoBehaviour {
 	#endregion
 
 
-	#region utils
-
-	protected IEnumerable<Line> GetSelectedOrFocusedLines(bool ascending = true)
-	{
-		if( HasSelection )
-		{
-			if( ascending )
-			{
-				foreach( Line line in selectedLines_.Values )
-				{
-					yield return line;
-				}
-			}
-			else
-			{
-				for( int i = selectedLines_.Count - 1; i >= 0; --i )
-				{
-					yield return selectedLines_.Values[i];
-				}
-			}
-		}
-		else if( focusedLine_ != null )
-		{
-			yield return focusedLine_;
-		}
-	}
-
-	#endregion
-
-
 	#region events
-
-
+	
 	public void Bind(Line line)
 	{
 		TextField field = heapParent_.GetComponentInChildren<TextField>();
@@ -1433,6 +1446,115 @@ public class Tree : MonoBehaviour {
 			requestLayoutLines_.Clear();
 			UpdateLayoutElement();
 		}
+	}
+
+	#endregion
+	
+
+	#region file
+	
+	public void Load(string path)
+	{
+		if( file_ != null )
+		{
+			return;
+		}
+
+		file_ = new FileInfo(path);
+		
+		rootLine_ = new Line(file_.Name);
+		rootLine_.Bind(this.gameObject);
+
+		SuspendLayout();
+		StreamReader reader = new StreamReader(file_.OpenRead());
+		Line parent = rootLine_;
+		Line brother = null;
+		string text = null;
+		int currentLevel, oldLevel = 0;
+		while( (text = reader.ReadLine()) != null )
+		{
+			currentLevel = 0;
+			while( text.StartsWith(TabString) )
+			{
+				++currentLevel;
+				text = text.Remove(0, 1);
+			}
+
+			Line line = new Line(text);
+
+			Line addParent;
+
+			if( currentLevel > oldLevel )
+			{
+				addParent = brother;
+				parent = brother;
+			}
+			else if( currentLevel == oldLevel )
+			{
+				addParent = parent;
+			}
+			else// currentLevel < oldLevel 
+			{
+				for( int level = oldLevel; level > currentLevel; --level )
+				{
+					if( parent.Parent == null ) break;
+
+					brother = parent;
+					parent = parent.Parent;
+				}
+				addParent = parent;
+			}
+
+			addParent.Add(line);
+
+			brother = line;
+			oldLevel = currentLevel;
+		}
+		if( rootLine_.Count == 0 )
+		{
+			rootLine_.Add(new Line(""));
+		}
+		reader.Close();
+		ResumeLayout();
+		UpdateLayoutElement();
+		
+		OnFocused(rootLine_[0]);
+
+		SubscribeKeyInput();
+	}
+
+	public void Save()
+	{
+		if( file_ == null )
+		{
+			SaveFileDialog saveFileDialog = new SaveFileDialog();
+			saveFileDialog.Filter = "dones file (*.dtml)|*.dtml";
+			DialogResult dialogResult = saveFileDialog.ShowDialog();
+			if( dialogResult == DialogResult.OK )
+			{
+				file_ = new FileInfo(saveFileDialog.FileName);
+			}
+			else
+			{
+				return;
+			}
+		}
+
+		StringBuilder lines = new StringBuilder();
+		foreach( Line line in rootLine_.GetAllChildren() )
+		{
+			int level = line.Level - 1;
+			for( int i = 0; i < level; ++i )
+			{
+				lines.Append(TabString);
+			}
+			lines.AppendLine(line.Text);
+		}
+
+		StreamWriter writer = new StreamWriter(file_.FullName, append: false);
+		writer.Write(lines.ToString());
+		writer.Flush();
+		writer.Close();
 	}
 
 	#endregion

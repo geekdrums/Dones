@@ -7,6 +7,7 @@ using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using UniRx;
 using UniRx.Triggers;
+
 public class ControlManager : MonoBehaviour {
 
 	// Use this for initialization
@@ -20,7 +21,12 @@ public class ControlManager : MonoBehaviour {
 	{
 		KeyCode[] throttleKeys = new KeyCode[]
 		{
+			
+#if UNITY_EDITOR
+			KeyCode.Q,
+#else
 			KeyCode.Z,
+#endif
 			KeyCode.Y,
 		};
 
@@ -48,7 +54,11 @@ public class ControlManager : MonoBehaviour {
 		{
 			switch( key )
 			{
+#if UNITY_EDITOR
+			case KeyCode.Q:
+#else
 			case KeyCode.Z:
+#endif
 				GameContext.CurrentActionManager.Undo();
 				break;
 			case KeyCode.Y:
