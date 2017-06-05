@@ -108,12 +108,14 @@ public class Line : IEnumerable<Line>
 
 		public override void Undo()
 		{
+			line_.Field.IsFocused = true;
 			line_.Field.CaretPosision = CaretPos;
 			line_.Text = line_.text_.Remove(CaretPos, Text.Length);
 		}
 
 		public override void Redo()
 		{
+			line_.Field.IsFocused = true;
 			line_.Text = line_.text_.Insert(CaretPos, Text.ToString());
 			line_.Field.CaretPosision = CaretPos + Text.Length;
 		}
@@ -132,12 +134,14 @@ public class Line : IEnumerable<Line>
 
 		public override void Undo()
 		{
+			line_.Field.IsFocused = true;
 			line_.Text = line_.text_.Insert(CaretPos, Text.ToString());
 			line_.Field.CaretPosision = CaretPos + Text.Length;
 		}
 
 		public override void Redo()
 		{
+			line_.Field.IsFocused = true;
 			line_.Field.CaretPosision = CaretPos;
 			line_.Text = line_.text_.Remove(CaretPos, Text.Length);
 		}

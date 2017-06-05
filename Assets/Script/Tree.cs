@@ -176,11 +176,6 @@ public class Tree : MonoBehaviour {
 				// ctrlもshiftもなしにクリックした場合は選択解除
 				ClearSelection();
 			}
-
-			if( focusedLine_ != null && focusedLine_.Field != null && focusedLine_.Field.Rect.Contains(Input.mousePosition) )
-			{
-				selectionStartLine_ = focusedLine_;
-			}
 		}
 		else if( Input.GetMouseButton(0) && selectionStartLine_ != null )
 		{

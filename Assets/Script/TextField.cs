@@ -25,13 +25,16 @@ public class TextField : InputField, IColoredObject
 		get { return isFocused; }
 		set
 		{
-			if( value )
+			if( value != isFocused )
 			{
-				ActivateInputField();
-			}
-			else
-			{
-				DeactivateInputField();
+				if( value )
+				{
+					ActivateInputField();
+				}
+				else
+				{
+					DeactivateInputField();
+				}
 			}
 		}
 	}
