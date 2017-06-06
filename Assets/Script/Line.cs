@@ -257,7 +257,6 @@ public class Line : IEnumerable<Line>
 
 	#region Tree params
 
-	public Line Parent { get { return parent_; } private set { parent_ = value; } }
 	protected Line parent_;
 	protected ReactiveCollection<Line> children_ = new ReactiveCollection<Line>();
 
@@ -273,6 +272,7 @@ public class Line : IEnumerable<Line>
 			children_[index] = value;
 		}
 	}
+	public Line Parent { get { return parent_; } private set { parent_ = value; } }
 	public int Count { get { return children_.Count; } }
 	public void Add(Line child)
 	{

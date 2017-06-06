@@ -47,10 +47,6 @@ public class TextField : InputField, IColoredObject
 			if( isSelected_ != value )
 			{
 				isSelected_ = value;
-				if( isSelected_ )
-				{
-					IsFocused = false;
-				}
 				transition = isSelected_ ? Transition.None : Transition.ColorTint;
 				Background = isSelected_ ? GameContext.Config.SelectionColor : colors.normalColor;
 			}
@@ -92,10 +88,28 @@ public class TextField : InputField, IColoredObject
 
 	#region public functions
 
-	public void Paste(string text)
+	public void Paste(string pasteText)
 	{
-		Append(text);
-		UpdateLabel();
+		DeleteSelection();
+		BindedLine.Text = text.Insert(m_CaretPosition, pasteText);
+		caretSelectPositionInternal = caretPositionInternal += text.Length;
+	}
+
+	public void DeleteSelection()
+	{
+		if( caretPositionInternal == caretSelectPositionInternal )
+			return;
+
+		if( caretPositionInternal < caretSelectPositionInternal )
+		{
+			m_Text = text.Substring(0, caretPositionInternal) + text.Substring(caretSelectPositionInternal, text.Length - caretSelectPositionInternal);
+			caretSelectPositionInternal = caretPositionInternal;
+		}
+		else
+		{
+			m_Text = text.Substring(0, caretSelectPositionInternal) + text.Substring(caretPositionInternal, text.Length - caretPositionInternal);
+			caretPositionInternal = caretSelectPositionInternal;
+		}
 	}
 
 	public void SetTextDirectly(string text)

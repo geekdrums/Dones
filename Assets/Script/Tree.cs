@@ -221,6 +221,7 @@ public class Tree : MonoBehaviour {
 			{
 				// ctrlもshiftもなしにクリックした場合は選択解除
 				ClearSelection();
+				selectionStartLine_ = focusedLine_;
 			}
 		}
 		else if( Input.GetMouseButton(0) && selectionStartLine_ != null )
@@ -1192,8 +1193,8 @@ public class Tree : MonoBehaviour {
 			},
 			undo: () =>
 			{
-				pasteStart.Text = oldText;
 				pasteStart.Field.CaretPosision = oldCaretPos;
+				pasteStart.Text = oldText;
 				if( layoutStart != null )
 				{
 					RequestLayout(layoutStart);
