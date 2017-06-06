@@ -62,6 +62,8 @@ public class TextField : InputField, IColoredObject
 	public Rect Rect { get { return new Rect(targetGraphic.rectTransform.position, targetGraphic.rectTransform.sizeDelta); } }
 	public float RectY { get { return targetGraphic.rectTransform.position.y; } }
 
+	protected UIGaugeRenderer strikeLine_;
+
 	#endregion
 
 
@@ -76,6 +78,7 @@ public class TextField : InputField, IColoredObject
 	protected override void Start()
 	{
 		base.Start();
+		strikeLine_ = GetComponentInChildren<UIGaugeRenderer>(includeInactive: true);
 	}
 
 	// Update is called once per frame
@@ -120,6 +123,29 @@ public class TextField : InputField, IColoredObject
 		// この関数でイベント呼び出しを避ける。
 		m_Text = text;
 		UpdateLabel();
+	}
+
+	public void SetDone(bool isDone)
+	{
+		if( isDone )
+		{
+			TextGenerator gen = m_TextComponent.cachedTextGenerator;
+
+			if( gen == null )
+				return;
+			
+			float charLength = gen.characters[gen.characters.Count - 1].cursorPos.x - gen.characters[0].cursorPos.x;
+			charLength /= m_TextComponent.pixelsPerUnit;
+
+			strikeLine_.SetLength(charLength + 10);
+			strikeLine_.gameObject.SetActive(true);
+			Foreground = GameContext.Config.DoneTextColor;
+		}
+		else
+		{
+			strikeLine_.gameObject.SetActive(false);
+			Foreground = GameContext.Config.TextColor;
+		}
 	}
 
 	#endregion
@@ -206,6 +232,16 @@ public class TextField : InputField, IColoredObject
 						// process in ownerTree
 					}
 					break;
+				case KeyCode.Space:
+					if( ctrlOnly )
+					{
+						// process in ownerTree
+					}
+					else
+					{
+						KeyPressed(processingEvent_);
+					}
+					break;
 				case KeyCode.C:
 				case KeyCode.X:
 					if( ctrlOnly && isSelected_ )
@@ -283,7 +319,11 @@ public class TextField : InputField, IColoredObject
 					}
 					break;
 				default:
-					if( processingEvent_.keyCode == KeyCode.None && BindedLine.Tree.HasSelection && processingEvent_.character.ToString() != Tree.TabString )
+					if( processingEvent_.keyCode == KeyCode.None && processingEvent_.character.ToString() == " " )
+					{
+						// process in ownerTree
+					}
+					else if( processingEvent_.keyCode == KeyCode.None && BindedLine.Tree.HasSelection && processingEvent_.character.ToString() != Tree.TabString )
 					{
 						TextField newField = BindedLine.Tree.DeleteSelection().Field;
 						newField.KeyPressed(processingEvent_);

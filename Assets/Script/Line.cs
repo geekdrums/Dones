@@ -55,7 +55,21 @@ public class Line : IEnumerable<Line>
 	}
 	protected bool isFolded_ = false;
 
-	public bool IsDone { get { return isDone_; } set { isDone_ = value; } }
+	public bool IsDone
+	{
+		get { return isDone_; }
+		set
+		{
+			if( isDone_ != value )
+			{
+				isDone_ = value;
+				if( Field != null )
+				{
+					Field.SetDone(isDone_);
+				}
+			}
+		}
+	}
 	protected bool isDone_ = false;
 
 
@@ -71,10 +85,12 @@ public class Line : IEnumerable<Line>
 	
 	#endregion
 
+
 	public Line(string text = "")
 	{
 		text_ = text;
 	}
+
 
 	#region TextInputAction
 

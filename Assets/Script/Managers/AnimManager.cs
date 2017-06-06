@@ -365,6 +365,7 @@ public class PrimitiveAnimInfo : AnimInfoBase
 public class GaugeAnimInfo : AnimInfoBase
 {
 	protected GaugeRenderer gauge_;
+	protected UIGaugeRenderer uigauge_;
 
 	public GaugeAnimInfo(GameObject obj, object target, ParamType paramType, AnimType animType, float factor = 0.1f, float delay = 0.0f, AnimEndOption endOption = AnimEndOption.None)
 		: base(obj, target, paramType, animType, factor, delay, endOption)
@@ -378,33 +379,70 @@ public class GaugeAnimInfo : AnimInfoBase
 	protected override void InitValue()
 	{
 		gauge_ = Object.GetComponentInChildren<GaugeRenderer>();
-		switch( Param )
+		uigauge_ = Object.GetComponentInChildren<UIGaugeRenderer>();
+		if( gauge_ != null )
 		{
-		case ParamType.GaugeLength:
-			initialValue_ = (float)gauge_.Length;
-			break;
-		case ParamType.GaugeRate:
-			initialValue_ = (float)gauge_.Rate;
-			break;
-		case ParamType.GaugeWidth:
-			initialValue_ = (float)gauge_.Width;
-			break;
+			switch( Param )
+			{
+			case ParamType.GaugeLength:
+				initialValue_ = (float)gauge_.Length;
+				break;
+			case ParamType.GaugeRate:
+				initialValue_ = (float)gauge_.Rate;
+				break;
+			case ParamType.GaugeWidth:
+				initialValue_ = (float)gauge_.Width;
+				break;
+			}
+		}
+		else if( uigauge_ != null )
+		{
+			switch( Param )
+			{
+			case ParamType.GaugeLength:
+				initialValue_ = (float)uigauge_.Length;
+				break;
+			case ParamType.GaugeRate:
+				initialValue_ = (float)uigauge_.Rate;
+				break;
+			case ParamType.GaugeWidth:
+				initialValue_ = (float)uigauge_.Width;
+				break;
+			}
 		}
 	}
 
 	protected override void UpdateAnimValue()
 	{
-		switch( Param )
+		if( gauge_ != null )
 		{
-		case ParamType.GaugeLength:
-			gauge_.Length = currentValueFloat;
-			break;
-		case ParamType.GaugeRate:
-			gauge_.SetRate(currentValueFloat);
-			break;
-		case ParamType.GaugeWidth:
-			gauge_.SetWidth(currentValueFloat);
-			break;
+			switch( Param )
+			{
+			case ParamType.GaugeLength:
+				gauge_.Length = currentValueFloat;
+				break;
+			case ParamType.GaugeRate:
+				gauge_.SetRate(currentValueFloat);
+				break;
+			case ParamType.GaugeWidth:
+				gauge_.SetWidth(currentValueFloat);
+				break;
+			}
+		}
+		else if( uigauge_ != null )
+		{
+			switch( Param )
+			{
+			case ParamType.GaugeLength:
+				uigauge_.SetLength(currentValueFloat);
+				break;
+			case ParamType.GaugeRate:
+				uigauge_.SetRate(currentValueFloat);
+				break;
+			case ParamType.GaugeWidth:
+				uigauge_.SetWidth(currentValueFloat);
+				break;
+			}
 		}
 	}
 }

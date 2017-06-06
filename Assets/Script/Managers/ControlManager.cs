@@ -24,10 +24,11 @@ public class ControlManager : MonoBehaviour {
 			
 #if UNITY_EDITOR
 			KeyCode.Q,
+			KeyCode.U,
 #else
 			KeyCode.Z,
-#endif
 			KeyCode.Y,
+#endif
 		};
 
 		var updateStream = this.UpdateAsObservable();
@@ -56,14 +57,19 @@ public class ControlManager : MonoBehaviour {
 			{
 #if UNITY_EDITOR
 			case KeyCode.Q:
+				GameContext.CurrentActionManager.Undo();
+				break;
+			case KeyCode.U:
+				GameContext.CurrentActionManager.Redo();
+				break;
 #else
 			case KeyCode.Z:
-#endif
 				GameContext.CurrentActionManager.Undo();
 				break;
 			case KeyCode.Y:
 				GameContext.CurrentActionManager.Redo();
 				break;
+#endif
 			}
 		}
 	}

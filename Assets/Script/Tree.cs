@@ -160,6 +160,10 @@ public class Tree : MonoBehaviour {
 			{
 				Save();
 			}
+			else if( Input.GetKeyDown(KeyCode.Space) )
+			{
+				OnCtrlSpaceInput();
+			}
 		}
 		else if( Input.GetKeyDown(KeyCode.Tab) )
 		{
@@ -567,6 +571,23 @@ public class Tree : MonoBehaviour {
 			{
 				break;
 			}
+		}
+		actionManager_.EndChain();
+	}
+
+
+	protected void OnCtrlSpaceInput()
+	{
+		actionManager_.StartChain();
+		foreach( Line line in GetSelectedOrFocusedLines() )
+		{
+			Line targetLine = line;
+			actionManager_.Execute(new Action(
+				execute: () =>
+				{
+					targetLine.IsDone = !targetLine.IsDone;
+				}
+				));
 		}
 		actionManager_.EndChain();
 	}
