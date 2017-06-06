@@ -210,6 +210,8 @@ public class Line : IEnumerable<Line>
 
 		lastTextActionTime_ = Time.time;
 		text_ = newText;
+
+		if( IsDone ) Field.UpdateDone();
 	}
 
 	public void FixTextInputAction()

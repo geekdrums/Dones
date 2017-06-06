@@ -11,14 +11,6 @@ public class TextField : InputField, IColoredObject
 	#region properties
 
 	public Line BindedLine { get; set; }
-	
-	public int CaretPosision
-	{
-		get { return caretPos_; }
-		set { selectionAnchorPosition = selectionFocusPosition = caretPos_ = desiredCaretPos_ = value; }
-	}
-	protected int caretPos_;
-	protected static int desiredCaretPos_;
 
 	public bool IsFocused
 	{
@@ -54,6 +46,14 @@ public class TextField : InputField, IColoredObject
 	}
 	protected bool isSelected_;
 
+	public int CaretPosision
+	{
+		get { return caretPos_; }
+		set { selectionAnchorPosition = selectionFocusPosition = caretPos_ = desiredCaretPos_ = value; }
+	}
+	protected int caretPos_;
+	protected static int desiredCaretPos_;
+
 	public Color Foreground { get { return textComponent.color; } set { textComponent.color = value; } }
 	public Color Background { get { return targetGraphic.canvasRenderer.GetColor(); } set { targetGraphic.CrossFadeColor(value, 0.0f, true, true); } }
 	public void SetColor(Color color) { Background = color; }
@@ -63,6 +63,8 @@ public class TextField : InputField, IColoredObject
 	public float RectY { get { return targetGraphic.rectTransform.position.y; } }
 
 	protected UIGaugeRenderer strikeLine_;
+	protected Image checkMark_;
+	protected bool shouldUpdateDone_ = false;
 
 	#endregion
 
@@ -79,6 +81,7 @@ public class TextField : InputField, IColoredObject
 	{
 		base.Start();
 		strikeLine_ = GetComponentInChildren<UIGaugeRenderer>(includeInactive: true);
+		checkMark_ = textComponent.transform.FindChild("Check").GetComponent<Image>();
 	}
 
 	// Update is called once per frame
@@ -123,29 +126,55 @@ public class TextField : InputField, IColoredObject
 		// この関数でイベント呼び出しを避ける。
 		m_Text = text;
 		UpdateLabel();
+		if( BindedLine.IsDone ) UpdateDone();
 	}
 
 	public void SetDone(bool isDone)
 	{
 		if( isDone )
 		{
-			TextGenerator gen = m_TextComponent.cachedTextGenerator;
-
-			if( gen == null )
-				return;
-			
-			float charLength = gen.characters[gen.characters.Count - 1].cursorPos.x - gen.characters[0].cursorPos.x;
-			charLength /= m_TextComponent.pixelsPerUnit;
-
-			strikeLine_.SetLength(charLength + 10);
 			strikeLine_.gameObject.SetActive(true);
-			Foreground = GameContext.Config.DoneTextColor;
+			checkMark_.gameObject.SetActive(true);
+			UpdateDone();
+
+			strikeLine_.Rate = 0.0f;
+			AnimManager.AddAnim(strikeLine_, 1.0f, ParamType.GaugeRate, AnimType.BounceIn, 0.3f);
+			checkMark_.transform.localScale = Vector3.zero;
+			AnimManager.AddAnim(checkMark_, Vector3.one, ParamType.Scale, AnimType.BounceIn, 0.15f, 0.15f);
 		}
 		else
 		{
 			strikeLine_.gameObject.SetActive(false);
+			checkMark_.gameObject.SetActive(false);
 			Foreground = GameContext.Config.TextColor;
 		}
+	}
+
+	public void UpdateDone()
+	{
+		if( shouldUpdateDone_ == false )
+		{
+			shouldUpdateDone_ = true;
+			StartCoroutine(UpdateDoneCoroutine());
+		}
+	}
+
+	IEnumerator UpdateDoneCoroutine()
+	{
+		yield return new WaitForEndOfFrame();
+
+		TextGenerator gen = m_TextComponent.cachedTextGenerator;
+
+		float charLength = gen.characters[gen.characters.Count - 1].cursorPos.x - gen.characters[0].cursorPos.x;
+		charLength /= m_TextComponent.pixelsPerUnit;
+
+		strikeLine_.SetLength(charLength + 10);
+		Vector2 size = checkMark_.rectTransform.rect.size;
+		checkMark_.rectTransform.offsetMin = new Vector2(charLength + 5, checkMark_.rectTransform.offsetMin.y);
+		checkMark_.rectTransform.offsetMax = checkMark_.rectTransform.offsetMin + size;
+		Foreground = GameContext.Config.DoneTextColor;
+
+		shouldUpdateDone_ = false;
 	}
 
 	#endregion
@@ -319,7 +348,7 @@ public class TextField : InputField, IColoredObject
 					}
 					break;
 				default:
-					if( processingEvent_.keyCode == KeyCode.None && processingEvent_.character.ToString() == " " )
+					if( ctrlOnly && processingEvent_.keyCode == KeyCode.None && processingEvent_.character.ToString() == " " )
 					{
 						// process in ownerTree
 					}
