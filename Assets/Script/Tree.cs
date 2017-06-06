@@ -45,6 +45,7 @@ public class Tree : MonoBehaviour {
 
 	// properties
 	public ActionManager ActionManager { get { return actionManager_; } }
+	public FileInfo File { get { return file_; } }
 
 	// utils
 	protected IEnumerable<Line> GetSelectedOrFocusedLines(bool ascending = true)

@@ -17,10 +17,13 @@ public class Window : MonoBehaviour
 	public GameObject CanvasContent;
 
 	List<Tree> trees_ = new List<Tree>();
+	FileInfo settingFile_;
 
 	// Use this for initialization
-	void Start () {
-
+	void Start ()
+	{
+		settingFile_ = new FileInfo(UnityEngine.Application.streamingAssetsPath + "/settings.txt");
+		LoadSettings();
 	}
 
 	// Update is called once per frame
@@ -44,6 +47,41 @@ public class Window : MonoBehaviour
 		Tree tree = Instantiate(TreePrefab.gameObject, CanvasContent.transform).GetComponent<Tree>();
 		tree.Load(path);
 		trees_.Add(tree);
+	}
+
+	void LoadSettings()
+	{
+		if( settingFile_.Exists == false )
+		{
+			return;
+		}
+
+		StreamReader reader = new StreamReader(settingFile_.OpenRead());
+		string text = null;
+		while( (text = reader.ReadLine()) != null )
+		{
+			LoadTree(text);
+		}
+		reader.Close();
+	}
+
+	void SaveSettings()
+	{
+		StreamWriter writer = new StreamWriter(settingFile_.FullName, append: false);
+		foreach(Tree tree in trees_)
+		{
+			if( tree.File != null )
+			{
+				writer.WriteLine(tree.File.FullName.ToString());
+			}
+		}
+		writer.Flush();
+		writer.Close();
+	}
+
+	void OnApplicationQuit()
+	{
+		SaveSettings();
 	}
 
 #if UNITY_EDITOR
