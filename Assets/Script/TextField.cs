@@ -47,22 +47,24 @@ public class TextField : InputField, IColoredObject
 			if( isSelected_ != value )
 			{
 				isSelected_ = value;
-				Background = isSelected_ ? selectionColor : colors.normalColor;
+				if( isSelected_ )
+				{
+					IsFocused = false;
+				}
+				transition = isSelected_ ? Transition.None : Transition.ColorTint;
+				Background = isSelected_ ? GameContext.Config.SelectionColor : colors.normalColor;
 			}
 		}
 	}
 	protected bool isSelected_;
 
 	public Color Foreground { get { return textComponent.color; } set { textComponent.color = value; } }
-	public Color Background { get { return image_.color; } set { image_.color = value; } }
+	public Color Background { get { return targetGraphic.canvasRenderer.GetColor(); } set { targetGraphic.CrossFadeColor(value, 0.0f, true, true); } }
 	public void SetColor(Color color) { Background = color; }
 	public Color GetColor() { return Background;  }
 
-	public Rect Rect { get { return new Rect(image_.rectTransform.position, image_.rectTransform.sizeDelta); } }
-	public float RectY { get { return image_.rectTransform.position.y; } }
-	protected Image image_;
-	
-	protected Tree ownerTree_;
+	public Rect Rect { get { return new Rect(targetGraphic.rectTransform.position, targetGraphic.rectTransform.sizeDelta); } }
+	public float RectY { get { return targetGraphic.rectTransform.position.y; } }
 
 	#endregion
 
@@ -73,13 +75,11 @@ public class TextField : InputField, IColoredObject
 	protected override void Awake()
 	{
 		base.Awake();
-		image_ = GetComponent<Image>();
 	}
 
 	protected override void Start()
 	{
 		base.Start();
-		ownerTree_ = GetComponentInParent<Tree>();
 	}
 
 	// Update is called once per frame
@@ -115,8 +115,8 @@ public class TextField : InputField, IColoredObject
 
 	protected override void OnDestroy()
 	{
-		if( ownerTree_ != null )
-			ownerTree_.OnTextFieldDestroy(this);
+		if( BindedLine != null && BindedLine.Tree != null )
+			BindedLine.Tree.OnTextFieldDestroy(this);
 	}
 
 	protected override void LateUpdate()
@@ -125,7 +125,7 @@ public class TextField : InputField, IColoredObject
 
 		base.LateUpdate();
 
-		if( oldIsFocused != isFocused )
+		if( oldIsFocused != isFocused && BindedLine != null && BindedLine.Tree != null )
 		{
 			caretPos_ = desiredCaretPos_;
 			if( caretPos_ > text.Length )
@@ -133,7 +133,7 @@ public class TextField : InputField, IColoredObject
 				caretPos_ = text.Length;
 			}
 			selectionAnchorPosition = selectionFocusPosition = caretPos_;
-			ownerTree_.OnFocused(BindedLine);
+			BindedLine.Tree.OnFocused(BindedLine);
 		}
 	}
 
@@ -167,7 +167,7 @@ public class TextField : InputField, IColoredObject
 	protected Event processingEvent_ = new Event();
 	public override void OnUpdateSelected(BaseEventData eventData)
 	{
-		if( !isFocused )
+		if( !isFocused || BindedLine == null || BindedLine.Tree == null )
 			return;
 
 		//bool consumedEvent = false;
@@ -206,12 +206,12 @@ public class TextField : InputField, IColoredObject
 				case KeyCode.M:
 					if( ctrlOnly && BindedLine.Count > 0 )
 					{
-						ownerTree_.OnFoldUpdated(BindedLine, !BindedLine.IsFolded);
+						BindedLine.Tree.OnFoldUpdated(BindedLine, !BindedLine.IsFolded);
 					}
 					break;
 				case KeyCode.Delete:
 					{
-						if( ownerTree_.HasSelection )
+						if( BindedLine.Tree.HasSelection )
 						{
 							// process in ownerTree
 						}
@@ -219,13 +219,13 @@ public class TextField : InputField, IColoredObject
 						{
 							bool use = caretPos_ < text.Length;
 							KeyPressed(processingEvent_);
-							if( use ) ownerTree_.OnDeleteKeyConsumed();
+							if( use ) BindedLine.Tree.OnDeleteKeyConsumed();
 						}
 					}
 					break;
 				case KeyCode.Backspace:
 					{
-						if( ownerTree_.HasSelection )
+						if( BindedLine.Tree.HasSelection )
 						{
 							// process in ownerTree
 						}
@@ -269,9 +269,9 @@ public class TextField : InputField, IColoredObject
 					}
 					break;
 				default:
-					if( processingEvent_.keyCode == KeyCode.None && ownerTree_.HasSelection && processingEvent_.character.ToString() != Tree.TabString )
+					if( processingEvent_.keyCode == KeyCode.None && BindedLine.Tree.HasSelection && processingEvent_.character.ToString() != Tree.TabString )
 					{
-						TextField newField = ownerTree_.DeleteSelection().Field;
+						TextField newField = BindedLine.Tree.DeleteSelection().Field;
 						newField.KeyPressed(processingEvent_);
 						newField.CaretPosision = newField.text.Length;
 					}
