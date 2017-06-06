@@ -225,7 +225,8 @@ public class Tree : MonoBehaviour {
 			{
 				// ctrlもshiftもなしにクリックした場合は選択解除
 				ClearSelection();
-				selectionStartLine_ = focusedLine_;
+				if( focusedLine_.Field.IsFocused )
+					selectionStartLine_ = focusedLine_;
 			}
 		}
 		else if( Input.GetMouseButton(0) && selectionStartLine_ != null )
@@ -1143,7 +1144,6 @@ public class Tree : MonoBehaviour {
 		}
 	}
 	public static string[] LineSeparator = new string[] { System.Environment.NewLine };
-	public static string TabString = "	";
 
 	protected void Copy()
 	{
@@ -1152,22 +1152,12 @@ public class Tree : MonoBehaviour {
 			StringBuilder clipboardLines = new StringBuilder();
 			foreach( Line line in selectedLines_.Values )
 			{
-				int level = line.Level - 1;
-				for( int i = 0; i < level; ++i )
-				{
-					clipboardLines.Append(TabString);
-				}
-				clipboardLines.AppendLine(line.Text);
+				line.AppendStringTo(clipboardLines);
 				if( line.IsFolded )
 				{
 					foreach( Line child in line.GetAllChildren() )
 					{
-						level = child.Level - 1;
-						for( int i = 0; i < level; ++i )
-						{
-							clipboardLines.Append(TabString);
-						}
-						clipboardLines.AppendLine(child.Text);
+						child.AppendStringTo(clipboardLines);
 					}
 				}
 			}
@@ -1193,7 +1183,7 @@ public class Tree : MonoBehaviour {
 		string text = cilpboardLines[0];
 		int currentLevel = 0;
 		int oldLevel = 0;
-		while( text.StartsWith(TabString) )
+		while( text.StartsWith(Line.TabString) )
 		{
 			++currentLevel;
 			text = text.Remove(0, 1);
@@ -1231,7 +1221,7 @@ public class Tree : MonoBehaviour {
 		{
 			text = cilpboardLines[i];
 			currentLevel = 0;
-			while( text.StartsWith(TabString) )
+			while( text.StartsWith(Line.TabString) )
 			{
 				++currentLevel;
 				text = text.Remove(0, 1);
@@ -1497,13 +1487,13 @@ public class Tree : MonoBehaviour {
 		while( (text = reader.ReadLine()) != null )
 		{
 			currentLevel = 0;
-			while( text.StartsWith(TabString) )
+			while( text.StartsWith(Line.TabString) )
 			{
 				++currentLevel;
 				text = text.Remove(0, 1);
 			}
 
-			Line line = new Line(text);
+			Line line = new Line(text, loadTag: true);
 
 			Line addParent;
 
@@ -1563,19 +1553,14 @@ public class Tree : MonoBehaviour {
 			}
 		}
 
-		StringBuilder lines = new StringBuilder();
+		StringBuilder builder = new StringBuilder();
 		foreach( Line line in rootLine_.GetAllChildren() )
 		{
-			int level = line.Level - 1;
-			for( int i = 0; i < level; ++i )
-			{
-				lines.Append(TabString);
-			}
-			lines.AppendLine(line.Text);
+			line.AppendStringTo(builder, appendTag: true);
 		}
 
 		StreamWriter writer = new StreamWriter(file_.FullName, append: false);
-		writer.Write(lines.ToString());
+		writer.Write(builder.ToString());
 		writer.Flush();
 		writer.Close();
 	}

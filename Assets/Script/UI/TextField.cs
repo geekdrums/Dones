@@ -75,13 +75,13 @@ public class TextField : InputField, IColoredObject
 	protected override void Awake()
 	{
 		base.Awake();
+		strikeLine_ = GetComponentInChildren<UIGaugeRenderer>(includeInactive: true);
+		checkMark_ = textComponent.transform.FindChild("Check").GetComponent<Image>();
 	}
 
 	protected override void Start()
 	{
 		base.Start();
-		strikeLine_ = GetComponentInChildren<UIGaugeRenderer>(includeInactive: true);
-		checkMark_ = textComponent.transform.FindChild("Check").GetComponent<Image>();
 	}
 
 	// Update is called once per frame
@@ -129,7 +129,7 @@ public class TextField : InputField, IColoredObject
 		if( BindedLine.IsDone ) UpdateDone();
 	}
 
-	public void SetDone(bool isDone)
+	public void SetDone(bool isDone, bool withAnim = true)
 	{
 		if( isDone )
 		{
@@ -137,10 +137,13 @@ public class TextField : InputField, IColoredObject
 			checkMark_.gameObject.SetActive(true);
 			UpdateDone();
 
-			strikeLine_.Rate = 0.0f;
-			AnimManager.AddAnim(strikeLine_, 1.0f, ParamType.GaugeRate, AnimType.BounceIn, 0.3f);
-			checkMark_.transform.localScale = Vector3.zero;
-			AnimManager.AddAnim(checkMark_, Vector3.one, ParamType.Scale, AnimType.BounceIn, 0.15f, 0.15f);
+			if( withAnim )
+			{
+				strikeLine_.Rate = 0.0f;
+				AnimManager.AddAnim(strikeLine_, 1.0f, ParamType.GaugeRate, AnimType.BounceIn, 0.3f);
+				checkMark_.transform.localScale = Vector3.zero;
+				AnimManager.AddAnim(checkMark_, Vector3.one, ParamType.Scale, AnimType.BounceIn, 0.15f, 0.15f);
+			}
 		}
 		else
 		{
@@ -352,7 +355,7 @@ public class TextField : InputField, IColoredObject
 					{
 						// process in ownerTree
 					}
-					else if( processingEvent_.keyCode == KeyCode.None && BindedLine.Tree.HasSelection && processingEvent_.character.ToString() != Tree.TabString )
+					else if( processingEvent_.keyCode == KeyCode.None && BindedLine.Tree.HasSelection && processingEvent_.character.ToString() != Line.TabString )
 					{
 						TextField newField = BindedLine.Tree.DeleteSelection().Field;
 						newField.KeyPressed(processingEvent_);

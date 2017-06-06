@@ -27,4 +27,17 @@ public class TreeToggle : Toggle {
 	// Update is called once per frame
 	void Update () {
 	}
+
+	public void SetFold(bool isFolded, bool withAnim = true)
+	{
+		isOn = !isFolded;
+		if( withAnim )
+		{
+			AnimManager.AddAnim(targetGraphic, interactable && isOn ? 0 : 90, ParamType.RotationZ, AnimType.Time, GameContext.Config.AnimTime);
+		}
+		else
+		{
+			transform.localRotation = Quaternion.AngleAxis(isOn ? 0 : 90, Vector3.forward);
+		}
+	}
 }

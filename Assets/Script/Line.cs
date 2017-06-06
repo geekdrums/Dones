@@ -46,9 +46,7 @@ public class Line : IEnumerable<Line>
 				}
 				if( Toggle != null )
 				{
-					if( Toggle.isOn != !IsFolded )
-						Toggle.isOn = !IsFolded;
-					AnimManager.AddAnim(Toggle.targetGraphic, Toggle.interactable && Toggle.isOn ? 0 : 90, ParamType.RotationZ, AnimType.Time, GameContext.Config.AnimTime);
+					Toggle.SetFold(IsFolded);
 				}
 			}
 		}
@@ -86,8 +84,12 @@ public class Line : IEnumerable<Line>
 	#endregion
 
 
-	public Line(string text = "")
+	public Line(string text = "", bool loadTag = false)
 	{
+		if( loadTag )
+		{
+			LoadTag(ref text);
+		}
 		text_ = text;
 	}
 
@@ -242,6 +244,7 @@ public class Line : IEnumerable<Line>
 			{
 				OnTextChanged(text);
 			});
+			Field.SetDone(isDone_, withAnim: false);
 
 			Toggle = Field.GetComponentInChildren<TreeToggle>();
 			toggleSubscription_ = children_.ObserveCountChanged(true).Select(x => x > 0).DistinctUntilChanged().Subscribe(hasChild =>
@@ -249,6 +252,12 @@ public class Line : IEnumerable<Line>
 				Toggle.interactable = hasChild;
 				AnimManager.AddAnim(Toggle.targetGraphic, Toggle.interactable && Toggle.isOn ? 0 : 90, ParamType.RotationZ, AnimType.Time, GameContext.Config.AnimTime);
 			}).AddTo(Field);
+			Toggle.SetFold(IsFolded);
+
+			if( parent_ != null && parent_.IsFolded )
+			{
+				Binding.SetActive(false);
+			}
 		}
 		else
 		{
@@ -649,4 +658,46 @@ public class Line : IEnumerable<Line>
 
 	#endregion
 
+	#region save & load
+
+	public static string TabString = "	";
+	public static string FoldTag = "<f>";
+	public static string DoneTag = "<d>";
+	public void AppendStringTo(StringBuilder builder, bool appendTag = false)
+	{
+		int level = Level - 1;
+		for( int i = 0; i < level; ++i )
+		{
+			builder.Append(TabString);
+		}
+		builder.Append(Text);
+		if( appendTag )
+		{
+			if( IsFolded )
+			{
+				builder.Append(FoldTag);
+			}
+			if( IsDone )
+			{
+				builder.Append(DoneTag);
+			}
+		}
+		builder.AppendLine();
+	}
+
+	public void LoadTag(ref string text)
+	{
+		if( text.EndsWith(DoneTag) )
+		{
+			text = text.Remove(text.Length - DoneTag.Length);
+			isDone_ = true;
+		}
+		if( text.EndsWith(FoldTag) )
+		{
+			text = text.Remove(text.Length - FoldTag.Length);
+			isFolded_ = true;
+		}
+	}
+
+	#endregion
 }
