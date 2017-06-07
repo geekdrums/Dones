@@ -17,7 +17,15 @@ public class MenuButton : Button {
 	}
 	
 	// Update is called once per frame
-	void Update () {
+	void Update ()
+	{
+		if( isOpening_ && Input.GetMouseButtonDown(0) )
+		{
+			if( currentSelectionState != SelectionState.Highlighted )
+			{
+				OnClick();
+			}
+		}
 	}
 
 	public void OnClick()

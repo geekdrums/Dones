@@ -90,6 +90,15 @@ public class TextField : InputField, IColoredObject
 	{
 	}
 
+	protected override void OnEnable()
+	{
+		base.OnEnable();
+		if( shouldUpdateDone_ )
+		{
+			StartCoroutine(UpdateDoneCoroutine());
+		}
+	}
+
 	#endregion
 
 
@@ -136,6 +145,7 @@ public class TextField : InputField, IColoredObject
 		{
 			strikeLine_.gameObject.SetActive(true);
 			checkMark_.gameObject.SetActive(true);
+			Foreground = GameContext.Config.DoneTextColor;
 			UpdateDone();
 
 			if( withAnim )
@@ -159,7 +169,10 @@ public class TextField : InputField, IColoredObject
 		if( shouldUpdateDone_ == false )
 		{
 			shouldUpdateDone_ = true;
-			StartCoroutine(UpdateDoneCoroutine());
+			if( this.gameObject.activeInHierarchy )
+			{
+				StartCoroutine(UpdateDoneCoroutine());
+			}
 		}
 	}
 
@@ -176,7 +189,6 @@ public class TextField : InputField, IColoredObject
 		Vector2 size = checkMark_.rectTransform.rect.size;
 		checkMark_.rectTransform.offsetMin = new Vector2(charLength + 5, checkMark_.rectTransform.offsetMin.y);
 		checkMark_.rectTransform.offsetMax = checkMark_.rectTransform.offsetMin + size;
-		Foreground = GameContext.Config.DoneTextColor;
 
 		shouldUpdateDone_ = false;
 	}

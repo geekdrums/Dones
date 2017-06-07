@@ -579,13 +579,16 @@ public class Tree : MonoBehaviour {
 		actionManager_.StartChain();
 		foreach( Line line in GetSelectedOrFocusedLines() )
 		{
-			Line targetLine = line;
-			actionManager_.Execute(new Action(
-				execute: () =>
-				{
-					targetLine.IsDone = !targetLine.IsDone;
-				}
-				));
+			if( line.Text != "" )
+			{
+				Line targetLine = line;
+				actionManager_.Execute(new Action(
+					execute: () =>
+					{
+						targetLine.IsDone = !targetLine.IsDone;
+					}
+					));
+			}
 		}
 		actionManager_.EndChain();
 	}
@@ -1171,54 +1174,92 @@ public class Tree : MonoBehaviour {
 
 		actionManager_.StartChain();
 
-		Line pasteStart = focusedLine_;
+		// delete
+		Line pasteStart = null;
 		if( HasSelection )
 		{
 			pasteStart = DeleteSelection();
 		}
 
 		string[] cilpboardLines = Clipboard.Split(LineSeparator, System.StringSplitOptions.None);
-
-		string text = cilpboardLines[0];
+		string pasteText = cilpboardLines[0];
 		int currentLevel = 0;
-		int oldLevel = 0;
-		while( text.StartsWith(Line.TabString) )
+		while( pasteText.StartsWith(Line.TabString) )
 		{
 			++currentLevel;
-			text = text.Remove(0, 1);
+			pasteText = pasteText.Remove(0, 1);
+		}
+		
+		if( cilpboardLines.Length == 1 )
+		{
+			// paste for current focused line
+			if( pasteStart == null )
+			{
+				pasteStart = focusedLine_;
+			}
+
+			string oldText = pasteStart.Text;
+			int oldCaretPos = pasteStart.Field.CaretPosision;
+			actionManager_.Execute(new Action(
+				execute: () =>
+				{
+					pasteStart.Field.Paste(pasteText);
+				},
+				undo: () =>
+				{
+					pasteStart.Field.CaretPosision = oldCaretPos;
+					pasteStart.Text = oldText;
+				}
+				));
+		}
+		else
+		{
+			// paste mutiple lines.
+			if( focusedLine_.Text == "" )
+			{
+				pasteStart = focusedLine_;
+			}
+			else if( pasteStart == null )
+			{
+				Line pasteParent = focusedLine_.Parent;
+				int pasteIndex = focusedLine_.Index + 1;
+				pasteStart = new Line();
+				actionManager_.Execute(new Action(
+					execute: () =>
+					{
+						pasteParent.Insert(pasteIndex, pasteStart);
+					},
+					undo: () =>
+					{
+						pasteParent.Remove(pasteStart);
+					}
+					));
+			}
+			
+			Line layoutStart = pasteStart.NextVisibleLine;
+			actionManager_.Execute(new Action(
+				execute: () =>
+				{
+					pasteStart.LoadTag(ref pasteText);
+					pasteStart.Text = pasteText;
+					RequestLayout(layoutStart);
+				},
+				undo: () =>
+				{
+					pasteStart.Field.CaretPosision = 0;
+					pasteStart.Text = "";
+					pasteStart.IsDone = false;
+					RequestLayout(layoutStart);
+				}
+				));
 		}
 
-		string oldText = pasteStart.Text;
-		string pasteText = text;
-		int oldCaretPos = pasteStart.Field.CaretPosision;
-		Line layoutStart = (cilpboardLines.Length > 1 ? pasteStart.NextVisibleLine : null);
-		actionManager_.Execute(new Action(
-			execute: () =>
-			{
-				pasteStart.Field.Paste(pasteText);
-				if( layoutStart != null )
-				{
-					RequestLayout(layoutStart);
-				}
-			},
-			undo: () =>
-			{
-				pasteStart.Field.CaretPosision = oldCaretPos;
-				pasteStart.Text = oldText;
-				if( layoutStart != null )
-				{
-					RequestLayout(layoutStart);
-				}
-			}
-			));
-
-		oldLevel = currentLevel;
-		
+		int oldLevel = currentLevel;
 		Line parent = pasteStart.Parent;
 		Line brother = pasteStart;
 		for( int i = 1; i < cilpboardLines.Length; ++i )
 		{
-			text = cilpboardLines[i];
+			string text = cilpboardLines[i];
 			currentLevel = 0;
 			while( text.StartsWith(Line.TabString) )
 			{
@@ -1471,6 +1512,17 @@ public class Tree : MonoBehaviour {
 
 	#region file
 	
+	public void NewFile()
+	{
+		SuspendLayout();
+		rootLine_ = new Line("new");
+		rootLine_.Bind(this.gameObject);
+		rootLine_.Add(new Line(""));
+		ResumeLayout();
+		OnFocused(rootLine_[0]);
+		SubscribeKeyInput();
+	}
+
 	public void Load(string path)
 	{
 		if( file_ != null )
@@ -1479,11 +1531,11 @@ public class Tree : MonoBehaviour {
 		}
 
 		file_ = new FileInfo(path);
-		
+
+		SuspendLayout();
 		rootLine_ = new Line(file_.Name);
 		rootLine_.Bind(this.gameObject);
 
-		SuspendLayout();
 		StreamReader reader = new StreamReader(file_.OpenRead());
 		Line parent = rootLine_;
 		Line brother = null;
@@ -1540,12 +1592,13 @@ public class Tree : MonoBehaviour {
 		SubscribeKeyInput();
 	}
 
-	public void Save()
+	public void Save(bool saveAs = false)
 	{
-		if( file_ == null )
+		if( file_ == null || saveAs )
 		{
 			SaveFileDialog saveFileDialog = new SaveFileDialog();
 			saveFileDialog.Filter = "dones file (*.dtml)|*.dtml";
+			saveFileDialog.FileName = rootLine_.Text;
 			DialogResult dialogResult = saveFileDialog.ShowDialog();
 			if( dialogResult == DialogResult.OK )
 			{

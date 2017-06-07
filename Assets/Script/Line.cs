@@ -690,12 +690,12 @@ public class Line : IEnumerable<Line>
 		if( text.EndsWith(DoneTag) )
 		{
 			text = text.Remove(text.Length - DoneTag.Length);
-			isDone_ = true;
+			IsDone = true;
 		}
 		if( text.EndsWith(FoldTag) )
 		{
 			text = text.Remove(text.Length - FoldTag.Length);
-			isFolded_ = true;
+			IsFolded = true;
 		}
 	}
 

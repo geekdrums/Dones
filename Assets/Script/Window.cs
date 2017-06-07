@@ -15,7 +15,9 @@ public class Window : MonoBehaviour
 {
 	public Tree TreePrefab;
 	public GameObject CanvasContent;
+	public MenuButton FileMenu;
 
+	Tree activeTree_;
 	List<Tree> trees_ = new List<Tree>();
 	FileInfo settingFile_;
 
@@ -23,15 +25,17 @@ public class Window : MonoBehaviour
 	void Start ()
 	{
 		settingFile_ = new FileInfo(UnityEngine.Application.streamingAssetsPath + "/settings.txt");
+#if UNITY_EDITOR
+		// なんかアプリ版だと変になるので一旦Editorのみに
 		LoadSettings();
+#endif
 	}
 
 	// Update is called once per frame
 	void Update () {
-
 	}
 
-	void OpenFile()
+	public void OpenFile()
 	{
 		OpenFileDialog openFileDialog = new OpenFileDialog();
 		openFileDialog.Filter = "dones file (*.dtml)|*.dtml";
@@ -40,13 +44,62 @@ public class Window : MonoBehaviour
 		{
 			LoadTree(openFileDialog.FileName);
 		}
+
+		FileMenu.OnClick();
 	}
+
+	public void NewFile()
+	{
+		Close();
+
+		Tree tree = Instantiate(TreePrefab.gameObject, CanvasContent.transform).GetComponent<Tree>();
+		tree.NewFile();
+		trees_.Add(tree);
+		activeTree_ = tree;
+
+		FileMenu.OnClick();
+	}
+
+	public void Save()
+	{
+		if( activeTree_ != null )
+		{
+			activeTree_.Save();
+		}
+
+		FileMenu.OnClick();
+	}
+
+	public void SaveAs()
+	{
+		if( activeTree_ != null )
+		{
+			activeTree_.Save(saveAs: true);
+		}
+
+		FileMenu.OnClick();
+	}
+
+	public void Close()
+	{
+		if( activeTree_ != null )
+		{
+			//TODO: 複数ツリー対応
+			trees_.Remove(activeTree_);
+			Destroy(activeTree_.gameObject);
+		}
+	}
+
+
 
 	void LoadTree(string path)
 	{
+		Close();
+
 		Tree tree = Instantiate(TreePrefab.gameObject, CanvasContent.transform).GetComponent<Tree>();
 		tree.Load(path);
 		trees_.Add(tree);
+		activeTree_ = tree;
 	}
 
 	void LoadSettings()
