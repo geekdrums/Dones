@@ -32,12 +32,17 @@ public class Tree : MonoBehaviour {
 	// input states
 	bool wasDeleteKeyConsumed_ = false;
 	bool wasCtrlMInput_ = false;
+
+	// layout
 	bool isAllFolded_ = false;
 	List<Line> requestLayoutLines_ = new List<Line>();
 	int suspendLayoutCount_ = 0;
+	float targetScrollValue_ = 0;
+	bool isScrollAnimating_;
 
 	// components
 	LayoutElement layout_;
+	ContentSizeFitter contentSizeFitter_;
 	ScrollRect scrollRect_;
 
 	// file
@@ -82,6 +87,7 @@ public class Tree : MonoBehaviour {
 	// Use this for initialization
 	void Awake () {
 		layout_ = GetComponentInParent<LayoutElement>();
+		contentSizeFitter_ = GetComponentInParent<ContentSizeFitter>();
 		scrollRect_ = GetComponentInParent<ScrollRect>();
 
 		actionManager_.ChainStarted += this.actionManager__ChainStarted;
@@ -98,30 +104,22 @@ public class Tree : MonoBehaviour {
 			field.transform.SetParent(heapParent_.transform);
 		}
 		heapParent_.SetActive(false);
-
-		// test
-		//rootLine_ = new Line("CategoryName");
-		//rootLine_.Bind(this.gameObject);
-
-		//SuspendLayout();
-		//rootLine_.Add(new Line("Hello World"));
-		//rootLine_.Add(new Line("Hello1"));
-		//rootLine_.Add(new Line("Hello2"));
-		//rootLine_.Add(new Line("Hello3"));
-		//rootLine_.Add(new Line("Hello4"));
-		//rootLine_.Add(new Line("Hello5"));
-		//rootLine_.Add(new Line("Hello6"));
-		//ResumeLayout();
-
-		//OnFocused(usingFields_[0].BindedLine);
-
-		//SubscribeKeyInput();
 	}
 	
 	// Update is called once per frame
 	void Update()
 	{
 		if( rootLine_ == null ) return;
+
+		if( isScrollAnimating_ )
+		{
+			scrollRect_.verticalScrollbar.value = Mathf.Lerp(scrollRect_.verticalScrollbar.value, targetScrollValue_, 0.2f);
+			if( Mathf.Abs(scrollRect_.verticalScrollbar.value - targetScrollValue_) < 0.01f )
+			{
+				scrollRect_.verticalScrollbar.value = targetScrollValue_;
+				isScrollAnimating_ = false;
+			}
+		}
 
 		bool ctrl = Input.GetKey(KeyCode.LeftControl);
 		bool shift = Input.GetKey(KeyCode.LeftShift);
@@ -559,7 +557,6 @@ public class Tree : MonoBehaviour {
 						{
 							newParent.IsFolded = false;
 							newParent.AdjustLayoutRecursive();
-							UpdateLayoutElement();
 						}
 					},
 					undo: ()=>
@@ -641,12 +638,14 @@ public class Tree : MonoBehaviour {
 				{
 					parent.Insert(index, line);
 					parent.AdjustLayoutRecursive(index + 1);
+					UpdateScrollTo(target);
 				},
 				undo: () =>
 				{
 					parent.Remove(line);
 					parent.AdjustLayoutRecursive(index);
 					target.Field.CaretPosision = caretPos;
+					UpdateScrollTo(target);
 				}
 				));
 		}
@@ -1152,12 +1151,12 @@ public class Tree : MonoBehaviour {
 			StringBuilder clipboardLines = new StringBuilder();
 			foreach( Line line in selectedLines_.Values )
 			{
-				line.AppendStringTo(clipboardLines);
+				line.AppendStringTo(clipboardLines, appendTag: true);
 				if( line.IsFolded )
 				{
 					foreach( Line child in line.GetAllChildren() )
 					{
-						child.AppendStringTo(clipboardLines);
+						child.AppendStringTo(clipboardLines, appendTag: true);
 					}
 				}
 			}
@@ -1227,7 +1226,7 @@ public class Tree : MonoBehaviour {
 				text = text.Remove(0, 1);
 			}
 
-			Line line = new Line(text);
+			Line line = new Line(text, loadTag: true);
 
 			Line insertParent;
 			int insertIndex;
@@ -1307,7 +1306,6 @@ public class Tree : MonoBehaviour {
 		field.gameObject.SetActive(true);
 		line.Bind(field.gameObject);
 		usingFields_.Add(field);
-		UpdateLayoutElement();
 	}
 
 	public void OnReBind(Line line)
@@ -1345,23 +1343,7 @@ public class Tree : MonoBehaviour {
 		focusedLine_ = line;
 		selectionStartLine_ = line;
 
-		// update scroll
-		float scrollHeight = scrollRect_.GetComponent<RectTransform>().sizeDelta.y;
-		float focusHeight = -(focusedLine_.Field.transform.position.y - this.transform.position.y);
-
-		// focusLineが下側に出て見えなくなった場合
-		float focusUnderHeight = -(focusedLine_.Field.transform.position.y - scrollRect_.transform.position.y) - scrollHeight;
-		if( focusUnderHeight > 0 )
-		{
-			scrollRect_.verticalScrollbar.value = 1.0f - (focusHeight + GameContext.Config.HeightPerLine - scrollHeight) / (layout_.preferredHeight - scrollHeight);
-		}
-
-		// focusLineが上側に出て見えなくなった場合
-		float focusOverHeight = (focusedLine_.Field.transform.position.y + GameContext.Config.HeightPerLine - scrollRect_.transform.position.y);
-		if( focusOverHeight > 0 )
-		{
-			scrollRect_.verticalScrollbar.value = (layout_.preferredHeight - scrollHeight - focusHeight + GameContext.Config.HeightPerLine) / (layout_.preferredHeight - scrollHeight);
-		}
+		UpdateScrollTo(focusedLine_);
 	}
 
 	public void OnFoldUpdated(Line line, bool isFolded)
@@ -1380,7 +1362,6 @@ public class Tree : MonoBehaviour {
 					line.AdjustLayoutRecursive();
 				}
 				));
-			UpdateLayoutElement();
 		}
 	}
 
@@ -1392,7 +1373,6 @@ public class Tree : MonoBehaviour {
 	public void OnTextFieldDestroy(TextField field)
 	{
 		usingFields_.Remove(field);
-		UpdateLayoutElement();
 	}
 
 	#endregion
@@ -1407,8 +1387,34 @@ public class Tree : MonoBehaviour {
 			Line lastLine = rootLine_.LastVisibleLine;
 			if( lastLine != null && lastLine.Field != null )
 			{
-				layout_.preferredHeight = -(lastLine.TargetAbsolutePosition.y - this.transform.position.y) + GameContext.Config.HeightPerLine * 1.5f;
+				layout_.preferredHeight = -(lastLine.TargetAbsolutePosition.y - this.transform.position.y) + GameContext.Config.HeightPerLine * 1.0f;
+				contentSizeFitter_.SetLayoutVertical();
 			}
+		}
+	}
+
+	protected void UpdateScrollTo(Line targetLine)
+	{
+		float scrollHeight = scrollRect_.GetComponent<RectTransform>().rect.height;
+		float targetHeight = -(targetLine.Field.transform.position.y - this.transform.position.y);
+		float heightPerLine = GameContext.Config.HeightPerLine;
+
+		// focusLineが下側に出て見えなくなった場合
+		float targetUnderHeight = -(targetLine.Field.transform.position.y - scrollRect_.transform.position.y) + heightPerLine / 2 - scrollHeight;
+		if( targetUnderHeight > 0 )
+		{
+			targetScrollValue_ = Mathf.Clamp01(1.0f - (targetHeight + heightPerLine * 1.5f - scrollHeight) / (layout_.preferredHeight - scrollHeight));
+			isScrollAnimating_ = true;
+			return;
+		}
+
+		// focusLineが上側に出て見えなくなった場合
+		float targetOverHeight = (targetLine.Field.transform.position.y + heightPerLine - scrollRect_.transform.position.y);
+		if( targetOverHeight > 0 )
+		{
+			targetScrollValue_ = Mathf.Clamp01((layout_.preferredHeight - scrollHeight - targetHeight + heightPerLine) / (layout_.preferredHeight - scrollHeight));
+			isScrollAnimating_ = true;
+			return;
 		}
 	}
 
@@ -1430,8 +1436,7 @@ public class Tree : MonoBehaviour {
 	protected void RequestLayout(Line line)
 	{
 		if( line == null || line.Parent == null ) return;
-
-
+		
 		if( suspendLayoutCount_ > 0 )
 		{
 			if( requestLayoutLines_.Contains(line) == false )
@@ -1457,8 +1462,8 @@ public class Tree : MonoBehaviour {
 				}
 			}
 			requestLayoutLines_.Clear();
-			UpdateLayoutElement();
 		}
+		UpdateLayoutElement();
 	}
 
 	#endregion
@@ -1529,7 +1534,6 @@ public class Tree : MonoBehaviour {
 		}
 		reader.Close();
 		ResumeLayout();
-		UpdateLayoutElement();
 		
 		OnFocused(rootLine_[0]);
 
