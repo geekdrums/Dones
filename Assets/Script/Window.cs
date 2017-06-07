@@ -45,10 +45,14 @@ public class Window : MonoBehaviour
 	void Start ()
 	{
 		settingFile_ = new FileInfo(UnityEngine.Application.streamingAssetsPath + "/settings.txt");
-//#if UNITY_EDITOR
-		// なんかアプリ版だと変になるので一旦Editorのみに
+		StartCoroutine(InitialLoadCoroutine());
+	}
+
+	IEnumerator InitialLoadCoroutine()
+	{
+		// Editorではいいんだけど、アプリ版はこうしないとScrollがバグってその後一切操作できなくなる。。
+		yield return new WaitForEndOfFrame();
 		LoadSettings();
-//#endif
 	}
 
 	// Update is called once per frame

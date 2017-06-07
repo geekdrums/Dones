@@ -268,7 +268,7 @@ public class TextField : InputField, IColoredObject
 				bool alt = (currentEventModifiers & EventModifiers.Alt) != 0;
 				bool ctrlOnly = ctrl && !alt && !shift;
 
-				desiredCaretPos_ = cachedCaretPos_ = m_CaretSelectPosition;
+				cachedCaretPos_ = m_CaretSelectPosition;
 				switch( processingEvent_.keyCode )
 				{
 				case KeyCode.V:
@@ -360,6 +360,7 @@ public class TextField : InputField, IColoredObject
 				case KeyCode.LeftArrow:
 					{
 						KeyPressed(processingEvent_);
+						desiredCaretPos_ = m_CaretSelectPosition;
 						BindedLine.FixTextInputAction();
 					}
 					break;
