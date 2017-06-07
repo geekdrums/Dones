@@ -9,4 +9,5 @@ public static class GameContext
 	public static Config Config;
 	public static ControlManager ControlManager;
 	public static ActionManager CurrentActionManager;
+	public static Window Window;
 }

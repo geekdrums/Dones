@@ -13,51 +13,106 @@ using UnityEditor;
 // [ Window ] - Tree - Line
 public class Window : MonoBehaviour
 {
+	#region editor params
+
 	public Tree TreePrefab;
-	public GameObject CanvasContent;
+	public TabButton TabButtonPrefab;
+
+	public GameObject TreeParent;
+	public GameObject TabParent;
 	public MenuButton FileMenu;
+
+	#endregion
+
+
+	#region params
 
 	Tree activeTree_;
 	List<Tree> trees_ = new List<Tree>();
 	FileInfo settingFile_;
 
+	#endregion
+
+
+	#region unity functions
+
+	void Awake()
+	{
+		GameContext.Window = this;
+	}
+
 	// Use this for initialization
 	void Start ()
 	{
 		settingFile_ = new FileInfo(UnityEngine.Application.streamingAssetsPath + "/settings.txt");
-#if UNITY_EDITOR
+//#if UNITY_EDITOR
 		// なんかアプリ版だと変になるので一旦Editorのみに
 		LoadSettings();
-#endif
+//#endif
 	}
 
 	// Update is called once per frame
-	void Update () {
+	void Update()
+	{
+		bool ctrl = Input.GetKey(KeyCode.LeftControl);
+		bool shift = Input.GetKey(KeyCode.LeftShift);
+		bool alt = Input.GetKey(KeyCode.LeftAlt);
+		bool ctrlOnly = ctrl && !alt && !shift;
+
+		if( ctrlOnly )
+		{
+			if( Input.GetKeyDown(KeyCode.O) )
+			{
+				OpenFile();
+			}
+			else if( Input.GetKeyDown(KeyCode.N) )
+			{
+				NewFile();
+			}
+		}
 	}
+
+	void OnApplicationQuit()
+	{
+		SaveSettings();
+	}
+
+	#endregion
+
+
+	#region file menu
 
 	public void OpenFile()
 	{
 		OpenFileDialog openFileDialog = new OpenFileDialog();
 		openFileDialog.Filter = "dones file (*.dtml)|*.dtml";
+		openFileDialog.Multiselect = true;
 		DialogResult dialogResult = openFileDialog.ShowDialog();
 		if( dialogResult == DialogResult.OK )
 		{
-			LoadTree(openFileDialog.FileName);
+			bool isActive = true;
+			foreach( string path in openFileDialog.FileNames )
+			{
+				if( path.EndsWith(".dtml") && File.Exists(path) )
+				{
+					LoadTree(path, isActive);
+					isActive = false;
+				}
+			}
 		}
 
-		FileMenu.OnClick();
+		FileMenu.Close();
 	}
 
 	public void NewFile()
 	{
-		Close();
-
-		Tree tree = Instantiate(TreePrefab.gameObject, CanvasContent.transform).GetComponent<Tree>();
-		tree.NewFile();
+		Tree tree = Instantiate(TreePrefab.gameObject, TreeParent.transform).GetComponent<Tree>();
+		TabButton tab = Instantiate(TabButtonPrefab.gameObject, TabParent.transform).GetComponent<TabButton>();
+		tree.NewFile(tab);
 		trees_.Add(tree);
-		activeTree_ = tree;
+		tree.IsActive = true;
 
-		FileMenu.OnClick();
+		FileMenu.Close();
 	}
 
 	public void Save()
@@ -67,7 +122,7 @@ public class Window : MonoBehaviour
 			activeTree_.Save();
 		}
 
-		FileMenu.OnClick();
+		FileMenu.Close();
 	}
 
 	public void SaveAs()
@@ -77,30 +132,62 @@ public class Window : MonoBehaviour
 			activeTree_.Save(saveAs: true);
 		}
 
-		FileMenu.OnClick();
+		FileMenu.Close();
 	}
 
-	public void Close()
+	void LoadTree(string path, bool isActive)
 	{
-		if( activeTree_ != null )
+		foreach( Tree existTree in trees_ )
 		{
-			//TODO: 複数ツリー対応
-			trees_.Remove(activeTree_);
-			Destroy(activeTree_.gameObject);
+			if( existTree.File != null && existTree.File.FullName == path )
+			{
+				if( existTree != activeTree_ )
+				{
+					existTree.IsActive = true;
+				}
+				return;
+			}
+		}
+		Tree tree = Instantiate(TreePrefab.gameObject, TreeParent.transform).GetComponent<Tree>();
+		TabButton tab = Instantiate(TabButtonPrefab.gameObject, TabParent.transform).GetComponent<TabButton>();
+		tree.Load(path, tab);
+		trees_.Add(tree);
+		tree.IsActive = isActive;
+	}
+
+	#endregion
+
+
+	#region events
+
+	public void OnTreeActivated(Tree tree)
+	{
+		if( activeTree_ != null && tree != activeTree_ )
+		{
+			activeTree_.IsActive = false;
+		}
+		activeTree_ = tree;
+	}
+
+	public void OnTreeClosed(Tree tree)
+	{
+		int index = trees_.IndexOf(tree);
+		trees_.Remove(tree);
+		if( trees_.Count == 0 )
+		{
+			NewFile();
+		}
+		else if( tree == activeTree_ )
+		{
+			if( index >= trees_.Count ) index = trees_.Count - 1;
+			trees_[index].IsActive = true;
 		}
 	}
 
+	#endregion
 
 
-	void LoadTree(string path)
-	{
-		Close();
-
-		Tree tree = Instantiate(TreePrefab.gameObject, CanvasContent.transform).GetComponent<Tree>();
-		tree.Load(path);
-		trees_.Add(tree);
-		activeTree_ = tree;
-	}
+	#region settings
 
 	void LoadSettings()
 	{
@@ -113,7 +200,14 @@ public class Window : MonoBehaviour
 		string text = null;
 		while( (text = reader.ReadLine()) != null )
 		{
-			LoadTree(text);
+			if( text.EndsWith(".dtml") && File.Exists(text) )
+			{
+				LoadTree(text, isActive: activeTree_ == null);
+			}
+		}
+		if( activeTree_ == null )
+		{
+			NewFile();
 		}
 		reader.Close();
 	}
@@ -132,10 +226,27 @@ public class Window : MonoBehaviour
 		writer.Close();
 	}
 
-	void OnApplicationQuit()
+	#endregion
+
+
+	#region window title
+
+	// How can i change the title of the standalone player window? https://answers.unity3d.com/questions/148723/how-can-i-change-the-title-of-the-standalone-playe.html
+	[DllImport("user32.dll", EntryPoint = "SetWindowText")]
+	public static extern bool SetWindowText(System.IntPtr hwnd, System.String lpString);
+
+	[DllImport("user32.dll")]
+	static extern System.IntPtr GetActiveWindow();
+
+	public void SetTitle(string text)
 	{
-		SaveSettings();
+		SetWindowText(GetActiveWindow(), text);
 	}
+
+	#endregion
+
+
+	#region drop file
 
 #if UNITY_EDITOR
 	void OnGUI()
@@ -157,7 +268,7 @@ public class Window : MonoBehaviour
 					{
 						if( path.EndsWith(".dtml") )
 						{
-							LoadTree(path);
+							LoadTree(path, isActive: true);
 							break;
 						}
 					}
@@ -303,4 +414,5 @@ public class Window : MonoBehaviour
 
 #endif
 
+	#endregion
 }

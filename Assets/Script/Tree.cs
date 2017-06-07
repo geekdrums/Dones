@@ -37,20 +37,26 @@ public class Tree : MonoBehaviour {
 	bool isAllFolded_ = false;
 	List<Line> requestLayoutLines_ = new List<Line>();
 	int suspendLayoutCount_ = 0;
-	float targetScrollValue_ = 0;
+	float targetScrollValue_ = 1.0f;
 	bool isScrollAnimating_;
 
 	// components
 	LayoutElement layout_;
 	ContentSizeFitter contentSizeFitter_;
 	ScrollRect scrollRect_;
+	TabButton tabButton_;
 
 	// file
 	FileInfo file_ = null;
+	bool isEdited_ = false;
 
 	// properties
 	public ActionManager ActionManager { get { return actionManager_; } }
 	public FileInfo File { get { return file_; } }
+
+	public string TitleText { get { return rootLine_ != null ? rootLine_.Text : ""; } }
+	public bool IsActive { get { return (tabButton_ != null ? tabButton_.IsOn : false); } set { if( tabButton_ != null ) tabButton_.IsOn = value; } }
+
 
 	// utils
 	protected IEnumerable<Line> GetSelectedOrFocusedLines(bool ascending = true)
@@ -86,15 +92,9 @@ public class Tree : MonoBehaviour {
 
 	// Use this for initialization
 	void Awake () {
-		layout_ = GetComponentInParent<LayoutElement>();
-		contentSizeFitter_ = GetComponentInParent<ContentSizeFitter>();
-		scrollRect_ = GetComponentInParent<ScrollRect>();
-
 		actionManager_.ChainStarted += this.actionManager__ChainStarted;
 		actionManager_.ChainEnded += this.actionManager__ChainEnded;
 		actionManager_.Executed += this.actionManager__Executed;
-		// todo: 複数ツリーで切り替え
-		GameContext.CurrentActionManager = actionManager_;
 
 		heapParent_ = new GameObject("heap");
 		heapParent_.transform.parent = this.transform;
@@ -476,6 +476,12 @@ public class Tree : MonoBehaviour {
 		{
 			AdjustRequestedLayouts();
 		}
+
+		if( isEdited_ == false )
+		{
+			isEdited_ = true;
+			tabButton_.Text = TitleText + "*";
+		}
 	}
 
 	#endregion
@@ -509,7 +515,7 @@ public class Tree : MonoBehaviour {
 				.ThrottleFirst(TimeSpan.FromSeconds(GameContext.Config.ArrowStreamIntervalTime))
 				)
 				.TakeUntil(this.UpdateAsObservable().Where(x => Input.GetKeyUp(key)))
-				.RepeatUntilDestroy(this)
+				.RepeatUntilDisable(this)
 				.Subscribe(_ => OnThrottleInput(key));
 		}
 	}
@@ -572,8 +578,7 @@ public class Tree : MonoBehaviour {
 		}
 		actionManager_.EndChain();
 	}
-
-
+	
 	protected void OnCtrlSpaceInput()
 	{
 		actionManager_.StartChain();
@@ -1416,6 +1421,45 @@ public class Tree : MonoBehaviour {
 		usingFields_.Remove(field);
 	}
 
+	public void OnActivated()
+	{
+		layout_ = GetComponentInParent<LayoutElement>();
+		contentSizeFitter_ = GetComponentInParent<ContentSizeFitter>();
+		scrollRect_ = GetComponentInParent<ScrollRect>();
+
+		GameContext.CurrentActionManager = actionManager_;
+
+		UpdateLayoutElement();
+		scrollRect_.verticalScrollbar.value = targetScrollValue_;
+
+		if( focusedLine_ == null )
+		{
+			OnFocused(rootLine_[0]);
+		}
+		else
+		{
+			focusedLine_.Field.IsFocused = true;
+		}
+
+		SubscribeKeyInput();
+
+#if UNITY_STANDALONE_WIN
+		GameContext.Window.SetTitle(TitleText + " - Dones");
+#endif
+	}
+
+	public void OnDeactivated()
+	{
+		if( scrollRect_ != null )
+		{
+			targetScrollValue_ = scrollRect_.verticalScrollbar.value;
+		}
+
+		layout_ = null;
+		contentSizeFitter_ = null;
+		scrollRect_ = null;
+	}
+
 	#endregion
 
 
@@ -1423,7 +1467,7 @@ public class Tree : MonoBehaviour {
 
 	protected void UpdateLayoutElement()
 	{
-		if( suspendLayoutCount_ <= 0 )
+		if( suspendLayoutCount_ <= 0 && layout_ != null )
 		{
 			Line lastLine = rootLine_.LastVisibleLine;
 			if( lastLine != null && lastLine.Field != null )
@@ -1512,23 +1556,28 @@ public class Tree : MonoBehaviour {
 
 	#region file
 	
-	public void NewFile()
+	public void NewFile(TabButton tab)
 	{
+		tabButton_ = tab;
+
 		SuspendLayout();
 		rootLine_ = new Line("new");
 		rootLine_.Bind(this.gameObject);
 		rootLine_.Add(new Line(""));
 		ResumeLayout();
-		OnFocused(rootLine_[0]);
-		SubscribeKeyInput();
+
+		tabButton_.BindedTree = this;
+		tabButton_.Text = TitleText;
 	}
 
-	public void Load(string path)
+	public void Load(string path, TabButton tab)
 	{
 		if( file_ != null )
 		{
 			return;
 		}
+
+		tabButton_ = tab;
 
 		file_ = new FileInfo(path);
 
@@ -1586,10 +1635,9 @@ public class Tree : MonoBehaviour {
 		}
 		reader.Close();
 		ResumeLayout();
-		
-		OnFocused(rootLine_[0]);
 
-		SubscribeKeyInput();
+		tabButton_.BindedTree = this;
+		tabButton_.Text = TitleText;
 	}
 
 	public void Save(bool saveAs = false)
@@ -1603,6 +1651,10 @@ public class Tree : MonoBehaviour {
 			if( dialogResult == DialogResult.OK )
 			{
 				file_ = new FileInfo(saveFileDialog.FileName);
+				rootLine_.Text = file_.Name;
+#if UNITY_STANDALONE_WIN
+				GameContext.Window.SetTitle(TitleText + " - Dones");
+#endif
 			}
 			else
 			{
@@ -1620,6 +1672,9 @@ public class Tree : MonoBehaviour {
 		writer.Write(builder.ToString());
 		writer.Flush();
 		writer.Close();
+
+		isEdited_ = false;
+		tabButton_.Text = TitleText;
 	}
 
 	#endregion

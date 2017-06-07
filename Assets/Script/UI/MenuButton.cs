@@ -33,4 +33,14 @@ public class MenuButton : Button {
 		isOpening_ = !isOpening_;
 		menuObject_.SetActive(isOpening_);
 	}
+
+
+	public void Close()
+	{
+		if( isOpening_ )
+		{
+			isOpening_ = false;
+			menuObject_.SetActive(false);
+		}
+	}
 }
