@@ -48,11 +48,12 @@ public class TextField : InputField, IColoredObject
 
 	public int CaretPosision
 	{
-		get { return caretPos_; }
-		set { selectionAnchorPosition = selectionFocusPosition = caretPos_ = desiredCaretPos_ = value; }
+		get { return cachedCaretPos_; }
+		set { selectionAnchorPosition = selectionFocusPosition = cachedCaretPos_ = desiredCaretPos_ = value; }
 	}
-	protected int caretPos_;
+	protected int cachedCaretPos_;
 	protected static int desiredCaretPos_;
+	public int ActualCaretPosition { get { return m_CaretSelectPosition; } }
 
 	public Color Foreground { get { return textComponent.color; } set { textComponent.color = value; } }
 	public Color Background { get { return targetGraphic.canvasRenderer.GetColor(); } set { targetGraphic.CrossFadeColor(value, 0.0f, true, true); } }
@@ -199,12 +200,12 @@ public class TextField : InputField, IColoredObject
 
 		if( oldIsFocused != isFocused && BindedLine != null && BindedLine.Tree != null )
 		{
-			caretPos_ = desiredCaretPos_;
-			if( caretPos_ > text.Length )
+			cachedCaretPos_ = desiredCaretPos_;
+			if( cachedCaretPos_ > text.Length )
 			{
-				caretPos_ = text.Length;
+				cachedCaretPos_ = text.Length;
 			}
-			selectionAnchorPosition = selectionFocusPosition = caretPos_;
+			selectionAnchorPosition = selectionFocusPosition = cachedCaretPos_;
 			BindedLine.Tree.OnFocused(BindedLine);
 		}
 	}
@@ -229,7 +230,7 @@ public class TextField : InputField, IColoredObject
 		//{
 		Vector2 localMousePos;
 		RectTransformUtility.ScreenPointToLocalPointInRectangle(textComponent.rectTransform, eventData.position, eventData.pressEventCamera, out localMousePos);
-		desiredCaretPos_ = caretPos_ = caretSelectPositionInternal = caretPositionInternal = GetCharacterIndexFromPosition(localMousePos) + m_DrawStart;
+		desiredCaretPos_ = cachedCaretPos_ = caretSelectPositionInternal = caretPositionInternal = GetCharacterIndexFromPosition(localMousePos) + m_DrawStart;
 		//}
 
 		UpdateLabel();
@@ -255,7 +256,7 @@ public class TextField : InputField, IColoredObject
 				bool alt = (currentEventModifiers & EventModifiers.Alt) != 0;
 				bool ctrlOnly = ctrl && !alt && !shift;
 
-				desiredCaretPos_ = caretPos_ = caretPosition;
+				desiredCaretPos_ = cachedCaretPos_ = m_CaretSelectPosition;
 				switch( processingEvent_.keyCode )
 				{
 				case KeyCode.V:
@@ -299,7 +300,7 @@ public class TextField : InputField, IColoredObject
 						}
 						else
 						{
-							bool use = caretPos_ < text.Length;
+							bool use = cachedCaretPos_ < text.Length;
 							KeyPressed(processingEvent_);
 							if( use ) BindedLine.Tree.OnDeleteKeyConsumed();
 						}

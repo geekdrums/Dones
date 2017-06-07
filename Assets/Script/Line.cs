@@ -172,7 +172,7 @@ public class Line : IEnumerable<Line>
 	protected void OnTextChanged(string newText)
 	{
 		int oldCaretPos = Field.CaretPosision;
-		int currentCaretPos = Field.caretPosition;
+		int currentCaretPos = Field.ActualCaretPosition;
 
 		if( oldCaretPos < currentCaretPos )
 		{
