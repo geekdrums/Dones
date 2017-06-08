@@ -53,6 +53,7 @@ public class Tree : MonoBehaviour {
 	// properties
 	public ActionManager ActionManager { get { return actionManager_; } }
 	public FileInfo File { get { return file_; } }
+	public TabButton Tab { get { return tabButton_; } }
 
 	public string TitleText { get { return rootLine_ != null ? rootLine_.Text : ""; } }
 	public bool IsActive { get { return (tabButton_ != null ? tabButton_.IsOn : false); } set { if( tabButton_ != null ) tabButton_.IsOn = value; } }
@@ -1017,7 +1018,7 @@ public class Tree : MonoBehaviour {
 			// 選択行を上下に追加または削除
 			int sign = key == KeyCode.DownArrow ? 1 : -1;
 			Line line = (sign > 0 ? selectionEndLine_.NextVisibleLine : selectionEndLine_.PrevVisibleLine);
-			if( line != null )
+			if( line != null && HasSelection )
 			{
 				if( SelectionSign * sign > 0 ) UpdateSelection(selectionEndLine_, false);
 				selectionEndLine_ = line;

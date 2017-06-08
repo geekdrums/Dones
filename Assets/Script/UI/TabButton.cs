@@ -49,7 +49,7 @@ public class TabButton : UnityEngine.UI.Button {
 			if( textComponent_ == null )
 				textComponent_ = GetComponentInChildren<Text>();
 			textComponent_.text = value;
-			StartCoroutine(UpdateSizeCoroutine());
+			//
 		}
 	}
 	Text textComponent_;
@@ -57,6 +57,8 @@ public class TabButton : UnityEngine.UI.Button {
 	public Color Background { get { return image_.canvasRenderer.GetColor(); } set { image_.color = value; image_.CrossFadeColor(Color.white, 0.0f, true, true); } }
 	Image image_;
 
+	public float Width { get { return desiredWidth_; } set { desiredWidth_ = value; StartCoroutine(UpdateSizeCoroutine()); } }
+	float desiredWidth_ = 0;
 	RectTransform rect_;
 
 	protected override void Start()
@@ -101,11 +103,15 @@ public class TabButton : UnityEngine.UI.Button {
 	{
 		yield return new WaitForEndOfFrame();
 
+		/*
 		TextGenerator gen = textComponent_.cachedTextGenerator;
 
 		float charLength = gen.characters[gen.characters.Count - 1].cursorPos.x - gen.characters[0].cursorPos.x;
 		charLength /= textComponent_.pixelsPerUnit;
 
 		rect_.sizeDelta = new Vector2(charLength + 50, rect_.sizeDelta.y);
+		*/
+
+		rect_.sizeDelta = new Vector2(desiredWidth_, rect_.sizeDelta.y);
 	}
 }

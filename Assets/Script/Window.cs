@@ -22,6 +22,9 @@ public class Window : MonoBehaviour
 	public GameObject TabParent;
 	public MenuButton FileMenu;
 
+	public float DesiredTabWidth = 200.0f;
+	public float HeaderWidth = 5.0f;
+
 	#endregion
 
 
@@ -113,7 +116,7 @@ public class Window : MonoBehaviour
 		Tree tree = Instantiate(TreePrefab.gameObject, TreeParent.transform).GetComponent<Tree>();
 		TabButton tab = Instantiate(TabButtonPrefab.gameObject, TabParent.transform).GetComponent<TabButton>();
 		tree.NewFile(tab);
-		trees_.Add(tree);
+		OnTreeCreated(tree);
 		tree.IsActive = true;
 
 		FileMenu.Close();
@@ -155,7 +158,7 @@ public class Window : MonoBehaviour
 		Tree tree = Instantiate(TreePrefab.gameObject, TreeParent.transform).GetComponent<Tree>();
 		TabButton tab = Instantiate(TabButtonPrefab.gameObject, TabParent.transform).GetComponent<TabButton>();
 		tree.Load(path, tab);
-		trees_.Add(tree);
+		OnTreeCreated(tree);
 		tree.IsActive = isActive;
 	}
 
@@ -163,6 +166,20 @@ public class Window : MonoBehaviour
 
 
 	#region events
+
+	public void OnTreeCreated(Tree newTree)
+	{
+		trees_.Add(newTree);
+
+		if( DesiredTabWidth * trees_.Count > UnityEngine.Screen.width - HeaderWidth )
+		{
+			float tabWidth = (UnityEngine.Screen.width - HeaderWidth) / trees_.Count;
+			foreach(Tree tree in trees_)
+			{
+				tree.Tab.Width = tabWidth;
+			}
+		}
+	}
 
 	public void OnTreeActivated(Tree tree)
 	{
@@ -173,18 +190,28 @@ public class Window : MonoBehaviour
 		activeTree_ = tree;
 	}
 
-	public void OnTreeClosed(Tree tree)
+	public void OnTreeClosed(Tree closedTree)
 	{
-		int index = trees_.IndexOf(tree);
-		trees_.Remove(tree);
+		int index = trees_.IndexOf(closedTree);
+		trees_.Remove(closedTree);
 		if( trees_.Count == 0 )
 		{
 			NewFile();
 		}
-		else if( tree == activeTree_ )
+		else if( closedTree == activeTree_ )
 		{
 			if( index >= trees_.Count ) index = trees_.Count - 1;
 			trees_[index].IsActive = true;
+		}
+
+		float tabWidth = DesiredTabWidth;
+		if( DesiredTabWidth * trees_.Count > UnityEngine.Screen.width - HeaderWidth )
+		{
+			tabWidth = (UnityEngine.Screen.width - HeaderWidth) / trees_.Count;
+		}
+		foreach( Tree tree in trees_ )
+		{
+			tree.Tab.Width = tabWidth;
 		}
 	}
 
