@@ -44,7 +44,7 @@ public class Window : MonoBehaviour
 	// Use this for initialization
 	void Start ()
 	{
-		settingFile_ = new FileInfo(UnityEngine.Application.streamingAssetsPath + "/settings.txt");
+		settingFile_ = new FileInfo(System.Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + "/Dones/settings.txt");
 		StartCoroutine(InitialLoadCoroutine());
 	}
 
@@ -218,6 +218,13 @@ public class Window : MonoBehaviour
 
 	void SaveSettings()
 	{
+		if( settingFile_.Exists == false )
+		{
+			if( Directory.Exists(settingFile_.DirectoryName) == false )
+			{
+				Directory.CreateDirectory(settingFile_.DirectoryName);
+			}
+		}
 		StreamWriter writer = new StreamWriter(settingFile_.FullName, append: false);
 		foreach(Tree tree in trees_)
 		{
