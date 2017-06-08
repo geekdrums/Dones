@@ -174,9 +174,10 @@ public class Line : IEnumerable<Line>
 		int oldCaretPos = Field.CaretPosision;
 		int currentCaretPos = Field.ActualCaretPosition;
 
-		if( Input.compositionString.Length > 0 )
+		if( currentCaretPos < text_.Length && Input.compositionString.Length > 0 )
 		{
 			// compositionStringがある状態で日本語入力を確定させると挿入位置がズレるバグへの対処
+			//Debug.Log(string.Format("old={0}, caret={2} | current={1}, caret={3}, | compositionString={4}", text_, newText, oldCaretPos, currentCaretPos, Input.compositionString.Length));
 			currentCaretPos -= Input.compositionString.Length;
 			Field.ActualCaretPosition = currentCaretPos;
 		}
