@@ -944,12 +944,32 @@ public class Tree : MonoBehaviour {
 		{
 		case KeyCode.DownArrow:
 		case KeyCode.UpArrow:
-			// フォーカスを上下に移動
-			Line line = (key == KeyCode.DownArrow ? focusedLine_.NextVisibleLine : focusedLine_.PrevVisibleLine);
-			if( line != null )
+			if( Input.GetKey(KeyCode.LeftAlt) )
 			{
-				focusedLine_.Field.IsFocused = false;
-				line.Field.IsFocused = true;
+				// 上下の兄弟と交換
+				Line src = focusedLine_;
+				Line dest = (key == KeyCode.DownArrow ? src.NextSiblingLine : src.PrevSiblingLine);
+				if( dest != null )
+				{
+					actionManager_.Execute(new Action(
+						execute: () =>
+						{
+							src.Parent.Insert(dest.Index, src);
+							dest.AdjustLayout();
+							src.Field.IsFocused = true;
+						}
+						));
+				}
+			}
+			else
+			{
+				// フォーカスを上下に移動
+				Line line = (key == KeyCode.DownArrow ? focusedLine_.NextVisibleLine : focusedLine_.PrevVisibleLine);
+				if( line != null )
+				{
+					focusedLine_.Field.IsFocused = false;
+					line.Field.IsFocused = true;
+				}
 			}
 			break;
 		case KeyCode.RightArrow:

@@ -315,16 +315,23 @@ public class Line : IEnumerable<Line>
 	}
 	public void Insert(int index, Line child)
 	{
-		children_.Insert(index, child);
-		child.Tree = Tree;
-
 		Line oldParent = child.parent_;
-		child.parent_ = this;
-		if( oldParent != null && oldParent != this )
-		{
-			oldParent.children_.Remove(child);
-		}
 
+		if( oldParent == this )
+		{
+			children_.Move(child.Index, index);
+		}
+		else
+		{
+			children_.Insert(index, child);
+			child.Tree = Tree;
+			child.parent_ = this;
+			if( oldParent != null )
+			{
+				oldParent.children_.Remove(child);
+			}
+		}
+		
 		if( child.Field == null || child.Field.BindedLine != child )
 		{
 			Tree.Bind(child);
@@ -335,7 +342,10 @@ public class Line : IEnumerable<Line>
 		}
 		else
 		{
-			child.Binding.transform.SetParent(this.Binding.transform, worldPositionStays: true);
+			if( child.Binding.transform.parent != this.Binding.transform )
+			{
+				child.Binding.transform.SetParent(this.Binding.transform, worldPositionStays: true);
+			}
 			child.AdjustLayout();
 		}
 	}
@@ -639,6 +649,30 @@ public class Line : IEnumerable<Line>
 			}
 			return null;
 			
+		}
+	}
+
+	public Line NextSiblingLine
+	{
+		get
+		{
+			if( parent_ != null )
+			{
+				return parent_[Index + 1];
+			}
+			return null;
+		}
+	}
+
+	public Line PrevSiblingLine
+	{
+		get
+		{
+			if( parent_ != null )
+			{
+				return parent_[Index - 1];
+			}
+			return null;
 		}
 	}
 
