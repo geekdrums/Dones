@@ -174,6 +174,13 @@ public class Line : IEnumerable<Line>
 		int oldCaretPos = Field.CaretPosision;
 		int currentCaretPos = Field.ActualCaretPosition;
 
+		if( Input.compositionString.Length > 0 )
+		{
+			// compositionStringがある状態で日本語入力を確定させると挿入位置がズレるバグへの対処
+			currentCaretPos -= Input.compositionString.Length;
+			Field.ActualCaretPosition = currentCaretPos;
+		}
+
 		if( oldCaretPos < currentCaretPos )
 		{
 			if( textAction_ == null || textAction_ is TextInputAction == false || Time.time - lastTextActionTime_ > GameContext.Config.TextInputFixIntervalTime )

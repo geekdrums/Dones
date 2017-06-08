@@ -13,7 +13,7 @@ public class MenuButton : Button {
 	protected override void Start () {
 		base.Start();
 		onClick.AddListener(this.OnClick);
-		menuObject_ = transform.FindChild("Menu").gameObject;
+		menuObject_ = transform.Find("Menu").gameObject;
 	}
 	
 	// Update is called once per frame

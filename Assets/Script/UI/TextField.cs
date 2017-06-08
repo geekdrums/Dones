@@ -53,7 +53,7 @@ public class TextField : InputField, IColoredObject
 	}
 	protected int cachedCaretPos_;
 	protected static int desiredCaretPos_;
-	public int ActualCaretPosition { get { return m_CaretSelectPosition; } }
+	public int ActualCaretPosition { get { return m_CaretSelectPosition; } set { m_CaretSelectPosition = m_CaretPosition = value; } }
 
 	public Color Foreground { get { return textComponent.color; } set { textComponent.color = value; } }
 	public Color Background { get { return targetGraphic.canvasRenderer.GetColor(); } set { targetGraphic.CrossFadeColor(value, 0.0f, true, true); } }
@@ -77,7 +77,7 @@ public class TextField : InputField, IColoredObject
 	{
 		base.Awake();
 		strikeLine_ = GetComponentInChildren<UIGaugeRenderer>(includeInactive: true);
-		checkMark_ = textComponent.transform.FindChild("Check").GetComponent<Image>();
+		checkMark_ = textComponent.transform.Find("Check").GetComponent<Image>();
 	}
 
 	protected override void Start()
