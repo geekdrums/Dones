@@ -1422,11 +1422,13 @@ public class Tree : MonoBehaviour {
 				{
 					line.IsFolded = isFolded;
 					line.AdjustLayoutRecursive();
+					line.Field.IsFocused = true;
 				},
 				undo: () =>
 				{
 					line.IsFolded = !isFolded;
 					line.AdjustLayoutRecursive();
+					line.Field.IsFocused = true;
 				}
 				));
 		}

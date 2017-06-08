@@ -34,6 +34,8 @@ public class Window : MonoBehaviour
 	List<Tree> trees_ = new List<Tree>();
 	FileInfo settingFile_;
 
+	string initialDirectory_;
+
 	#endregion
 
 
@@ -94,6 +96,8 @@ public class Window : MonoBehaviour
 		OpenFileDialog openFileDialog = new OpenFileDialog();
 		openFileDialog.Filter = "dones file (*.dtml)|*.dtml";
 		openFileDialog.Multiselect = true;
+		if( initialDirectory_ != null )
+			openFileDialog.InitialDirectory = initialDirectory_;
 		DialogResult dialogResult = openFileDialog.ShowDialog();
 		if( dialogResult == DialogResult.OK )
 		{
@@ -105,6 +109,11 @@ public class Window : MonoBehaviour
 					LoadTree(path, isActive);
 					isActive = false;
 				}
+			}
+
+			if( activeTree_ != null )
+			{
+				initialDirectory_ = activeTree_.File.Directory.FullName;
 			}
 		}
 
@@ -219,6 +228,20 @@ public class Window : MonoBehaviour
 
 
 	#region settings
+	
+	enum Settings
+	{
+		InitialFiles,
+		InitialDirectory,
+		IsFullScreen,
+		Count
+	}
+
+	static string[] SettingsTags = new string[(int)Settings.Count] {
+		"[initial files]",
+		"[initial directory]",
+		"[full screen]"
+		};
 
 	void LoadSettings()
 	{
@@ -229,11 +252,44 @@ public class Window : MonoBehaviour
 
 		StreamReader reader = new StreamReader(settingFile_.OpenRead());
 		string text = null;
+
+		Settings setting = Settings.InitialFiles;
 		while( (text = reader.ReadLine()) != null )
 		{
-			if( text.EndsWith(".dtml") && File.Exists(text) )
+			foreach(Settings set in (Settings[])Enum.GetValues(typeof(Settings)))
 			{
-				LoadTree(text, isActive: activeTree_ == null);
+				if( set == Settings.Count ) break;
+				else if( SettingsTags[(int)set] == text )
+				{
+					setting = set;
+					text = reader.ReadLine();
+					break;
+				}
+			}
+			switch(setting)
+			{
+			case Settings.InitialFiles:
+				if( text.EndsWith(".dtml") && File.Exists(text) )
+				{
+					LoadTree(text, isActive: activeTree_ == null);
+				}
+				break;
+			case Settings.InitialDirectory:
+				if( Directory.Exists(text) )
+				{
+					initialDirectory_ = text;
+				}
+				break;
+			case Settings.IsFullScreen:
+				if( text == "true" )
+				{
+					UnityEngine.Screen.fullScreen = true;
+				}
+				else if( text == "false" )
+				{
+					UnityEngine.Screen.fullScreen = false;
+				}
+				break;
 			}
 		}
 		if( activeTree_ == null )
@@ -252,7 +308,10 @@ public class Window : MonoBehaviour
 				Directory.CreateDirectory(settingFile_.DirectoryName);
 			}
 		}
+
 		StreamWriter writer = new StreamWriter(settingFile_.FullName, append: false);
+
+		writer.WriteLine(SettingsTags[(int)Settings.InitialFiles]);
 		foreach(Tree tree in trees_)
 		{
 			if( tree.File != null )
@@ -260,6 +319,14 @@ public class Window : MonoBehaviour
 				writer.WriteLine(tree.File.FullName.ToString());
 			}
 		}
+		if( initialDirectory_ != null )
+		{
+			writer.WriteLine(SettingsTags[(int)Settings.InitialDirectory]);
+			writer.WriteLine(initialDirectory_);
+		}
+		writer.WriteLine(SettingsTags[(int)Settings.IsFullScreen]);
+		writer.WriteLine(UnityEngine.Screen.fullScreen ? "true" : "false");
+
 		writer.Flush();
 		writer.Close();
 	}

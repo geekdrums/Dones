@@ -299,9 +299,16 @@ public class TextField : InputField, IColoredObject
 					}
 					break;
 				case KeyCode.M:
-					if( ctrlOnly && BindedLine.Count > 0 )
+					if( ctrlOnly )
 					{
-						BindedLine.Tree.OnFoldUpdated(BindedLine, !BindedLine.IsFolded);
+						if( BindedLine.Count > 0 )
+						{
+							BindedLine.Tree.OnFoldUpdated(BindedLine, !BindedLine.IsFolded);
+						}
+						else if( BindedLine.Parent.Parent != null )
+						{
+							BindedLine.Tree.OnFoldUpdated(BindedLine.Parent, true);
+						}
 					}
 					break;
 				case KeyCode.Delete:
