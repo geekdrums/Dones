@@ -12,3 +12,4 @@ UnityVS.*
 *.dll
 *.bundle/
 *.prx
+Assets/StreamingAssets/settings.txt
