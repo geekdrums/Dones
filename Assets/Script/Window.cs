@@ -1,4 +1,6 @@
 ﻿using UnityEngine;
+using UnityEngine.UI;
+using UnityEngine.EventSystems;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -37,6 +39,7 @@ public class Window : MonoBehaviour
 	string initialDirectory_;
 
 	float currentScreenWidth_;
+	float currentTabWidth_;
 
 	#endregion
 
@@ -47,6 +50,7 @@ public class Window : MonoBehaviour
 	{
 		GameContext.Window = this;
 		currentScreenWidth_ = UnityEngine.Screen.width;
+		currentTabWidth_ = DesiredTabWidth;
 	}
 
 	// Use this for initialization
@@ -85,7 +89,7 @@ public class Window : MonoBehaviour
 
 		if(	currentScreenWidth_ != UnityEngine.Screen.width )
 		{
-			UpdateTabSize();
+			UpdateTabLayout();
 			currentScreenWidth_ = UnityEngine.Screen.width;
 		}
 	}
@@ -189,7 +193,7 @@ public class Window : MonoBehaviour
 	{
 		trees_.Add(newTree);
 
-		UpdateTabSize();
+		UpdateTabLayout();
 	}
 
 	public void OnTreeActivated(Tree tree)
@@ -215,27 +219,71 @@ public class Window : MonoBehaviour
 			trees_[index].IsActive = true;
 		}
 
-		UpdateTabSize();
+		UpdateTabLayout();
 	}
 
-	void UpdateTabSize()
+	#endregion
+
+
+	#region tab
+	
+	void UpdateTabLayout()
 	{
-		float tabWidth = DesiredTabWidth;
+		currentTabWidth_ = DesiredTabWidth;
 		if( DesiredTabWidth * trees_.Count > UnityEngine.Screen.width - HeaderWidth )
 		{
-			tabWidth = (UnityEngine.Screen.width - HeaderWidth) / trees_.Count;
+			currentTabWidth_ = (UnityEngine.Screen.width - HeaderWidth) / trees_.Count;
 		}
 		foreach( Tree tree in trees_ )
 		{
-			tree.Tab.Width = tabWidth;
+			tree.Tab.Width = currentTabWidth_;
+			tree.Tab.TargetPosition = GetTabPosition(tree.Tab);
 		}
+	}
+
+	Vector3 GetTabPosition(TabButton tab)
+	{
+		return Vector3.right * currentTabWidth_ * (trees_.IndexOf(tab.BindedTree));
+	}
+	
+	public void OnBeginDrag(TabButton tab)
+	{
+		tab.IsOn = true;
+		if( tab.BindedTree.FocusedLine != null )
+		{
+			tab.BindedTree.FocusedLine.Field.IsFocused = false;
+		}
+		tab.transform.SetAsLastSibling();
+	}
+
+	public void OnDragging(TabButton tab, PointerEventData eventData)
+	{
+		int index = trees_.IndexOf(tab.BindedTree);
+		tab.transform.localPosition += new Vector3(eventData.delta.x, 0);
+
+		int desiredIndex = Mathf.Clamp((int)(tab.transform.localPosition.x / currentTabWidth_), 0, trees_.Count - 1);
+		if( index != desiredIndex )
+		{
+			trees_.Remove(tab.BindedTree);
+			trees_.Insert(desiredIndex, tab.BindedTree);
+			int sign = (int)Mathf.Sign(desiredIndex - index);
+			for( int i = index; i != desiredIndex; i += sign )
+			{
+				AnimManager.AddAnim(trees_[i].Tab, GetTabPosition(trees_[i].Tab), ParamType.Position, AnimType.Time, GameContext.Config.AnimTime);
+			}
+		}
+	}
+
+	public void OnEndDrag(TabButton tab)
+	{
+		AnimManager.AddAnim(tab, GetTabPosition(tab), ParamType.Position, AnimType.Time, GameContext.Config.AnimTime);
 	}
 
 	#endregion
 
 
 	#region settings
-	
+
 	enum Settings
 	{
 		InitialFiles,

@@ -2,10 +2,13 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
-public class TabButton : UnityEngine.UI.Button {
+public class TabButton : UnityEngine.UI.Button, IDragHandler, IBeginDragHandler, IEndDragHandler
+{
+	#region params
 
 	public Tree BindedTree;
 	
@@ -49,7 +52,6 @@ public class TabButton : UnityEngine.UI.Button {
 			if( textComponent_ == null )
 				textComponent_ = GetComponentInChildren<Text>();
 			textComponent_.text = value;
-			//
 		}
 	}
 	Text textComponent_;
@@ -57,9 +59,44 @@ public class TabButton : UnityEngine.UI.Button {
 	public Color Background { get { return image_.canvasRenderer.GetColor(); } set { image_.color = value; image_.CrossFadeColor(Color.white, 0.0f, true, true); } }
 	Image image_;
 
-	public float Width { get { return desiredWidth_; } set { desiredWidth_ = value; StartCoroutine(UpdateSizeCoroutine()); } }
+	public float Width
+	{
+		get { return desiredWidth_; }
+		set
+		{
+			desiredWidth_ = value;
+			if( updateTransform_ == false )
+			{
+				updateTransform_ = true;
+				StartCoroutine(UpdateTransformCoroutine());
+			}
+		}
+	}
 	float desiredWidth_ = 0;
+
+	public Vector2 TargetPosition
+	{
+		get { return targetPosition_; }
+		set
+		{
+			targetPosition_ = value;
+			if( updateTransform_ == false )
+			{
+				updateTransform_ = true;
+				StartCoroutine(UpdateTransformCoroutine());
+			}
+		}
+	}
+	Vector2 targetPosition_;
+
+	bool updateTransform_ = false;
+
 	RectTransform rect_;
+
+	#endregion
+
+
+	#region unity functions
 
 	protected override void Start()
 	{
@@ -74,6 +111,11 @@ public class TabButton : UnityEngine.UI.Button {
 	void Update () {
 		
 	}
+
+	#endregion
+
+
+	#region click, close
 
 	public void OnClick()
 	{
@@ -98,8 +140,7 @@ public class TabButton : UnityEngine.UI.Button {
 		textComponent_.color = isOn_ ? ColorManager.Base.Front : GameContext.Config.TextColor;
 	}
 
-
-	IEnumerator UpdateSizeCoroutine()
+	IEnumerator UpdateTransformCoroutine()
 	{
 		yield return new WaitForEndOfFrame();
 
@@ -113,5 +154,30 @@ public class TabButton : UnityEngine.UI.Button {
 		*/
 
 		rect_.sizeDelta = new Vector2(desiredWidth_, rect_.sizeDelta.y);
+		rect_.anchoredPosition = targetPosition_;
+
+		updateTransform_ = false;
 	}
+
+	#endregion
+
+
+	#region drag
+
+	public void OnBeginDrag(PointerEventData eventData)
+	{
+		GameContext.Window.OnBeginDrag(this);
+	}
+
+	public void OnDrag(PointerEventData eventData)
+	{
+		GameContext.Window.OnDragging(this, eventData);
+	}
+
+	public void OnEndDrag(PointerEventData eventData)
+	{
+		GameContext.Window.OnEndDrag(this);
+	}
+
+	#endregion
 }

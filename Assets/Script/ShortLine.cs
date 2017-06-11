@@ -45,7 +45,7 @@ public class ShortLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragHa
 
 	ShortLineList ownerList_;
 
-	bool shouldUpdateDoneText_;
+	bool shouldUpdateStrikeLine_;
 
 	protected override void Awake()
 	{
@@ -115,7 +115,7 @@ public class ShortLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragHa
 			textComponent_.color = GameContext.Config.DoneTextColor;
 			doneButton_.transition = Transition.None;
 			doneButton_.targetGraphic.color = Color.clear;
-			UpdateDoneText();
+			UpdateStrikeLine();
 
 			if( withAnim )
 			{
@@ -137,19 +137,19 @@ public class ShortLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragHa
 		ownerList_.OnDoneChanged(this);
 	}
 
-	public void UpdateDoneText()
+	public void UpdateStrikeLine()
 	{
-		if( shouldUpdateDoneText_ == false )
+		if( shouldUpdateStrikeLine_ == false )
 		{
-			shouldUpdateDoneText_ = true;
+			shouldUpdateStrikeLine_ = true;
 			if( this.gameObject.activeInHierarchy )
 			{
-				StartCoroutine(UpdateDoneTextCoroutine());
+				StartCoroutine(UpdateStrikeLineCoroutine());
 			}
 		}
 	}
 
-	IEnumerator UpdateDoneTextCoroutine()
+	IEnumerator UpdateStrikeLineCoroutine()
 	{
 		yield return new WaitForEndOfFrame();
 
@@ -159,7 +159,7 @@ public class ShortLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragHa
 		charLength /= textComponent_.pixelsPerUnit;
 
 		strikeLine_.SetLength(charLength);
-		shouldUpdateDoneText_ = false;
+		shouldUpdateStrikeLine_ = false;
 	}
 
 	#endregion

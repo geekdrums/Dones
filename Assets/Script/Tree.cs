@@ -14,11 +14,15 @@ using System.Windows.Forms;
 
 // Window - [ Tree ] - Line
 public class Tree : MonoBehaviour {
-	
-	// editor params
+
+	#region editor params
+
 	public TextField FieldPrefab;
 	public int FieldCount = 100;
 	
+	#endregion
+
+
 	#region params
 
 	List<TextField> usingFields_ = new List<TextField>();
@@ -54,6 +58,7 @@ public class Tree : MonoBehaviour {
 	public ActionManager ActionManager { get { return actionManager_; } }
 	public FileInfo File { get { return file_; } }
 	public TabButton Tab { get { return tabButton_; } }
+	public Line FocusedLine { get { return focusedLine_; } }
 
 	public string TitleText { get { return rootLine_ != null ? rootLine_.Text : ""; } }
 	public bool IsActive { get { return (tabButton_ != null ? tabButton_.IsOn : false); } set { if( tabButton_ != null ) tabButton_.IsOn = value; } }
@@ -295,7 +300,7 @@ public class Tree : MonoBehaviour {
 		}
 	}
 
-	protected void ClearSelection(bool clearStartAndEnd = true)
+	public void ClearSelection(bool clearStartAndEnd = true)
 	{
 		foreach( Line line in selectedLines_.Values )
 		{
@@ -1466,12 +1471,9 @@ public class Tree : MonoBehaviour {
 
 		if( focusedLine_ == null )
 		{
-			rootLine_[0].Field.IsFocused = true;
+			focusedLine_ = rootLine_[0];
 		}
-		else
-		{
-			focusedLine_.Field.IsFocused = true;
-		}
+		focusedLine_.Field.IsFocused = true;
 
 		SubscribeKeyInput();
 
