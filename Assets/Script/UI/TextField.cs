@@ -218,6 +218,16 @@ public class TextField : InputField, IColoredObject
 		}
 	}
 
+	public override void OnDeselect(BaseEventData eventData)
+	{
+		base.OnDeselect(eventData);
+
+		if( BindedLine != null && BindedLine.Tree != null )
+		{
+			BindedLine.Tree.OnFocusEnded(BindedLine);
+		}
+	}
+
 	public override void OnPointerDown(PointerEventData eventData)
 	{
 		bool myDrag = IsActive() &&

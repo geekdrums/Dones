@@ -11,9 +11,14 @@ public class Config : MonoBehaviour
 	public float ArrowStreamDelayTime = 0.3f;
 	public float ArrowStreamIntervalTime = 0.03f;
 	public float TextInputFixIntervalTime = 1.0f;
+
 	public Color SelectionColor;
 	public Color TextColor;
 	public Color DoneTextColor;
+
+	public Color ShortLineColor;
+	public Color ShortLineSelectionColor;
+	public Color ShortLineBackColor;
 
 	// Use this for initialization
 	void Awake()

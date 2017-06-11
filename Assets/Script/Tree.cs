@@ -224,7 +224,7 @@ public class Tree : MonoBehaviour {
 			{
 				// ctrlもshiftもなしにクリックした場合は選択解除
 				ClearSelection();
-				if( focusedLine_.Field.IsFocused )
+				if( focusedLine_ != null && focusedLine_.Field.IsFocused )
 					selectionStartLine_ = focusedLine_;
 			}
 		}
@@ -1413,6 +1413,15 @@ public class Tree : MonoBehaviour {
 		UpdateScrollTo(focusedLine_);
 	}
 
+	public void OnFocusEnded(Line line)
+	{
+		if( line == focusedLine_ )
+		{
+			focusedLine_.FixTextInputAction();
+			focusedLine_ = null;
+		}
+	}
+
 	public void OnFoldUpdated(Line line, bool isFolded)
 	{
 		if( line.IsFolded != isFolded )
@@ -1457,7 +1466,7 @@ public class Tree : MonoBehaviour {
 
 		if( focusedLine_ == null )
 		{
-			OnFocused(rootLine_[0]);
+			rootLine_[0].Field.IsFocused = true;
 		}
 		else
 		{
