@@ -64,7 +64,7 @@ public class TextField : InputField, IColoredObject
 	public float RectY { get { return targetGraphic.rectTransform.position.y; } }
 
 	protected UIGaugeRenderer strikeLine_;
-	protected Image checkMark_;
+	protected CheckMark checkMark_;
 	protected bool shouldUpdateDone_ = false;
 
 	#endregion
@@ -77,7 +77,7 @@ public class TextField : InputField, IColoredObject
 	{
 		base.Awake();
 		strikeLine_ = GetComponentInChildren<UIGaugeRenderer>(includeInactive: true);
-		checkMark_ = textComponent.transform.Find("Check").GetComponent<Image>();
+		checkMark_ = textComponent.transform.Find("Check").GetComponent<CheckMark>();
 	}
 
 	protected override void Start()
@@ -108,7 +108,7 @@ public class TextField : InputField, IColoredObject
 	{
 		DeleteSelection();
 		BindedLine.Text = text.Insert(m_CaretPosition, pasteText);
-		caretSelectPositionInternal = caretPositionInternal += text.Length;
+		caretSelectPositionInternal = caretPositionInternal += pasteText.Length;
 	}
 
 	public void DeleteSelection()
@@ -151,9 +151,8 @@ public class TextField : InputField, IColoredObject
 			if( withAnim )
 			{
 				strikeLine_.Rate = 0.0f;
-				AnimManager.AddAnim(strikeLine_, 1.0f, ParamType.GaugeRate, AnimType.BounceIn, 0.3f);
-				checkMark_.transform.localScale = Vector3.zero;
-				AnimManager.AddAnim(checkMark_, Vector3.one, ParamType.Scale, AnimType.BounceIn, 0.15f, 0.15f);
+				AnimManager.AddAnim(strikeLine_, 1.0f, ParamType.GaugeRate, AnimType.Time, 0.15f);
+				checkMark_.Check();
 			}
 		}
 		else
@@ -186,10 +185,7 @@ public class TextField : InputField, IColoredObject
 		charLength /= m_TextComponent.pixelsPerUnit;
 
 		strikeLine_.SetLength(charLength + 10);
-		Vector2 size = checkMark_.rectTransform.rect.size;
-		checkMark_.rectTransform.offsetMin = new Vector2(charLength + 5, checkMark_.rectTransform.offsetMin.y);
-		checkMark_.rectTransform.offsetMax = checkMark_.rectTransform.offsetMin + size;
-
+		checkMark_.SetPositionX(charLength + 5);
 		shouldUpdateDone_ = false;
 	}
 

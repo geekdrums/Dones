@@ -552,12 +552,12 @@ public class Tree : MonoBehaviour {
 		foreach( Line line in GetSelectedOrFocusedLines() )
 		{
 			int index = line.Index;
-			if( index > 0 )
+			if( index > 0 && (line.Parent == rootLine_ || line.Parent.Field.IsSelected == false) )
 			{
 				Line oldParent = line.Parent;
 				Line newParent = line.Parent[index - 1];
 				actionManager_.Execute(new Action(
-					execute: ()=>
+					execute: () =>
 					{
 						newParent.Add(line);
 						if( newParent.IsFolded )
@@ -566,35 +566,16 @@ public class Tree : MonoBehaviour {
 							newParent.AdjustLayoutRecursive();
 						}
 					},
-					undo: ()=>
+					undo: () =>
 					{
 						oldParent.Insert(index, line);
 					}
 					));
 			}
-			else
-			{
-				break;
-			}
-		}
-		actionManager_.EndChain();
-	}
-	
-	protected void OnCtrlSpaceInput()
-	{
-		actionManager_.StartChain();
-		foreach( Line line in GetSelectedOrFocusedLines() )
-		{
-			if( line.Text != "" )
-			{
-				Line targetLine = line;
-				actionManager_.Execute(new Action(
-					execute: () =>
-					{
-						targetLine.IsDone = !targetLine.IsDone;
-					}
-					));
-			}
+			//else
+			//{
+			//	break;
+			//}
 		}
 		actionManager_.EndChain();
 	}
@@ -624,6 +605,25 @@ public class Tree : MonoBehaviour {
 					{
 						oldParent.Insert(index, line);
 						oldParent.AdjustLayoutRecursive(index);
+					}
+					));
+			}
+		}
+		actionManager_.EndChain();
+	}
+
+	protected void OnCtrlSpaceInput()
+	{
+		actionManager_.StartChain();
+		foreach( Line line in GetSelectedOrFocusedLines() )
+		{
+			if( line.Text != "" )
+			{
+				Line targetLine = line;
+				actionManager_.Execute(new Action(
+					execute: () =>
+					{
+						targetLine.IsDone = !targetLine.IsDone;
 					}
 					));
 			}

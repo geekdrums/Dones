@@ -318,6 +318,7 @@ public class TransformAnimInfo : AnimInfoBase
 public class PrimitiveAnimInfo : AnimInfoBase
 {
 	protected MidairPrimitive primitive_;
+	protected UIMidairPrimitive uiprimitive_;
 
 	public PrimitiveAnimInfo(GameObject obj, object target, ParamType paramType, AnimType animType, float factor = 0.1f, float delay = 0.0f, AnimEndOption endOption = AnimEndOption.None)
 		: base(obj, target, paramType, animType, factor, delay, endOption)
@@ -331,33 +332,70 @@ public class PrimitiveAnimInfo : AnimInfoBase
 	protected override void InitValue()
 	{
 		primitive_ = Object.GetComponentInChildren<MidairPrimitive>();
-		switch( Param )
+		uiprimitive_ = Object.GetComponentInChildren<UIMidairPrimitive>();
+		if( primitive_ != null )
 		{
-		case ParamType.PrimitiveRadius:
-			initialValue_ = (float)primitive_.Radius;
-			break;
-		case ParamType.PrimitiveWidth:
-			initialValue_ = (float)primitive_.Width;
-			break;
-		case ParamType.PrimitiveArc:
-			initialValue_ = (float)primitive_.ArcRate;
-			break;
+			switch( Param )
+			{
+			case ParamType.PrimitiveRadius:
+				initialValue_ = (float)primitive_.Radius;
+				break;
+			case ParamType.PrimitiveWidth:
+				initialValue_ = (float)primitive_.Width;
+				break;
+			case ParamType.PrimitiveArc:
+				initialValue_ = (float)primitive_.ArcRate;
+				break;
+			}
+		}
+		else if( uiprimitive_ != null )
+		{
+			switch( Param )
+			{
+			case ParamType.PrimitiveRadius:
+				initialValue_ = (float)uiprimitive_.Radius;
+				break;
+			case ParamType.PrimitiveWidth:
+				initialValue_ = (float)uiprimitive_.Width;
+				break;
+			case ParamType.PrimitiveArc:
+				initialValue_ = (float)uiprimitive_.ArcRate;
+				break;
+			}
 		}
 	}
 
 	protected override void UpdateAnimValue()
 	{
-		switch( Param )
+		if( primitive_ != null )
 		{
-		case ParamType.PrimitiveRadius:
-			primitive_.SetSize(currentValueFloat);
-			break;
-		case ParamType.PrimitiveWidth:
-			primitive_.SetWidth(currentValueFloat);
-			break;
-		case ParamType.PrimitiveArc:
-			primitive_.SetArc(currentValueFloat);
-			break;
+			switch( Param )
+			{
+			case ParamType.PrimitiveRadius:
+				primitive_.SetSize(currentValueFloat);
+				break;
+			case ParamType.PrimitiveWidth:
+				primitive_.SetWidth(currentValueFloat);
+				break;
+			case ParamType.PrimitiveArc:
+				primitive_.SetArc(currentValueFloat);
+				break;
+			}
+		}
+		else if( uiprimitive_ != null )
+		{
+			switch( Param )
+			{
+			case ParamType.PrimitiveRadius:
+				uiprimitive_.SetSize(currentValueFloat);
+				break;
+			case ParamType.PrimitiveWidth:
+				uiprimitive_.SetWidth(currentValueFloat);
+				break;
+			case ParamType.PrimitiveArc:
+				uiprimitive_.SetArc(currentValueFloat);
+				break;
+			}
 		}
 	}
 }
