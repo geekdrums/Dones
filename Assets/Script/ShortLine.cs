@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
-public class ShortLine : Selectable {
+public class ShortLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragHandler {
 
 	public Line BindedLine { get; private set; }
 
@@ -68,6 +68,9 @@ public class ShortLine : Selectable {
 		isDone_ = line.IsDone;
 	}
 
+
+	#region selection
+
 	public override void OnSelect(BaseEventData eventData)
 	{
 		base.OnSelect(eventData);
@@ -91,6 +94,11 @@ public class ShortLine : Selectable {
 			ownerList_.OnDeselect(this);
 		}
 	}
+
+	#endregion
+
+
+	#region done
 
 	public void Done()
 	{
@@ -153,4 +161,34 @@ public class ShortLine : Selectable {
 		strikeLine_.SetLength(charLength);
 		shouldUpdateDoneText_ = false;
 	}
+
+	#endregion
+
+	#region drag
+	
+	public void OnBeginDrag(PointerEventData eventData)
+	{
+		if( IsDone == false )
+		{
+			ownerList_.OnBeginDrag(this);
+		}
+	}
+
+	public void OnDrag(PointerEventData eventData)
+	{
+		if( IsDone == false )
+		{
+			ownerList_.OnDragging(this, eventData);
+		}
+	}
+
+	public void OnEndDrag(PointerEventData eventData)
+	{
+		if( IsDone == false )
+		{
+			ownerList_.OnEndDrag(this);
+		}
+	}
+
+	#endregion
 }

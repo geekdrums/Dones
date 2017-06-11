@@ -1,6 +1,8 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
+using UnityEngine.EventSystems;
 
 public class ShortLineList : MonoBehaviour {
 
@@ -133,6 +135,45 @@ public class ShortLineList : MonoBehaviour {
 			{
 				AnimManager.AddAnim(doneLines_[i], GetTargetPosition(doneLines_[i]), ParamType.Position, AnimType.Time, GameContext.Config.AnimTime);
 			}
+			AnimManager.AddAnim(line, GetTargetPosition(line), ParamType.Position, AnimType.Time, GameContext.Config.AnimTime);
+		}
+	}
+
+	public void OnBeginDrag(ShortLine line)
+	{
+		if( lines_.Contains(line) )
+		{
+			AnimManager.AddAnim(line, 5.0f, ParamType.PositionX, AnimType.Time, GameContext.Config.AnimTime);
+			line.transform.SetAsLastSibling();
+		}
+	}
+
+	public void OnDragging(ShortLine line, PointerEventData eventData)
+	{
+		if( lines_.Contains(line) )
+		{
+			int index = lines_.IndexOf(line);
+			line.transform.localPosition += new Vector3(0, eventData.delta.y, 0);
+
+			int desiredIndex = Mathf.Clamp((int)(-line.transform.localPosition.y / LineHeight), 0, lines_.Count - 1);
+			if( index != desiredIndex )
+			{
+				lines_.Remove(line);
+				lines_.Insert(desiredIndex, line);
+				int sign = (int)Mathf.Sign(desiredIndex - index);
+				for( int i = index; i != desiredIndex; i += sign )
+				{
+					AnimManager.AddAnim(lines_[i], GetTargetPosition(lines_[i]), ParamType.Position, AnimType.Time, GameContext.Config.AnimTime);
+				}
+			}
+		}
+	}
+
+	public void OnEndDrag(ShortLine line)
+	{
+		if( lines_.Contains(line) )
+		{
+			selectedIndex_ = lines_.IndexOf(line);
 			AnimManager.AddAnim(line, GetTargetPosition(line), ParamType.Position, AnimType.Time, GameContext.Config.AnimTime);
 		}
 	}
