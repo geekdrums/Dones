@@ -36,6 +36,8 @@ public class Window : MonoBehaviour
 
 	string initialDirectory_;
 
+	float currentScreenWidth_;
+
 	#endregion
 
 
@@ -44,6 +46,7 @@ public class Window : MonoBehaviour
 	void Awake()
 	{
 		GameContext.Window = this;
+		currentScreenWidth_ = UnityEngine.Screen.width;
 	}
 
 	// Use this for initialization
@@ -78,6 +81,12 @@ public class Window : MonoBehaviour
 			{
 				NewFile();
 			}
+		}
+
+		if(	currentScreenWidth_ != UnityEngine.Screen.width )
+		{
+			UpdateTabSize();
+			currentScreenWidth_ = UnityEngine.Screen.width;
 		}
 	}
 
@@ -180,14 +189,7 @@ public class Window : MonoBehaviour
 	{
 		trees_.Add(newTree);
 
-		if( DesiredTabWidth * trees_.Count > UnityEngine.Screen.width - HeaderWidth )
-		{
-			float tabWidth = (UnityEngine.Screen.width - HeaderWidth) / trees_.Count;
-			foreach(Tree tree in trees_)
-			{
-				tree.Tab.Width = tabWidth;
-			}
-		}
+		UpdateTabSize();
 	}
 
 	public void OnTreeActivated(Tree tree)
@@ -213,6 +215,11 @@ public class Window : MonoBehaviour
 			trees_[index].IsActive = true;
 		}
 
+		UpdateTabSize();
+	}
+
+	void UpdateTabSize()
+	{
 		float tabWidth = DesiredTabWidth;
 		if( DesiredTabWidth * trees_.Count > UnityEngine.Screen.width - HeaderWidth )
 		{
