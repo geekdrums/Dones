@@ -22,6 +22,14 @@ public class Line : IEnumerable<Line>
 			{
 				Field.SetTextDirectly(text_);
 			}
+			if( IsOnList )
+			{
+				ShortLine shortline = GameContext.LineList.FindBindedLine(this);
+				if( shortline != null )
+				{
+					shortline.Text = text_;
+				}
+			}
 		}
 	}
 	protected string text_;
@@ -64,6 +72,14 @@ public class Line : IEnumerable<Line>
 				if( Field != null )
 				{
 					Field.SetDone(isDone_);
+				}
+				if( IsOnList )
+				{
+					ShortLine bindedLine = GameContext.LineList.FindBindedLine(this);
+					if( bindedLine != null )
+					{
+						bindedLine.OnDoneChanged();
+					}
 				}
 			}
 		}
@@ -237,7 +253,18 @@ public class Line : IEnumerable<Line>
 		lastTextActionTime_ = Time.time;
 		text_ = newText;
 
-		if( IsDone ) Field.UpdateStrikeLine();
+		if( IsDone || IsOnList )
+		{
+			Field.OnTextLengthChanged();
+		}
+		if( IsOnList )
+		{
+			ShortLine shortline = GameContext.LineList.FindBindedLine(this);
+			if( shortline != null )
+			{
+				shortline.Text = text_;
+			}
+		}
 	}
 
 	public void FixTextInputAction()

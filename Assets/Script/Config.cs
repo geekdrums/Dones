@@ -11,6 +11,7 @@ public class Config : MonoBehaviour
 	public float ArrowStreamDelayTime = 0.3f;
 	public float ArrowStreamIntervalTime = 0.03f;
 	public float TextInputFixIntervalTime = 1.0f;
+	public float DoubleClickInterval = 0.25f;
 
 	public Color SelectionColor;
 	public Color TextColor;

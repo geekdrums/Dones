@@ -66,7 +66,7 @@ public class TextField : InputField, IColoredObject
 	protected UIGaugeRenderer strikeLine_;
 	protected CheckMark checkMark_;
 	protected UIMidairPrimitive listMark_;
-	protected bool shouldUpdateDone_ = false;
+	protected bool shouldUpdateTextLength_ = false;
 
 	#endregion
 
@@ -95,9 +95,9 @@ public class TextField : InputField, IColoredObject
 	protected override void OnEnable()
 	{
 		base.OnEnable();
-		if( shouldUpdateDone_ )
+		if( shouldUpdateTextLength_ )
 		{
-			StartCoroutine(UpdateStrikeLineCoroutine());
+			StartCoroutine(UpdateTextLengthCoroutine());
 		}
 	}
 
@@ -138,7 +138,7 @@ public class TextField : InputField, IColoredObject
 		// この関数でイベント呼び出しを避ける。
 		m_Text = text;
 		UpdateLabel();
-		if( BindedLine.IsDone ) UpdateStrikeLine();
+		if( BindedLine.IsDone || BindedLine.IsOnList ) OnTextLengthChanged();
 	}
 
 	public void SetDone(bool isDone, bool withAnim = true)
@@ -149,7 +149,7 @@ public class TextField : InputField, IColoredObject
 		if( isDone )
 		{
 			listMark_.gameObject.SetActive(false);
-			UpdateStrikeLine();
+			OnTextLengthChanged();
 
 			if( withAnim )
 			{
@@ -177,7 +177,7 @@ public class TextField : InputField, IColoredObject
 			listMark_.gameObject.SetActive(true);
 			listMark_.Width = 1;
 			listMark_.ArcRate = 1.0f;
-			UpdateStrikeLine();
+			OnTextLengthChanged();
 
 			if( withAnim )
 			{
@@ -207,19 +207,19 @@ public class TextField : InputField, IColoredObject
 		return GameContext.Config.TextColor;
 	}
 
-	public void UpdateStrikeLine()
+	public void OnTextLengthChanged()
 	{
-		if( shouldUpdateDone_ == false )
+		if( shouldUpdateTextLength_ == false )
 		{
-			shouldUpdateDone_ = true;
+			shouldUpdateTextLength_ = true;
 			if( this.gameObject.activeInHierarchy )
 			{
-				StartCoroutine(UpdateStrikeLineCoroutine());
+				StartCoroutine(UpdateTextLengthCoroutine());
 			}
 		}
 	}
 
-	IEnumerator UpdateStrikeLineCoroutine()
+	IEnumerator UpdateTextLengthCoroutine()
 	{
 		yield return new WaitForEndOfFrame();
 
@@ -233,7 +233,7 @@ public class TextField : InputField, IColoredObject
 		checkMark_.SetPositionX(charLength + 5);
 		listMark_.GetComponent<RectTransform>().anchoredPosition = new Vector2(charLength + 15, listMark_.transform.localPosition.y);
 
-		shouldUpdateDone_ = false;
+		shouldUpdateTextLength_ = false;
 	}
 
 	#endregion

@@ -235,8 +235,10 @@ public class Tree : MonoBehaviour {
 			{
 				// ctrlもshiftもなしにクリックした場合は選択解除
 				ClearSelection();
-				if( focusedLine_ != null && focusedLine_.Field.IsFocused )
+				if( focusedLine_ != null && focusedLine_.Field.IsFocused && focusedLine_.Field.Rect.Contains(Input.mousePosition) )
+				{
 					selectionStartLine_ = focusedLine_;
+				}
 			}
 		}
 		else if( Input.GetMouseButton(0) && selectionStartLine_ != null )
@@ -1177,7 +1179,11 @@ public class Tree : MonoBehaviour {
 			}
 			else
 			{
-				GameContext.LineList.RemoveShortLine(line);
+				ShortLine removeLine = GameContext.LineList.FindBindedLine(line);
+				if( removeLine != null )
+				{
+					GameContext.LineList.RemoveShortLine(removeLine);
+				}
 			}
 		}
 	}
@@ -1435,7 +1441,11 @@ public class Tree : MonoBehaviour {
 		}
 
 		focusedLine_ = line;
-		selectionStartLine_ = line;
+
+		if( focusedLine_ != null && focusedLine_.Field.Rect.Contains(Input.mousePosition) )
+		{
+			selectionStartLine_ = line;
+		}
 
 		UpdateScrollTo(focusedLine_);
 	}
@@ -1534,7 +1544,7 @@ public class Tree : MonoBehaviour {
 		}
 	}
 
-	protected void UpdateScrollTo(Line targetLine)
+	public void UpdateScrollTo(Line targetLine)
 	{
 		float scrollHeight = scrollRect_.GetComponent<RectTransform>().rect.height;
 		float targetHeight = -(targetLine.Field.transform.position.y - this.transform.position.y);

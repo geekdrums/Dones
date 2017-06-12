@@ -77,6 +77,23 @@ public class ShortLineList : MonoBehaviour {
 				selectedIndex_ = -1;
 			}
 		}
+		else if( Input.GetKeyDown(KeyCode.Delete) || Input.GetKeyDown(KeyCode.Backspace) )
+		{
+			if( selectedLine_.BindedLine != null )
+			{
+				selectedLine_.BindedLine.IsOnList = false;
+			}
+			RemoveShortLine(selectedLine_);
+			if( selectedIndex_ < lines_.Count )
+			{
+				lines_[selectedIndex_].Select();
+			}
+			else
+			{
+				selectedLine_ = null;
+				selectedIndex_ = -1;
+			}
+		}
 	}
 
 	public void InstantiateShortLine(Line line = null, bool withAnim = true)
@@ -105,33 +122,45 @@ public class ShortLineList : MonoBehaviour {
 		}
 	}
 
-	public void RemoveShortLine(Line line)
+	public ShortLine FindBindedLine(Line line)
 	{
-		ShortLine removeLine = null;
-		foreach(ShortLine shortLine in lines_)
+		foreach( ShortLine shortLine in lines_ )
 		{
 			if( shortLine.BindedLine == line )
 			{
-				removeLine = shortLine;
-				break;
+				return shortLine;
 			}
 		}
-		if( removeLine != null )
+		foreach( ShortLine shortLine in doneLines_ )
 		{
-			float animTime = 0.2f;
-			AnimManager.AddAnim(removeLine, GameContext.Config.ShortLineBackColor, ParamType.Color, AnimType.Time, animTime, 0.0f, AnimEndOption.Destroy);
-			AnimManager.AddAnim(removeLine.GetComponentInChildren<Text>(), GameContext.Config.ShortLineBackColor, ParamType.TextColor, AnimType.Time, animTime);
-			AnimManager.AddAnim(removeLine.GetComponentInChildren<UIMidairPrimitive>(), 0.0f, ParamType.PrimitiveArc, AnimType.Time, animTime);
-			int index = lines_.IndexOf(removeLine);
-			lines_.Remove(removeLine);
+			if( shortLine.BindedLine == line )
+			{
+				return shortLine;
+			}
+		}
+		return null;
+	}
+
+	public void RemoveShortLine(ShortLine shortline)
+	{
+		float animTime = 0.2f;
+		AnimManager.AddAnim(shortline, GameContext.Config.ShortLineBackColor, ParamType.Color, AnimType.Time, animTime, 0.0f, AnimEndOption.Destroy);
+		AnimManager.AddAnim(shortline.GetComponentInChildren<Text>(), GameContext.Config.ShortLineBackColor, ParamType.TextColor, AnimType.Time, animTime);
+		AnimManager.AddAnim(shortline.GetComponentInChildren<UIMidairPrimitive>(), 0.0f, ParamType.PrimitiveArc, AnimType.Time, animTime);
+		int index = lines_.IndexOf(shortline);
+		if( index >= 0 )
+		{
+			lines_.Remove(shortline);
 			for( int i = index; i < lines_.Count; ++i )
 			{
 				AnimManager.AddAnim(lines_[i], GetTargetPosition(lines_[i]), ParamType.Position, AnimType.Time, GameContext.Config.AnimTime, animTime);
 			}
-			for( int i = 0; i < doneLines_.Count; ++i )
-			{
-				AnimManager.AddAnim(doneLines_[i], GetTargetPosition(doneLines_[i]), ParamType.Position, AnimType.Time, GameContext.Config.AnimTime, animTime);
-			}
+		}
+		index = doneLines_.IndexOf(shortline);
+		if( index < 0 ) index = 0;
+		for( int i = index; i < doneLines_.Count; ++i )
+		{
+			AnimManager.AddAnim(doneLines_[i], GetTargetPosition(doneLines_[i]), ParamType.Position, AnimType.Time, GameContext.Config.AnimTime, animTime);
 		}
 	}
 

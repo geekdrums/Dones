@@ -3,8 +3,12 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
+using UniRx;
+using UniRx.Triggers;
 
-public class ShortLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragHandler, IColoredObject {
+public class ShortLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragHandler, IColoredObject
+{	
+	#region properties
 
 	public Line BindedLine { get; private set; }
 
@@ -40,6 +44,11 @@ public class ShortLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragHa
 	public Color Background { get { return image.color; } set { image.color = value; } }
 	public Color GetColor() { return Background; }
 	public void SetColor(Color color) { Background = color; }
+	
+	#endregion
+
+
+	#region params
 
 	CheckMark checkMark_;
 	UIGaugeRenderer strikeLine_;
@@ -49,6 +58,11 @@ public class ShortLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragHa
 
 	bool shouldUpdateStrikeLine_;
 
+	#endregion
+
+
+	#region unity functions
+
 	protected override void Awake()
 	{
 		base.Awake();
@@ -57,11 +71,24 @@ public class ShortLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragHa
 		checkMark_ = GetComponentInChildren<CheckMark>(includeInactive: true);
 		ownerList_ = GetComponentInParent<ShortLineList>();
 		doneButton_ = GetComponentInChildren<Button>();
+		this.OnPointerDownAsObservable()
+			.TimeInterval()
+			.Select(t => t.Interval.TotalSeconds)
+			.Buffer(2, 1)
+			.Where(list => list[0] > GameContext.Config.DoubleClickInterval)
+			.Where(list => list.Count > 1 ? list[1] <= GameContext.Config.DoubleClickInterval : false)
+			.Subscribe(_ => ShowBindedLine()).AddTo(this);
 	}
 
 	// Update is called once per frame
 	void Update () {
+
 	}
+
+	#endregion
+
+
+	#region binding
 
 	public void Bind(Line line)
 	{
@@ -69,6 +96,22 @@ public class ShortLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragHa
 		Text = line.Text;
 		isDone_ = line.IsDone;
 	}
+	
+	public void ShowBindedLine()
+	{
+		if( BindedLine != null )
+		{
+			if( BindedLine.Tree.IsActive == false )
+			{
+				BindedLine.Tree.IsActive = true;
+			}
+			BindedLine.Tree.UpdateScrollTo(BindedLine);
+			BindedLine.Field.Select();
+			BindedLine.Field.IsFocused = true;
+		}
+	}
+
+	#endregion
 
 
 	#region selection
@@ -165,6 +208,7 @@ public class ShortLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragHa
 	}
 
 	#endregion
+
 
 	#region drag
 	
