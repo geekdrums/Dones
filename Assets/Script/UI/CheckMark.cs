@@ -10,7 +10,7 @@ public class CheckMark : MonoBehaviour {
 	RectTransform rect_;
 
 	// Use this for initialization
-	void Start () {
+	void Awake () {
 		rect_ = GetComponent<RectTransform>();
 	}
 	

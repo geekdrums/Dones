@@ -61,6 +61,8 @@ public class Tree : MonoBehaviour {
 	public Line FocusedLine { get { return focusedLine_; } }
 
 	public string TitleText { get { return rootLine_ != null ? rootLine_.Text : ""; } }
+	public override string ToString() { return TitleText; }
+
 	public bool IsActive { get { return (tabButton_ != null ? tabButton_.IsOn : false); } set { if( tabButton_ != null ) tabButton_.IsOn = value; } }
 
 
@@ -167,6 +169,10 @@ public class Tree : MonoBehaviour {
 			else if( Input.GetKeyDown(KeyCode.Space) )
 			{
 				OnCtrlSpaceInput();
+			}
+			else if( Input.GetKeyDown(KeyCode.D) )
+			{
+				OnCtrlDInput();
 			}
 		}
 		else if( Input.GetKeyDown(KeyCode.Tab) )
@@ -1158,6 +1164,22 @@ public class Tree : MonoBehaviour {
 			}
 		}
 		actionManager_.EndChain();
+	}
+
+	protected void OnCtrlDInput()
+	{
+		foreach( Line line in GetSelectedOrFocusedLines() )
+		{
+			line.IsOnList = !line.IsOnList;
+			if( line.IsOnList )
+			{
+				GameContext.LineList.InstantiateShortLine(line);
+			}
+			else
+			{
+				GameContext.LineList.RemoveShortLine(line);
+			}
+		}
 	}
 
 	#endregion

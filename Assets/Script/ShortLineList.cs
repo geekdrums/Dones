@@ -16,10 +16,7 @@ public class ShortLineList : MonoBehaviour {
 
 	// Use this for initialization
 	void Start () {
-		InstantiateShortLine(new Line("Hello World!"));
-		InstantiateShortLine(new Line("Hello1"));
-		InstantiateShortLine(new Line("Hello2"));
-		InstantiateShortLine(new Line("Hello3"));
+		GameContext.LineList = this;
 	}
 
 	// Update is called once per frame
@@ -82,7 +79,7 @@ public class ShortLineList : MonoBehaviour {
 		}
 	}
 
-	public void InstantiateShortLine(Line line = null)
+	public void InstantiateShortLine(Line line = null, bool withAnim = true)
 	{
 		ShortLine shortLine = Instantiate(ShortLinePrefab.gameObject, this.transform).GetComponent<ShortLine>();
 		lines_.Add(shortLine);
@@ -90,7 +87,52 @@ public class ShortLineList : MonoBehaviour {
 		{
 			shortLine.Bind(line);
 		}
-		shortLine.transform.localPosition = GetTargetPosition(shortLine);
+		if( withAnim )
+		{
+			shortLine.transform.localPosition = Vector3.zero;
+			AnimManager.AddAnim(shortLine, GetTargetPosition(shortLine), ParamType.Position, AnimType.BounceIn, 0.25f);
+			shortLine.Background = GameContext.Config.ShortLineBackColor;
+			AnimManager.AddAnim(shortLine, GameContext.Config.ShortLineAccentColor, ParamType.Color, AnimType.Time, 0.15f);
+			AnimManager.AddAnim(shortLine, GameContext.Config.ShortLineColor, ParamType.Color, AnimType.Time, 0.1f, 0.15f);
+			UIMidairPrimitive primitive = shortLine.GetComponentInChildren<UIMidairPrimitive>();
+			AnimManager.AddAnim(primitive, 8.0f, ParamType.PrimitiveWidth, AnimType.Time, 0.05f, 0.25f);
+			AnimManager.AddAnim(primitive, 1.0f, ParamType.PrimitiveWidth, AnimType.Time, 0.2f, 0.3f);
+		}
+
+		for( int i = 0; i < doneLines_.Count; ++i )
+		{
+			AnimManager.AddAnim(doneLines_[i], GetTargetPosition(doneLines_[i]), ParamType.Position, AnimType.Time, GameContext.Config.AnimTime);
+		}
+	}
+
+	public void RemoveShortLine(Line line)
+	{
+		ShortLine removeLine = null;
+		foreach(ShortLine shortLine in lines_)
+		{
+			if( shortLine.BindedLine == line )
+			{
+				removeLine = shortLine;
+				break;
+			}
+		}
+		if( removeLine != null )
+		{
+			float animTime = 0.2f;
+			AnimManager.AddAnim(removeLine, GameContext.Config.ShortLineBackColor, ParamType.Color, AnimType.Time, animTime, 0.0f, AnimEndOption.Destroy);
+			AnimManager.AddAnim(removeLine.GetComponentInChildren<Text>(), GameContext.Config.ShortLineBackColor, ParamType.TextColor, AnimType.Time, animTime);
+			AnimManager.AddAnim(removeLine.GetComponentInChildren<UIMidairPrimitive>(), 0.0f, ParamType.PrimitiveArc, AnimType.Time, animTime);
+			int index = lines_.IndexOf(removeLine);
+			lines_.Remove(removeLine);
+			for( int i = index; i < lines_.Count; ++i )
+			{
+				AnimManager.AddAnim(lines_[i], GetTargetPosition(lines_[i]), ParamType.Position, AnimType.Time, GameContext.Config.AnimTime, animTime);
+			}
+			for( int i = 0; i < doneLines_.Count; ++i )
+			{
+				AnimManager.AddAnim(doneLines_[i], GetTargetPosition(doneLines_[i]), ParamType.Position, AnimType.Time, GameContext.Config.AnimTime, animTime);
+			}
+		}
 	}
 
 	public void OnSelect(ShortLine line)
@@ -137,6 +179,7 @@ public class ShortLineList : MonoBehaviour {
 			}
 			AnimManager.AddAnim(line, GetTargetPosition(line), ParamType.Position, AnimType.Time, GameContext.Config.AnimTime);
 		}
+		line.transform.SetAsLastSibling();
 	}
 
 	public void OnBeginDrag(ShortLine line)

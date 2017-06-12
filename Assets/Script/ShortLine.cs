@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
-public class ShortLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragHandler {
+public class ShortLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragHandler, IColoredObject {
 
 	public Line BindedLine { get; private set; }
 
@@ -38,6 +38,8 @@ public class ShortLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragHa
 	Text textComponent_;
 
 	public Color Background { get { return image.color; } set { image.color = value; } }
+	public Color GetColor() { return Background; }
+	public void SetColor(Color color) { Background = color; }
 
 	CheckMark checkMark_;
 	UIGaugeRenderer strikeLine_;

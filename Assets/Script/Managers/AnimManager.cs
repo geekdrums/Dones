@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using UnityEngine.UI;
+using System.Linq;
 using System.Collections;
 using System.Collections.Generic;
 
@@ -78,7 +79,7 @@ public abstract class AnimInfoBase
 		{
 			return normalizedValue_ >= 1.0f;
 		}
-		protected set
+		set
 		{
 			if( value )
 			{
@@ -660,6 +661,7 @@ public class AnimManager : MonoBehaviour
 	static AnimManager instance_;
 
 	public List<AnimInfoBase> Animations = new List<AnimInfoBase>();
+	List<AnimInfoBase> removeAnims_ = new List<AnimInfoBase>();
 
 	// Use this for initialization
 	void Start()
@@ -675,6 +677,12 @@ public class AnimManager : MonoBehaviour
 			anim.Update();
 		}
 		Animations.RemoveAll((AnimInfoBase anim) => anim.IsEnd);
+		foreach(AnimInfoBase removeAnim in removeAnims_)
+		{
+			removeAnim.IsEnd = true;
+			Animations.Remove(removeAnim);
+		}
+		removeAnims_.Clear();
 	}
 
 	private static GameObject ToGameObject(Object obj)
@@ -749,6 +757,13 @@ public class AnimManager : MonoBehaviour
 
 	public static void RemoveOtherAnim(AnimInfoBase animInfo)
 	{
-		Instance.Animations.RemoveAll((AnimInfoBase other) => other != animInfo && other.Object == animInfo.Object && other.Param == animInfo.Param && other.IsPlaying);
+		Instance.removeAnims_.AddRange(from other in Instance.Animations
+									   where other != animInfo && other.Object == animInfo.Object && other.Param == animInfo.Param && other.IsPlaying
+									   select other);
+	}
+
+	public static void RemoveOtherAnim(Object obj)
+	{
+		Instance.Animations.RemoveAll((AnimInfoBase anim) => anim.Object == obj && anim.IsPlaying);
 	}
 }

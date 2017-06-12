@@ -70,6 +70,22 @@ public class Line : IEnumerable<Line>
 	}
 	protected bool isDone_ = false;
 
+	public bool IsOnList
+	{
+		get { return isOnList_; }
+		set
+		{
+			if( isOnList_ != value )
+			{
+				isOnList_ = value;
+				if( Field != null )
+				{
+					Field.SetIsOnList(isOnList_);
+				}
+			}
+		}
+	}
+	protected bool isOnList_ = false;
 
 	public Vector3 TargetPosition { get; protected set; }
 
@@ -221,7 +237,7 @@ public class Line : IEnumerable<Line>
 		lastTextActionTime_ = Time.time;
 		text_ = newText;
 
-		if( IsDone ) Field.UpdateDone();
+		if( IsDone ) Field.UpdateStrikeLine();
 	}
 
 	public void FixTextInputAction()
@@ -253,6 +269,7 @@ public class Line : IEnumerable<Line>
 				OnTextChanged(text);
 			});
 			Field.SetDone(isDone_, withAnim: false);
+			Field.SetIsOnList(isOnList_, withAnim: false);
 
 			Toggle = Field.GetComponentInChildren<TreeToggle>();
 			toggleSubscription_ = children_.ObserveCountChanged(true).Select(x => x > 0).DistinctUntilChanged().Subscribe(hasChild =>

@@ -65,6 +65,7 @@ public class TextField : InputField, IColoredObject
 
 	protected UIGaugeRenderer strikeLine_;
 	protected CheckMark checkMark_;
+	protected UIMidairPrimitive listMark_;
 	protected bool shouldUpdateDone_ = false;
 
 	#endregion
@@ -78,6 +79,7 @@ public class TextField : InputField, IColoredObject
 		base.Awake();
 		strikeLine_ = GetComponentInChildren<UIGaugeRenderer>(includeInactive: true);
 		checkMark_ = textComponent.transform.Find("Check").GetComponent<CheckMark>();
+		listMark_ = textComponent.transform.Find("Mark").GetComponent<UIMidairPrimitive>();
 	}
 
 	protected override void Start()
@@ -95,7 +97,7 @@ public class TextField : InputField, IColoredObject
 		base.OnEnable();
 		if( shouldUpdateDone_ )
 		{
-			StartCoroutine(UpdateDoneCoroutine());
+			StartCoroutine(UpdateStrikeLineCoroutine());
 		}
 	}
 
@@ -136,17 +138,18 @@ public class TextField : InputField, IColoredObject
 		// この関数でイベント呼び出しを避ける。
 		m_Text = text;
 		UpdateLabel();
-		if( BindedLine.IsDone ) UpdateDone();
+		if( BindedLine.IsDone ) UpdateStrikeLine();
 	}
 
 	public void SetDone(bool isDone, bool withAnim = true)
 	{
+		strikeLine_.gameObject.SetActive(isDone);
+		checkMark_.gameObject.SetActive(isDone);
+		Foreground = GetDesiredTextColor();
 		if( isDone )
 		{
-			strikeLine_.gameObject.SetActive(true);
-			checkMark_.gameObject.SetActive(true);
-			Foreground = GameContext.Config.DoneTextColor;
-			UpdateDone();
+			listMark_.gameObject.SetActive(false);
+			UpdateStrikeLine();
 
 			if( withAnim )
 			{
@@ -157,25 +160,66 @@ public class TextField : InputField, IColoredObject
 		}
 		else
 		{
-			strikeLine_.gameObject.SetActive(false);
-			checkMark_.gameObject.SetActive(false);
-			Foreground = GameContext.Config.TextColor;
+			listMark_.gameObject.SetActive(BindedLine.IsOnList);
 		}
 	}
 
-	public void UpdateDone()
+	public void SetIsOnList(bool isOnList, bool withAnim = true)
+	{
+		Foreground = GetDesiredTextColor();
+		if( isOnList )
+		{
+			if( listMark_.gameObject.activeInHierarchy )
+			{
+				AnimManager.RemoveOtherAnim(listMark_);
+			}
+			checkMark_.gameObject.SetActive(false);
+			listMark_.gameObject.SetActive(true);
+			listMark_.Width = 1;
+			listMark_.ArcRate = 1.0f;
+			UpdateStrikeLine();
+
+			if( withAnim )
+			{
+				AnimManager.AddAnim(listMark_, 8.0f, ParamType.PrimitiveWidth, AnimType.Time, 0.05f);
+				AnimManager.AddAnim(listMark_, 1.0f, ParamType.PrimitiveWidth, AnimType.Time, 0.2f, 0.05f);
+			}
+		}
+		else
+		{
+			if( withAnim )
+			{
+				AnimManager.AddAnim(listMark_, 0.0f, ParamType.PrimitiveArc, AnimType.Time, 0.15f, endOption: AnimEndOption.Deactivate);
+			}
+			else
+			{
+				listMark_.gameObject.SetActive(false);
+			}
+		}
+	}
+
+	Color GetDesiredTextColor()
+	{
+		if( BindedLine != null )
+		{
+			return (BindedLine.IsDone ? GameContext.Config.DoneTextColor : (BindedLine.IsOnList ? GameContext.Config.ShortLineColor : GameContext.Config.TextColor));
+		}
+		return GameContext.Config.TextColor;
+	}
+
+	public void UpdateStrikeLine()
 	{
 		if( shouldUpdateDone_ == false )
 		{
 			shouldUpdateDone_ = true;
 			if( this.gameObject.activeInHierarchy )
 			{
-				StartCoroutine(UpdateDoneCoroutine());
+				StartCoroutine(UpdateStrikeLineCoroutine());
 			}
 		}
 	}
 
-	IEnumerator UpdateDoneCoroutine()
+	IEnumerator UpdateStrikeLineCoroutine()
 	{
 		yield return new WaitForEndOfFrame();
 
@@ -185,7 +229,10 @@ public class TextField : InputField, IColoredObject
 		charLength /= m_TextComponent.pixelsPerUnit;
 
 		strikeLine_.SetLength(charLength + 10);
+
 		checkMark_.SetPositionX(charLength + 5);
+		listMark_.GetComponent<RectTransform>().anchoredPosition = new Vector2(charLength + 15, listMark_.transform.localPosition.y);
+
 		shouldUpdateDone_ = false;
 	}
 
