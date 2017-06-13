@@ -24,13 +24,16 @@ public class ShortLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragHa
 		}
 		set
 		{
+			isDone_ = value;
 			if( BindedLine != null )
 			{
 				BindedLine.IsDone = value; ;
 			}
-			isDone_ = value;
+			else
+			{
+				OnDoneChanged();
+			}
 			interactable = (isDone_ == false);
-			OnDoneChanged();
 		}
 	}
 	protected bool isDone_;
@@ -147,7 +150,12 @@ public class ShortLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragHa
 
 	public void Done()
 	{
-		IsDone = !IsDone;
+		GameContext.CurrentActionManager = ownerList_.ActionManager;
+		ownerList_.ActionManager.Execute(new Action(
+			execute: () =>
+			{
+				IsDone = !IsDone;
+			}));
 	}
 
 	public void OnDoneChanged(bool withAnim = true)
@@ -158,8 +166,6 @@ public class ShortLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragHa
 			checkMark_.gameObject.SetActive(true);
 			Background = GameContext.Config.ShortLineBackColor;
 			textComponent_.color = GameContext.Config.DoneTextColor;
-			doneButton_.transition = Transition.None;
-			doneButton_.targetGraphic.color = Color.clear;
 			UpdateStrikeLine();
 
 			if( withAnim )
@@ -175,8 +181,6 @@ public class ShortLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragHa
 			checkMark_.gameObject.SetActive(false);
 			Background = GameContext.Config.ShortLineColor;
 			textComponent_.color = Color.white;
-			doneButton_.targetGraphic.color = GameContext.Config.ShortLineColor;
-			doneButton_.transition = Transition.ColorTint;
 		}
 
 		ownerList_.OnDoneChanged(this);

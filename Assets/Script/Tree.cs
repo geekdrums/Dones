@@ -1170,22 +1170,29 @@ public class Tree : MonoBehaviour {
 
 	protected void OnCtrlDInput()
 	{
+		actionManager_.StartChain();
 		foreach( Line line in GetSelectedOrFocusedLines() )
 		{
-			line.IsOnList = !line.IsOnList;
-			if( line.IsOnList )
-			{
-				GameContext.LineList.InstantiateShortLine(line);
-			}
-			else
-			{
-				ShortLine removeLine = GameContext.LineList.FindBindedLine(line);
-				if( removeLine != null )
+			Line targetLine = line;
+			actionManager_.Execute(new Action(
+				execute: ()=>
 				{
-					GameContext.LineList.RemoveShortLine(removeLine);
-				}
-			}
+					targetLine.IsOnList = !targetLine.IsOnList;
+					if( targetLine.IsOnList )
+					{
+						GameContext.LineList.InstantiateShortLine(targetLine);
+					}
+					else
+					{
+						ShortLine removeLine = GameContext.LineList.FindBindedLine(targetLine);
+						if( removeLine != null )
+						{
+							GameContext.LineList.RemoveShortLine(removeLine);
+						}
+					}
+				}));
 		}
+		actionManager_.EndChain();
 	}
 
 	#endregion
@@ -1441,6 +1448,7 @@ public class Tree : MonoBehaviour {
 		}
 
 		focusedLine_ = line;
+		GameContext.CurrentActionManager = actionManager_;
 
 		if( focusedLine_ != null && focusedLine_.Field.Rect.Contains(Input.mousePosition) )
 		{
