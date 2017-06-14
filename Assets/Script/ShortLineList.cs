@@ -195,14 +195,27 @@ public class ShortLineList : MonoBehaviour, IEnumerable<ShortLine>
 		AnimManager.AddAnim(shortline, GameContext.Config.ShortLineBackColor, ParamType.Color, AnimType.Time, animTime, 0.0f, AnimEndOption.Destroy);
 		AnimManager.AddAnim(shortline.GetComponentInChildren<Text>(), GameContext.Config.ShortLineBackColor, ParamType.TextColor, AnimType.Time, animTime);
 		AnimManager.AddAnim(shortline.GetComponentInChildren<UIMidairPrimitive>(), 0.0f, ParamType.PrimitiveArc, AnimType.Time, animTime);
+
 		int index = lines_.IndexOf(shortline);
 		if( index >= 0 )
 		{
 			lines_.Remove(shortline);
-			AnimLinesToTargetPosition(index, lines_.Count - 1);
 		}
+		else
+		{
+			index = 0;
+		}
+		AnimLinesToTargetPosition(index, lines_.Count - 1);
+
 		index = doneLines_.IndexOf(shortline);
-		if( index < 0 ) index = 0;
+		if( index >= 0 )
+		{
+			doneLines_.Remove(shortline);
+		}
+		else
+		{
+			index = 0;
+		}
 		AnimDoneLinesToTargetPosition(index, doneLines_.Count - 1);
 
 		UpdateLayoutElement();
@@ -400,8 +413,11 @@ public class ShortLineList : MonoBehaviour, IEnumerable<ShortLine>
 		shortLine.transform.localPosition = Vector3.zero;
 		AnimManager.AddAnim(shortLine, GetTargetPosition(shortLine), ParamType.Position, AnimType.BounceIn, 0.25f);
 		shortLine.Background = GameContext.Config.ShortLineBackColor;
-		AnimManager.AddAnim(shortLine, GameContext.Config.ShortLineAccentColor, ParamType.Color, AnimType.Time, 0.15f);
-		AnimManager.AddAnim(shortLine, GameContext.Config.ShortLineColor, ParamType.Color, AnimType.Time, 0.1f, 0.15f);
+		if( shortLine.IsDone == false )
+		{
+			AnimManager.AddAnim(shortLine, GameContext.Config.ShortLineAccentColor, ParamType.Color, AnimType.Time, 0.15f);
+			AnimManager.AddAnim(shortLine, GameContext.Config.ShortLineColor, ParamType.Color, AnimType.Time, 0.1f, 0.15f);
+		}
 		UIMidairPrimitive primitive = shortLine.GetComponentInChildren<UIMidairPrimitive>();
 		AnimManager.AddAnim(primitive, 8.0f, ParamType.PrimitiveWidth, AnimType.Time, 0.05f, 0.25f);
 		AnimManager.AddAnim(primitive, 1.0f, ParamType.PrimitiveWidth, AnimType.Time, 0.2f, 0.3f);

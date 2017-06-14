@@ -762,8 +762,8 @@ public class AnimManager : MonoBehaviour
 									   select other);
 	}
 
-	public static void RemoveOtherAnim(Object obj)
+	public static void RemoveOtherAnim(Object obj, ParamType type = ParamType.Any)
 	{
-		Instance.Animations.RemoveAll((AnimInfoBase anim) => anim.Object == obj && anim.IsPlaying);
+		Instance.Animations.RemoveAll((AnimInfoBase anim) => anim.Object == obj && anim.IsPlaying && (type == ParamType.Any || type == anim.Param));
 	}
 }

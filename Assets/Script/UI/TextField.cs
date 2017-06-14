@@ -171,7 +171,7 @@ public class TextField : InputField, IColoredObject
 		{
 			if( listMark_.gameObject.activeInHierarchy )
 			{
-				AnimManager.RemoveOtherAnim(listMark_);
+				AnimManager.RemoveOtherAnim(listMark_.gameObject);
 			}
 			checkMark_.gameObject.SetActive(false);
 			listMark_.gameObject.SetActive(true);

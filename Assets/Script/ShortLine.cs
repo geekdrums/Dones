@@ -44,9 +44,17 @@ public class ShortLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragHa
 		return Text;
 	}
 
-	public Color Background { get { return image.color; } set { image.color = value; } }
-	public Color GetColor() { return Background; }
-	public void SetColor(Color color) { Background = color; }
+	public Color Background
+	{
+		get { return image.color; }
+		set
+		{
+			AnimManager.RemoveOtherAnim(gameObject, ParamType.Color);
+			image.color = value;
+		}
+	}
+	public Color GetColor() { return image.color; }
+	public void SetColor(Color color) { image.color = color; }
 	
 	#endregion
 
@@ -216,6 +224,27 @@ public class ShortLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragHa
 
 		strikeLine_.SetLength(charLength);
 		shouldUpdateStrikeLine_ = false;
+	}
+
+	public void Remove()
+	{
+		Line line = BindedLine;
+		BindedLine.Tree.ActionManager.Execute(new Action(
+			execute: () =>
+			{
+				line.IsOnList = false;
+				ShortLine shortline = ownerList_.FindBindedLine(line);
+				// 最初はthisだけどRedoしたら違うオブジェクトになっているため
+				if( shortline != null )
+				{
+					ownerList_.RemoveShortLine(shortline);
+				}
+			},
+			undo: () =>
+			{
+				line.IsOnList = true;
+				ownerList_.InstantiateShortLine(line);
+			}));
 	}
 
 	#endregion
