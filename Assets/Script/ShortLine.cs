@@ -158,8 +158,7 @@ public class ShortLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragHa
 
 	public void Done()
 	{
-		GameContext.CurrentActionManager = ownerList_.ActionManager;
-		ownerList_.ActionManager.Execute(new Action(
+		BindedLine.Tree.ActionManager.Execute(new Action(
 			execute: () =>
 			{
 				IsDone = !IsDone;

@@ -22,9 +22,6 @@ public class ShortLineList : MonoBehaviour, IEnumerable<ShortLine>
 	int selectedIndex_ = -1;
 	int dragStartIndex_ = -1;
 
-	public ActionManager ActionManager { get { return actionManager_; } }
-	ActionManager actionManager_ = new ActionManager();
-
 	LayoutElement layout_;
 	ContentSizeFitter contentSizeFitter_;
 
@@ -95,7 +92,7 @@ public class ShortLineList : MonoBehaviour, IEnumerable<ShortLine>
 			ShortLine line = selectedLine_;
 			int index = selectedIndex_;
 			Line bindedLine = line.BindedLine;
-			actionManager_.Execute(new Action(
+			bindedLine.Tree.ActionManager.Execute(new Action(
 				execute: () =>
 				{
 					if( bindedLine != null )
@@ -124,10 +121,9 @@ public class ShortLineList : MonoBehaviour, IEnumerable<ShortLine>
 
 	#region add / remove lines
 
-	public ShortLine InstantiateShortLine(string text, int index = -1, bool withAnim = true)
+	public ShortLine InstantiateShortLine(Line line, int index = -1, bool withAnim = true)
 	{
 		ShortLine shortLine = Instantiate(ShortLinePrefab.gameObject, this.transform).GetComponent<ShortLine>();
-		shortLine.Text = text;
 
 		if( index < 0 )
 		{
@@ -139,6 +135,8 @@ public class ShortLineList : MonoBehaviour, IEnumerable<ShortLine>
 			lines_.Insert(index, shortLine);
 		}
 
+		shortLine.Bind(line);
+
 		if( withAnim )
 		{
 			AnimOnInstantiate(shortLine);
@@ -149,13 +147,6 @@ public class ShortLineList : MonoBehaviour, IEnumerable<ShortLine>
 
 		UpdateLayoutElement();
 
-		return shortLine;
-	}
-
-	public ShortLine InstantiateShortLine(Line line, int index = -1, bool withAnim = true)
-	{
-		ShortLine shortLine = InstantiateShortLine(line.Text, index, withAnim);
-		shortLine.Bind(line);
 		return shortLine;
 	}
 
@@ -214,7 +205,6 @@ public class ShortLineList : MonoBehaviour, IEnumerable<ShortLine>
 		{
 			selectedLine_ = line;
 			selectedIndex_ = lines_.IndexOf(selectedLine_);
-			GameContext.CurrentActionManager = actionManager_;
 		}
 	}
 
@@ -296,7 +286,7 @@ public class ShortLineList : MonoBehaviour, IEnumerable<ShortLine>
 
 			int newIndex = selectedIndex_;
 			int oldIndex = dragStartIndex_;
-			actionManager_.Execute(new Action(
+			line.BindedLine.Tree.ActionManager.Execute(new Action(
 				execute:()=>
 				{
 					AnimManager.AddAnim(line, GetTargetPosition(line), ParamType.Position, AnimType.Time, GameContext.Config.AnimTime);

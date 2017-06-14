@@ -123,6 +123,10 @@ public class Line : IEnumerable<Line>
 			LoadTag(ref text);
 		}
 		text_ = text;
+		if( IsOnList )
+		{
+			GameContext.Window.LineList.InstantiateShortLine(this);
+		}
 	}
 
 
@@ -402,6 +406,14 @@ public class Line : IEnumerable<Line>
 			child.toggleSubscription_.Dispose();
 			child.parent_ = null;
 			Tree.OnRemove(child);
+			if( IsOnList )
+			{
+				ShortLine shortline = GameContext.Window.LineList.FindBindedLine(this);
+				if( shortline != null )
+				{
+					GameContext.Window.LineList.RemoveShortLine(shortline);
+				}
+			}
 		}
 	}
 
@@ -751,7 +763,6 @@ public class Line : IEnumerable<Line>
 	public static string FoldTag = "<f>";
 	public static string DoneTag = "<d>";
 	public static string OnListTag = "<o>";
-	public static string OnListOnlyTag = "<oo>";
 	public void AppendStringTo(StringBuilder builder, bool appendTag = false)
 	{
 		int level = Level - 1;
