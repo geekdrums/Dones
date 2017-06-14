@@ -25,14 +25,19 @@ public class ShortLineList : MonoBehaviour, IEnumerable<ShortLine>
 	public ActionManager ActionManager { get { return actionManager_; } }
 	ActionManager actionManager_ = new ActionManager();
 
+	LayoutElement layout_;
+	ContentSizeFitter contentSizeFitter_;
+
 	#endregion
 
 
 	#region unity functions
 
 	// Use this for initialization
-	void Start () {
-
+	void Awake ()
+	{
+		layout_ = GetComponentInParent<LayoutElement>();
+		contentSizeFitter_ = GetComponentInParent<ContentSizeFitter>();
 	}
 
 	// Update is called once per frame
@@ -142,6 +147,8 @@ public class ShortLineList : MonoBehaviour, IEnumerable<ShortLine>
 		AnimLinesToTargetPosition(index, lines_.Count - 1);
 		AnimDoneLinesToTargetPosition(0, doneLines_.Count - 1);
 
+		UpdateLayoutElement();
+
 		return shortLine;
 	}
 
@@ -186,6 +193,14 @@ public class ShortLineList : MonoBehaviour, IEnumerable<ShortLine>
 		index = doneLines_.IndexOf(shortline);
 		if( index < 0 ) index = 0;
 		AnimDoneLinesToTargetPosition(index, doneLines_.Count - 1);
+
+		UpdateLayoutElement();
+	}
+
+	void UpdateLayoutElement()
+	{
+		layout_.preferredHeight = LineHeight * (lines_.Count + doneLines_.Count);
+		contentSizeFitter_.SetLayoutVertical();
 	}
 
 	#endregion
@@ -378,6 +393,7 @@ public class ShortLineList : MonoBehaviour, IEnumerable<ShortLine>
 			AnimManager.AddAnim(lines_[i], GetTargetPosition(lines_[i]), ParamType.Position, AnimType.Time, GameContext.Config.AnimTime);
 		}
 	}
+
 	void AnimDoneLinesToTargetPosition(int startIndex, int endIndex)
 	{
 		if( startIndex > endIndex )
