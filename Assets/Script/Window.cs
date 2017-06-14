@@ -21,12 +21,13 @@ public class Window : MonoBehaviour
 	public TabButton TabButtonPrefab;
 
 	public GameObject TreeParent;
+	public RectTransform TreeScrollView;
 	public GameObject TabParent;
+	public RectTransform TabMenuParent;
 	public MenuButton FileMenu;
 	public ShortLineList LineList;
 
 	public float DesiredTabWidth = 200.0f;
-	public float HeaderWidth = 5.0f;
 
 	#endregion
 
@@ -42,6 +43,11 @@ public class Window : MonoBehaviour
 
 	float currentScreenWidth_;
 	float currentTabWidth_;
+
+	Vector2 initialTreeOffsetMax_;
+	Vector2 initialTabOffsetMax_;
+
+	public float HeaderWidth { get { return LineList.Width + 5.0f; } }
 
 	#endregion
 
@@ -60,6 +66,8 @@ public class Window : MonoBehaviour
 	{
 		settingFile_ = new FileInfo(System.Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + "/Dones/settings.txt");
 		lineListFile_ = new FileInfo(System.Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + "/Dones/linelist.txt");
+		initialTreeOffsetMax_ = TreeScrollView.offsetMax;
+		initialTabOffsetMax_ = TabMenuParent.offsetMax;
 		StartCoroutine(InitialLoadCoroutine());
 	}
 
@@ -240,6 +248,15 @@ public class Window : MonoBehaviour
 		UpdateTabLayout();
 	}
 
+	public void OnHeaderWidthChanged()
+	{
+		TreeScrollView.anchoredPosition = new Vector3(HeaderWidth, TreeScrollView.anchoredPosition.y);
+		TabMenuParent.anchoredPosition = new Vector3(HeaderWidth, TabMenuParent.anchoredPosition.y);
+		TreeScrollView.offsetMax = initialTreeOffsetMax_;
+		TabMenuParent.offsetMax = initialTabOffsetMax_;
+		UpdateTabLayout();
+	}
+
 	#endregion
 
 
@@ -278,7 +295,15 @@ public class Window : MonoBehaviour
 	{
 		int index = trees_.IndexOf(tab.BindedTree);
 		tab.transform.localPosition += new Vector3(eventData.delta.x, 0);
-
+		if( tab.transform.localPosition.x < 0 )
+		{
+			tab.transform.localPosition = new Vector3(0, tab.transform.localPosition.y);
+		}
+		float tabmax = (UnityEngine.Screen.width - HeaderWidth) - currentTabWidth_;
+		if( tab.transform.localPosition.x > tabmax )
+		{
+			tab.transform.localPosition = new Vector3(tabmax, tab.transform.localPosition.y);
+		}
 		int desiredIndex = Mathf.Clamp((int)(tab.transform.localPosition.x / currentTabWidth_), 0, trees_.Count - 1);
 		if( index != desiredIndex )
 		{

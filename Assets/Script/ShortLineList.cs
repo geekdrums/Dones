@@ -9,32 +9,47 @@ public class ShortLineList : MonoBehaviour, IEnumerable<ShortLine>
 	#region editor params
 
 	public ShortLine ShortLinePrefab;
+	public float LineWidth = 200;
 	public float LineHeight = 30;
+	public float ClosedLineWidth = 10;
+
+	public Button OpenButton;
+	public Button CloseButton;
 
 	#endregion
 
 
 	#region params
 
+	public float Width { get { return isOpened_ ? LineWidth : ClosedLineWidth; } }
+
 	List<ShortLine> lines_ = new List<ShortLine>();
 	List<ShortLine> doneLines_ = new List<ShortLine>();
 	ShortLine selectedLine_;
 	int selectedIndex_ = -1;
 	int dragStartIndex_ = -1;
+	bool isOpened_ = true;
 
 	LayoutElement layout_;
 	ContentSizeFitter contentSizeFitter_;
+	RectTransform scrollRect_;
 
 	#endregion
 
 
 	#region unity functions
 
-	// Use this for initialization
 	void Awake ()
 	{
 		layout_ = GetComponentInParent<LayoutElement>();
 		contentSizeFitter_ = GetComponentInParent<ContentSizeFitter>();
+		scrollRect_ = GetComponentInParent<ScrollRect>().GetComponent<RectTransform>();
+	}
+
+	// Use this for initialization
+	void Start()
+	{
+		OpenButton.gameObject.SetActive(isOpened_ == false);
 	}
 
 	// Update is called once per frame
@@ -146,6 +161,11 @@ public class ShortLineList : MonoBehaviour, IEnumerable<ShortLine>
 		AnimDoneLinesToTargetPosition(0, doneLines_.Count - 1);
 
 		UpdateLayoutElement();
+
+		if( isOpened_ == false )
+		{
+			Open();
+		}
 
 		return shortLine;
 	}
@@ -307,6 +327,27 @@ public class ShortLineList : MonoBehaviour, IEnumerable<ShortLine>
 		}
 	}
 
+	#endregion
+
+
+	#region open / close
+
+	public void Open()
+	{
+		isOpened_ = true;
+		OpenButton.gameObject.SetActive(false);
+		scrollRect_.GetComponent<RectTransform>().anchoredPosition = new Vector3(0, scrollRect_.GetComponent<RectTransform>().anchoredPosition.y);
+		GameContext.Window.OnHeaderWidthChanged();
+	}
+
+	public void Close()
+	{
+		isOpened_ = false;
+		OpenButton.gameObject.SetActive(true);
+		scrollRect_.GetComponent<RectTransform>().anchoredPosition = new Vector3(-LineWidth + ClosedLineWidth, scrollRect_.GetComponent<RectTransform>().anchoredPosition.y);
+		GameContext.Window.OnHeaderWidthChanged();
+	}
+	
 	#endregion
 
 
