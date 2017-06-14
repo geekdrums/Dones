@@ -24,7 +24,7 @@ public class Line : IEnumerable<Line>
 			}
 			if( IsOnList )
 			{
-				ShortLine shortline = GameContext.LineList.FindBindedLine(this);
+				ShortLine shortline = GameContext.Window.LineList.FindBindedLine(this);
 				if( shortline != null )
 				{
 					shortline.Text = text_;
@@ -75,10 +75,10 @@ public class Line : IEnumerable<Line>
 				}
 				if( IsOnList )
 				{
-					ShortLine bindedLine = GameContext.LineList.FindBindedLine(this);
+					ShortLine bindedLine = GameContext.Window.LineList.FindBindedLine(this);
 					if( bindedLine != null )
 					{
-						bindedLine.OnDoneChanged();
+						bindedLine.IsDone = isDone_;
 					}
 				}
 			}
@@ -259,7 +259,7 @@ public class Line : IEnumerable<Line>
 		}
 		if( IsOnList )
 		{
-			ShortLine shortline = GameContext.LineList.FindBindedLine(this);
+			ShortLine shortline = GameContext.Window.LineList.FindBindedLine(this);
 			if( shortline != null )
 			{
 				shortline.Text = text_;
@@ -747,8 +747,11 @@ public class Line : IEnumerable<Line>
 	#region save & load
 
 	public static string TabString = "	";
+	public static char TabChar = '	';
 	public static string FoldTag = "<f>";
 	public static string DoneTag = "<d>";
+	public static string OnListTag = "<o>";
+	public static string OnListOnlyTag = "<oo>";
 	public void AppendStringTo(StringBuilder builder, bool appendTag = false)
 	{
 		int level = Level - 1;
@@ -767,12 +770,21 @@ public class Line : IEnumerable<Line>
 			{
 				builder.Append(DoneTag);
 			}
+			if( IsOnList )
+			{
+				builder.Append(OnListTag);
+			}
 		}
 		builder.AppendLine();
 	}
 
 	public void LoadTag(ref string text)
 	{
+		if( text.EndsWith(OnListTag) )
+		{
+			text = text.Remove(text.Length - OnListTag.Length);
+			IsOnList = true;
+		}
 		if( text.EndsWith(DoneTag) )
 		{
 			text = text.Remove(text.Length - DoneTag.Length);

@@ -307,7 +307,6 @@ public class UIMidairPrimitive : Graphic, IColoredObject
 			uiVertices_[i].color = color;
 		}
 		SetVerticesDirty();
-		//GetComponent<Renderer>().material.SetColor(colorName, Color);
 	}
 
 	public Color GetColor()
@@ -321,10 +320,12 @@ public class UIMidairPrimitive : Graphic, IColoredObject
 		UpdateArc();
 	}
 
+#if UNITY_EDITOR
 	protected override void OnValidate()
 	{
 		base.OnValidate();
 		RecalculatePolygon();
 		SetVerticesDirty();
 	}
+#endif
 }

@@ -59,6 +59,7 @@ public class Tree : MonoBehaviour {
 	public FileInfo File { get { return file_; } }
 	public TabButton Tab { get { return tabButton_; } }
 	public Line FocusedLine { get { return focusedLine_; } }
+	public Line RootLine { get { return rootLine_; } }
 
 	public string TitleText { get { return rootLine_ != null ? rootLine_.Text : ""; } }
 	public override string ToString() { return TitleText; }
@@ -136,7 +137,7 @@ public class Tree : MonoBehaviour {
 
 
 		// keyboard input
-		if( ctrlOnly )
+		if( ctrl )
 		{
 			if( Input.GetKeyDown(KeyCode.V) )
 			{
@@ -1178,16 +1179,17 @@ public class Tree : MonoBehaviour {
 				execute: ()=>
 				{
 					targetLine.IsOnList = !targetLine.IsOnList;
+					ShortLineList lineList = GameContext.Window.LineList;
 					if( targetLine.IsOnList )
 					{
-						GameContext.LineList.InstantiateShortLine(targetLine);
+						lineList.InstantiateShortLine(targetLine);
 					}
 					else
 					{
-						ShortLine removeLine = GameContext.LineList.FindBindedLine(targetLine);
+						ShortLine removeLine = lineList.FindBindedLine(targetLine);
 						if( removeLine != null )
 						{
-							GameContext.LineList.RemoveShortLine(removeLine);
+							lineList.RemoveShortLine(removeLine);
 						}
 					}
 				}));
@@ -1217,15 +1219,16 @@ public class Tree : MonoBehaviour {
 	{
 		if( HasSelection )
 		{
+			bool appendTag = Input.GetKey(KeyCode.LeftShift) == false;
 			StringBuilder clipboardLines = new StringBuilder();
 			foreach( Line line in selectedLines_.Values )
 			{
-				line.AppendStringTo(clipboardLines, appendTag: true);
+				line.AppendStringTo(clipboardLines, appendTag);
 				if( line.IsFolded )
 				{
 					foreach( Line child in line.GetAllChildren() )
 					{
-						child.AppendStringTo(clipboardLines, appendTag: true);
+						child.AppendStringTo(clipboardLines, appendTag);
 					}
 				}
 			}

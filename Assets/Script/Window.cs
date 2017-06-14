@@ -23,6 +23,7 @@ public class Window : MonoBehaviour
 	public GameObject TreeParent;
 	public GameObject TabParent;
 	public MenuButton FileMenu;
+	public ShortLineList LineList;
 
 	public float DesiredTabWidth = 200.0f;
 	public float HeaderWidth = 5.0f;
@@ -35,6 +36,7 @@ public class Window : MonoBehaviour
 	Tree activeTree_;
 	List<Tree> trees_ = new List<Tree>();
 	FileInfo settingFile_;
+	FileInfo lineListFile_;
 
 	string initialDirectory_;
 
@@ -57,6 +59,7 @@ public class Window : MonoBehaviour
 	void Start ()
 	{
 		settingFile_ = new FileInfo(System.Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + "/Dones/settings.txt");
+		lineListFile_ = new FileInfo(System.Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + "/Dones/linelist.txt");
 		StartCoroutine(InitialLoadCoroutine());
 	}
 
@@ -65,6 +68,7 @@ public class Window : MonoBehaviour
 		// Editorではいいんだけど、アプリ版はこうしないとScrollがバグってその後一切操作できなくなる。。
 		yield return new WaitForEndOfFrame();
 		LoadSettings();
+		LoadLineList();
 	}
 
 	// Update is called once per frame
@@ -97,6 +101,7 @@ public class Window : MonoBehaviour
 	void OnApplicationQuit()
 	{
 		SaveSettings();
+		SaveLineList();
 	}
 
 	#endregion
@@ -382,6 +387,138 @@ public class Window : MonoBehaviour
 		writer.WriteLine(SettingsTags[(int)Settings.IsFullScreen]);
 		writer.WriteLine(UnityEngine.Screen.fullScreen ? "true" : "false");
 
+		writer.Flush();
+		writer.Close();
+	}
+
+	#endregion
+
+
+	#region line list save/load
+
+	void LoadLineList()
+	{
+		if( lineListFile_.Exists == false )
+		{
+			return;
+		}
+
+		StreamReader reader = new StreamReader(lineListFile_.OpenRead());
+		string text = null;
+
+		while( (text = reader.ReadLine()) != null )
+		{
+			if( text.EndsWith(Line.OnListOnlyTag) )
+			{
+				ShortLine shortLine = new ShortLine();
+				text = text.Remove(text.Length - Line.OnListOnlyTag.Length);
+				if( text.EndsWith(Line.DoneTag) )
+				{
+					text = text.Remove(text.Length - Line.DoneTag.Length);
+					shortLine.IsDone = true;
+				}
+				LineList.InstantiateShortLine(text);
+			}
+			else
+			{
+				//search tree
+				Tree bindedTree = null;
+				foreach(Tree tree in trees_)
+				{
+					if( tree.TitleText == text )
+					{
+						bindedTree = tree;
+						break;
+					}
+				}
+
+				Line line = null;
+				if( bindedTree != null )
+				{
+					line = bindedTree.RootLine;
+				}
+				bool readListEnd = false;
+				while( readListEnd == false && (text = reader.ReadLine()) != null )
+				{
+					// search line
+					text = text.TrimStart(Line.TabChar);
+					if( text.EndsWith(Line.OnListTag) )
+					{
+						text = text.Remove(text.Length - Line.OnListTag.Length);
+						readListEnd = true;
+					}
+					if( line != null )
+					{
+						Line next = null;
+						foreach(Line childLine in line)
+						{
+							if( childLine.Text == text )
+							{
+								next = childLine;
+								break;
+							}
+						}
+						line = next;
+					}
+				}
+				if( line != null )
+				{
+					line.IsOnList = true;
+					LineList.InstantiateShortLine(line);
+				}
+				else
+				{
+					LineList.InstantiateShortLine(text);
+				}
+			}
+		}
+		reader.Close();
+	}
+
+	void SaveLineList()
+	{
+		if( lineListFile_.Exists == false )
+		{
+			if( Directory.Exists(lineListFile_.DirectoryName) == false )
+			{
+				Directory.CreateDirectory(lineListFile_.DirectoryName);
+			}
+		}
+
+		StreamWriter writer = new StreamWriter(lineListFile_.FullName, append: false);
+
+		foreach( ShortLine shortLine in LineList )
+		{
+			if( shortLine.BindedLine != null )
+			{
+				Line line = shortLine.BindedLine;
+				List<StringBuilder> tree = new List<StringBuilder>();
+				while( line != null )
+				{
+					foreach( StringBuilder builder in tree )
+					{
+						builder.Insert(0, Line.TabString);
+					}
+					tree.Insert(0, new StringBuilder(line.Text));
+					line = line.Parent;
+				}
+				tree[tree.Count - 1].Append(Line.OnListTag);
+				foreach( StringBuilder builder in tree )
+				{
+					writer.WriteLine(builder.ToString());
+				}
+			}
+			else
+			{
+				StringBuilder builder = new StringBuilder(shortLine.Text);
+				if( shortLine.IsDone )
+				{
+					builder.Append(Line.DoneTag);
+				}
+				builder.Append(Line.OnListOnlyTag);
+				writer.WriteLine(builder.ToString());
+			}
+		}
 		writer.Flush();
 		writer.Close();
 	}

@@ -25,15 +25,11 @@ public class ShortLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragHa
 		set
 		{
 			isDone_ = value;
-			if( BindedLine != null )
+			if( BindedLine != null && BindedLine.IsDone != isDone_ )
 			{
-				BindedLine.IsDone = value; ;
+				BindedLine.IsDone = value;
 			}
-			else
-			{
-				OnDoneChanged();
-			}
-			interactable = (isDone_ == false);
+			OnDoneChanged();
 		}
 	}
 	protected bool isDone_;
@@ -43,6 +39,10 @@ public class ShortLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragHa
 
 	public string Text { get { return textComponent_.text; } set { textComponent_.text = value; } }
 	Text textComponent_;
+	public override string ToString()
+	{
+		return Text;
+	}
 
 	public Color Background { get { return image.color; } set { image.color = value; } }
 	public Color GetColor() { return Background; }
@@ -81,6 +81,14 @@ public class ShortLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragHa
 			.Where(list => list[0] > GameContext.Config.DoubleClickInterval)
 			.Where(list => list.Count > 1 ? list[1] <= GameContext.Config.DoubleClickInterval : false)
 			.Subscribe(_ => ShowBindedLine()).AddTo(this);
+
+		StartCoroutine(InitializeColor());
+	}
+
+	IEnumerator InitializeColor()
+	{
+		yield return new WaitForEndOfFrame();
+		Background = IsDone ? GameContext.Config.ShortLineBackColor : GameContext.Config.ShortLineColor;
 	}
 
 	// Update is called once per frame
@@ -97,7 +105,7 @@ public class ShortLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragHa
 	{
 		BindedLine = line;
 		Text = line.Text;
-		isDone_ = line.IsDone;
+		IsDone = line.IsDone;
 	}
 	
 	public void ShowBindedLine()

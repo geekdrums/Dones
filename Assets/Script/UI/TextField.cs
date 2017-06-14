@@ -167,7 +167,7 @@ public class TextField : InputField, IColoredObject
 	public void SetIsOnList(bool isOnList, bool withAnim = true)
 	{
 		Foreground = GetDesiredTextColor();
-		if( isOnList )
+		if( isOnList && BindedLine.IsDone == false )
 		{
 			if( listMark_.gameObject.activeInHierarchy )
 			{
