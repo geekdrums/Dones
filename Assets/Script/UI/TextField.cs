@@ -130,6 +130,12 @@ public class TextField : InputField, IColoredObject
 		}
 	}
 
+	public void SetSelection(int start, int end)
+	{
+		CaretPosision = start;
+		selectionFocusPosition = end;
+	}
+
 	public void SetTextDirectly(string text)
 	{
 		// onValueChangedを発生させないテキスト設定。
@@ -223,10 +229,7 @@ public class TextField : InputField, IColoredObject
 	{
 		yield return new WaitForEndOfFrame();
 
-		TextGenerator gen = m_TextComponent.cachedTextGenerator;
-
-		float charLength = gen.characters[gen.characters.Count - 1].cursorPos.x - gen.characters[0].cursorPos.x;
-		charLength /= m_TextComponent.pixelsPerUnit;
+		float charLength = GetTextRectLength();
 
 		strikeLine_.SetLength(charLength + 10);
 
@@ -234,6 +237,12 @@ public class TextField : InputField, IColoredObject
 		listMark_.GetComponent<RectTransform>().anchoredPosition = new Vector2(charLength + 15, listMark_.transform.localPosition.y);
 
 		shouldUpdateTextLength_ = false;
+	}
+
+	public float GetTextRectLength()
+	{
+		TextGenerator gen = m_TextComponent.cachedTextGenerator;
+		return gen.characters[gen.characters.Count - 1].cursorPos.x - gen.characters[0].cursorPos.x;
 	}
 
 	#endregion

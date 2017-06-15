@@ -175,6 +175,14 @@ public class Tree : MonoBehaviour {
 			{
 				OnCtrlDInput();
 			}
+			else if( Input.GetKeyDown(KeyCode.Home) )
+			{
+				rootLine_[0].Field.IsFocused = true;
+			}
+			else if( Input.GetKeyDown(KeyCode.End) )
+			{
+				rootLine_.LastVisibleLine.Field.IsFocused = true;
+			}
 		}
 		else if( Input.GetKeyDown(KeyCode.Tab) )
 		{
@@ -269,6 +277,16 @@ public class Tree : MonoBehaviour {
 					selectionEndLine_ = line;
 				}
 				UpdateSelection(selectionEndLine_, true);
+			}
+
+			rect = selectionStartLine_.Field.Rect;
+			if( selectedLines_.Count == 1 && rect.Contains(Input.mousePosition) && Input.mousePosition.x - rect.x < selectionStartLine_.Field.GetTextRectLength() )
+			{
+				UpdateSelection(selectionStartLine_, false);
+			}
+			else if( selectedLines_.Count == 0 && rect.Contains(Input.mousePosition) && Input.mousePosition.x - rect.x > selectionStartLine_.Field.GetTextRectLength() )
+			{
+				UpdateSelection(selectionStartLine_, true);
 			}
 		}
 		else if( Input.GetMouseButtonUp(0) && HasSelection == false )
@@ -923,6 +941,10 @@ public class Tree : MonoBehaviour {
 								next.Add(children[i]);
 							}
 							RequestLayout(line);
+							if( next.Level < line.Level )
+							{
+								RequestLayout(next);
+							}
 						}
 						));
 				}
@@ -1052,6 +1074,11 @@ public class Tree : MonoBehaviour {
 			if( focusedLine_.Field.IsSelected == false && focusedLine_.Field.CaretPosision <= 0 )
 			{
 				UpdateSelection(focusedLine_, true);
+			}
+			else if( selectedLines_.Count == 1 && selectedLines_.Values[0] == focusedLine_ )
+			{
+				ClearSelection();
+				focusedLine_.Field.SetSelection(0, focusedLine_.TextLength);
 			}
 			break;
 		}
