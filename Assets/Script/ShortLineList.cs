@@ -1,9 +1,12 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Linq;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
+using UniRx;
+using UniRx.Triggers;
 
 public class ShortLineList : MonoBehaviour, IEnumerable<ShortLine>
 {
@@ -22,6 +25,7 @@ public class ShortLineList : MonoBehaviour, IEnumerable<ShortLine>
 
 	#region params
 
+	public bool IsOpened { get { return isOpened_; } }
 	public float Width { get { return isOpened_ ? LineWidth : ClosedLineWidth; } }
 
 	List<ShortLine> lines_ = new List<ShortLine>();
@@ -51,74 +55,113 @@ public class ShortLineList : MonoBehaviour, IEnumerable<ShortLine>
 	void Start()
 	{
 		OpenButton.gameObject.SetActive(isOpened_ == false);
+		SubscribeKeyInput();
 	}
 
-	// Update is called once per frame
-	void Update () {
+	void SubscribeKeyInput()
+	{
+		KeyCode[] throttleKeys = new KeyCode[]
+		{
+			KeyCode.UpArrow,
+			KeyCode.DownArrow,
+			KeyCode.Space,
+			KeyCode.Backspace,
+			KeyCode.Delete
+		};
+
+		var updateStream = this.UpdateAsObservable();
+
+		foreach( KeyCode key in throttleKeys )
+		{
+			// 最初の入力
+			updateStream.Where(x => Input.GetKeyDown(key))
+				.Merge(
+			// 押しっぱなしにした時の自動連打
+			updateStream.Where(x => Input.GetKey(key))
+				.Delay(TimeSpan.FromSeconds(GameContext.Config.ArrowStreamDelayTime))
+				.ThrottleFirst(TimeSpan.FromSeconds(GameContext.Config.ArrowStreamIntervalTime))
+				)
+				.TakeUntil(this.UpdateAsObservable().Where(x => Input.GetKeyUp(key)))
+				.RepeatUntilDisable(this)
+				.Subscribe(_ => OnThrottleInput(key));
+		}
+	}
+
+	void OnThrottleInput(KeyCode key)
+	{
 		if( selectedLine_ == null ) return;
 
 		bool ctrl = Input.GetKey(KeyCode.LeftControl);
 		bool shift = Input.GetKey(KeyCode.LeftShift);
 		bool alt = Input.GetKey(KeyCode.LeftAlt);
 		bool ctrlOnly = ctrl && !alt && !shift;
-
+		
 		List<ShortLine> list = selectedLine_.IsDone ? doneLines_ : lines_;
 
-		if( Input.GetKeyDown(KeyCode.UpArrow) )
+		switch( key )
 		{
-			if( selectedIndex_ > 0 )
-			{
-				--selectedIndex_;
-				if( alt )
-				{
-					list.Remove(selectedLine_);
-					list.Insert(selectedIndex_, selectedLine_);
-					AnimManager.AddAnim(selectedLine_, GetTargetPosition(selectedLine_), ParamType.Position, AnimType.Time, GameContext.Config.AnimTime);
-					AnimManager.AddAnim(list[selectedIndex_+1], GetTargetPosition(list[selectedIndex_ + 1]), ParamType.Position, AnimType.Time, GameContext.Config.AnimTime);
-				}
-				else
-				{
-					list[selectedIndex_].Select();
-				}
-			}
-			else if( selectedLine_.IsDone && lines_.Count > 0 && alt == false )
-			{
-				selectedIndex_ = lines_.Count - 1;
-				lines_[lines_.Count - 1].Select();
-			}
-		}
-		else if( Input.GetKeyDown(KeyCode.DownArrow) )
-		{
-			if( selectedIndex_ < list.Count - 1 )
-			{
-				++selectedIndex_;
-				if( alt )
-				{
-					list.Remove(selectedLine_);
-					list.Insert(selectedIndex_, selectedLine_);
-					AnimManager.AddAnim(selectedLine_, GetTargetPosition(selectedLine_), ParamType.Position, AnimType.Time, GameContext.Config.AnimTime);
-					AnimManager.AddAnim(list[selectedIndex_ - 1], GetTargetPosition(list[selectedIndex_ - 1]), ParamType.Position, AnimType.Time, GameContext.Config.AnimTime);
-				}
-				else
-				{
-					list[selectedIndex_].Select();
-				}
-			}
-			else if( selectedLine_.IsDone == false && doneLines_.Count > 0 && alt == false )
-			{
-				selectedIndex_ = 0;
-				doneLines_[0].Select();
-			}
-		}
-		else if( Input.GetKeyDown(KeyCode.Space) && ctrlOnly )
-		{
+		case KeyCode.Space:
 			selectedLine_.Done();
 			UpdateSelection(list, selectedIndex_);
-		}
-		else if( Input.GetKeyDown(KeyCode.Delete) || Input.GetKeyDown(KeyCode.Backspace) )
-		{
+			break;
+		case KeyCode.Backspace:
+		case KeyCode.Delete:
 			selectedLine_.Remove();
+			break;
+		case KeyCode.DownArrow:
+			{
+				if( selectedIndex_ < list.Count - 1 )
+				{
+					++selectedIndex_;
+					if( alt )
+					{
+						list.Remove(selectedLine_);
+						list.Insert(selectedIndex_, selectedLine_);
+						AnimManager.AddAnim(selectedLine_, GetTargetPosition(selectedLine_), ParamType.Position, AnimType.Time, GameContext.Config.AnimTime);
+						AnimManager.AddAnim(list[selectedIndex_ - 1], GetTargetPosition(list[selectedIndex_ - 1]), ParamType.Position, AnimType.Time, GameContext.Config.AnimTime);
+					}
+					else
+					{
+						list[selectedIndex_].Select();
+					}
+				}
+				else if( selectedLine_.IsDone == false && doneLines_.Count > 0 && alt == false )
+				{
+					selectedIndex_ = 0;
+					doneLines_[0].Select();
+				}
+			}
+			break;
+		case KeyCode.UpArrow:
+			{
+				if( selectedIndex_ > 0 )
+				{
+					--selectedIndex_;
+					if( alt )
+					{
+						list.Remove(selectedLine_);
+						list.Insert(selectedIndex_, selectedLine_);
+						AnimManager.AddAnim(selectedLine_, GetTargetPosition(selectedLine_), ParamType.Position, AnimType.Time, GameContext.Config.AnimTime);
+						AnimManager.AddAnim(list[selectedIndex_ + 1], GetTargetPosition(list[selectedIndex_ + 1]), ParamType.Position, AnimType.Time, GameContext.Config.AnimTime);
+					}
+					else
+					{
+						list[selectedIndex_].Select();
+					}
+				}
+				else if( selectedLine_.IsDone && lines_.Count > 0 && alt == false )
+				{
+					selectedIndex_ = lines_.Count - 1;
+					lines_[lines_.Count - 1].Select();
+				}
+			}
+			break;
 		}
+	}
+
+	// Update is called once per frame
+	void Update () {
+
 	}
 
 	#endregion

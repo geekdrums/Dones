@@ -349,13 +349,15 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 		InitialFiles,
 		InitialDirectory,
 		IsFullScreen,
+		IsToDoListOpened,
 		Count
 	}
 
 	static string[] SettingsTags = new string[(int)Settings.Count] {
 		"[initial files]",
 		"[initial directory]",
-		"[full screen]"
+		"[full screen]",
+		"[todo list]"
 		};
 
 	void LoadSettings()
@@ -405,6 +407,15 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 					UnityEngine.Screen.fullScreen = false;
 				}
 				break;
+			case Settings.IsToDoListOpened:
+				if( text == "open" )
+				{
+				}
+				else if( text == "close" )
+				{
+					LineList.Close();
+				}
+				break;
 			}
 		}
 		if( activeTree_ == null )
@@ -441,6 +452,8 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 		}
 		writer.WriteLine(SettingsTags[(int)Settings.IsFullScreen]);
 		writer.WriteLine(UnityEngine.Screen.fullScreen ? "true" : "false");
+		writer.WriteLine(SettingsTags[(int)Settings.IsToDoListOpened]);
+		writer.WriteLine(LineList.IsOpened ? "open" : "close");
 
 		writer.Flush();
 		writer.Close();
