@@ -600,8 +600,8 @@ public class ShakeAnimInfo : TransformAnimInfo
 	protected float updateTime_;
 	protected float timer_;
 
-	public ShakeAnimInfo(GameObject obj, object target, float time, float updateTime, ParamType paramType, AnimType animType, float delay = 0.0f, AnimEndOption endOption = AnimEndOption.None)
-		: base(obj, target, paramType, animType, time, delay, endOption)
+	public ShakeAnimInfo(GameObject obj, float range, float time, float updateTime, ParamType paramType, AnimType animType, float delay = 0.0f, AnimEndOption endOption = AnimEndOption.None)
+		: base(obj, range, paramType, animType, time, delay, endOption)
 	{
 		if( paramType < ParamType.Position || ParamType.PositionZ < paramType )
 		{
@@ -744,7 +744,7 @@ public class AnimManager : MonoBehaviour
 		}
 	}
 
-	public static void AddShakeAnim(Object obj, object range, float time, float updateTime, ParamType paramType, AnimType animType = AnimType.Time, float delay = 0.0f, AnimEndOption endOption = AnimEndOption.None)
+	public static void AddShakeAnim(Object obj, float range, float time, float updateTime, ParamType paramType, AnimType animType = AnimType.Time, float delay = 0.0f, AnimEndOption endOption = AnimEndOption.None)
 	{
 		GameObject gameObject = ToGameObject(obj);
 		Instance.Animations.Add(new ShakeAnimInfo(gameObject, range, time, updateTime, paramType, animType, delay, endOption));

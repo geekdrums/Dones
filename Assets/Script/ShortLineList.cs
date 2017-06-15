@@ -1,4 +1,5 @@
 ﻿using System.Collections;
+using System.Linq;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -117,32 +118,6 @@ public class ShortLineList : MonoBehaviour, IEnumerable<ShortLine>
 		else if( Input.GetKeyDown(KeyCode.Delete) || Input.GetKeyDown(KeyCode.Backspace) )
 		{
 			selectedLine_.Remove();
-			/*
-			ShortLine line = selectedLine_;
-			int index = selectedIndex_;
-			Line bindedLine = line.BindedLine;
-			bindedLine.Tree.ActionManager.Execute(new Action(
-				execute: () =>
-				{
-					if( bindedLine != null )
-					{
-						bindedLine.IsOnList = false;
-					}
-					RemoveShortLine(line);
-					UpdateSelection(list, index);
-				},
-				undo: ()=>
-				{
-					if( bindedLine != null )
-					{
-						bindedLine.IsOnList = true;
-					}
-					InstantiateShortLine(bindedLine, index);
-					UpdateSelection(list, index);
-					line = selectedLine_;
-				}
-				));
-			*/
 		}
 	}
 
@@ -155,14 +130,32 @@ public class ShortLineList : MonoBehaviour, IEnumerable<ShortLine>
 	{
 		ShortLine shortLine = Instantiate(ShortLinePrefab.gameObject, this.transform).GetComponent<ShortLine>();
 
-		if( index < 0 )
+		if( line.IsDone == false )
 		{
-			index = lines_.Count;
-			lines_.Add(shortLine);
+			if( index < 0 )
+			{
+				index = lines_.Count;
+				lines_.Add(shortLine);
+			}
+			else
+			{
+				lines_.Insert(index, shortLine);
+			}
+			AnimLinesToTargetPosition(index, lines_.Count - 1);
+			AnimDoneLinesToTargetPosition(0, doneLines_.Count - 1);
 		}
 		else
 		{
-			lines_.Insert(index, shortLine);
+			if( index < 0 )
+			{
+				index = doneLines_.Count;
+				doneLines_.Add(shortLine);
+			}
+			else
+			{
+				doneLines_.Insert(index, shortLine);
+			}
+			AnimDoneLinesToTargetPosition(index, doneLines_.Count - 1);
 		}
 
 		shortLine.Bind(line);
@@ -171,10 +164,7 @@ public class ShortLineList : MonoBehaviour, IEnumerable<ShortLine>
 		{
 			AnimOnInstantiate(shortLine);
 		}
-
-		AnimLinesToTargetPosition(index, lines_.Count - 1);
-		AnimDoneLinesToTargetPosition(0, doneLines_.Count - 1);
-
+		
 		UpdateLayoutElement();
 
 		if( isOpened_ == false )
@@ -204,23 +194,24 @@ public class ShortLineList : MonoBehaviour, IEnumerable<ShortLine>
 		return null;
 	}
 
-	public void RemoveShortLine(ShortLine shortline)
+	public void RemoveShortLine(ShortLine shortLine)
 	{
 		bool needSelectionUpdate = false;
-		if( shortline == selectedLine_ )
+		if( shortLine == selectedLine_ )
 		{
 			needSelectionUpdate = true;
 		}
 
 		float animTime = 0.2f;
-		AnimManager.AddAnim(shortline, ColorManager.MakeAlpha(GameContext.Config.ShortLineBackColor, 0.0f), ParamType.Color, AnimType.Time, animTime, 0.0f, AnimEndOption.Destroy);
-		AnimManager.AddAnim(shortline.GetComponentInChildren<Text>(), GameContext.Config.ShortLineBackColor, ParamType.TextColor, AnimType.Time, animTime);
-		AnimManager.AddAnim(shortline.GetComponentInChildren<UIMidairPrimitive>(), 0.0f, ParamType.PrimitiveArc, AnimType.Time, animTime);
+		AnimManager.AddAnim(shortLine, GameContext.Config.ShortLineAccentColor, ParamType.Color, AnimType.Time, 0.15f);
+		AnimManager.AddAnim(shortLine, GameContext.Config.ShortLineBackColor, ParamType.Color, AnimType.Time, 0.1f, 0.15f, AnimEndOption.Destroy);
+		AnimManager.AddAnim(shortLine.GetComponentInChildren<Text>(), GameContext.Config.ShortLineBackColor, ParamType.TextColor, AnimType.Time, animTime);
+		AnimManager.AddAnim(shortLine.GetComponentInChildren<UIMidairPrimitive>(), 0.0f, ParamType.PrimitiveArc, AnimType.Time, animTime);
 
-		int index = lines_.IndexOf(shortline);
+		int index = lines_.IndexOf(shortLine);
 		if( index >= 0 )
 		{
-			lines_.Remove(shortline);
+			lines_.Remove(shortLine);
 		}
 		else
 		{
@@ -228,10 +219,10 @@ public class ShortLineList : MonoBehaviour, IEnumerable<ShortLine>
 		}
 		AnimLinesToTargetPosition(index, lines_.Count - 1);
 
-		index = doneLines_.IndexOf(shortline);
+		index = doneLines_.IndexOf(shortLine);
 		if( index >= 0 )
 		{
-			doneLines_.Remove(shortline);
+			doneLines_.Remove(shortLine);
 		}
 		else
 		{
@@ -243,7 +234,7 @@ public class ShortLineList : MonoBehaviour, IEnumerable<ShortLine>
 
 		if( needSelectionUpdate )
 		{
-			UpdateSelection(shortline.BindedLine.IsDone ? doneLines_ : lines_, selectedIndex_);
+			UpdateSelection(shortLine.BindedLine.IsDone ? doneLines_ : lines_, selectedIndex_);
 		}
 	}
 
@@ -285,33 +276,36 @@ public class ShortLineList : MonoBehaviour, IEnumerable<ShortLine>
 		}
 	}
 
-	public void OnDoneChanged(ShortLine line)
+	public void OnDoneChanged(ShortLine shortLine)
 	{
 		// move to target position
-		if( line.IsDone )
+		if( shortLine.IsDone )
 		{
-			if( lines_.Contains(line) )
+			if( lines_.Contains(shortLine) )
 			{
-				int index = lines_.IndexOf(line);
-				lines_.Remove(line);
-				doneLines_.Insert(0, line);
+				int index = lines_.IndexOf(shortLine);
+				lines_.Remove(shortLine);
+				doneLines_.Insert(0, shortLine);
 
 				AnimLinesToTargetPosition(index, lines_.Count - 1);
-				AnimManager.AddAnim(line, GetTargetPosition(line), ParamType.Position, AnimType.Time, GameContext.Config.AnimTime);
-				line.transform.SetAsLastSibling();
+				AnimManager.AddAnim(shortLine, GetTargetPosition(shortLine), ParamType.Position, AnimType.Time, GameContext.Config.AnimTime);
+				AnimManager.AddAnim(shortLine, GameContext.Config.ShortLineAccentColor, ParamType.Color, AnimType.Time, 0.15f);
+				AnimManager.AddAnim(shortLine, GameContext.Config.ShortLineBackColor, ParamType.Color, AnimType.Time, 0.1f, 0.15f);
+				shortLine.transform.SetAsLastSibling();
 			}
 		}
 		else
 		{
-			if( doneLines_.Contains(line) )
+			if( doneLines_.Contains(shortLine) )
 			{
-				int index = doneLines_.IndexOf(line);
-				doneLines_.Remove(line);
-				lines_.Add(line);
+				int index = doneLines_.IndexOf(shortLine);
+				doneLines_.Remove(shortLine);
+				lines_.Add(shortLine);
 
 				AnimDoneLinesToTargetPosition(0, index - 1);
-				AnimManager.AddAnim(line, GetTargetPosition(line), ParamType.Position, AnimType.Time, GameContext.Config.AnimTime);
-				line.transform.SetAsLastSibling();
+				AnimManager.AddAnim(shortLine, GetTargetPosition(shortLine), ParamType.Position, AnimType.Time, GameContext.Config.AnimTime);
+				AnimManager.AddAnim(shortLine, GameContext.Config.ShortLineColor, ParamType.Color, AnimType.Time, 0.1f);
+				shortLine.transform.SetAsLastSibling();
 			}
 		}
 	}
@@ -379,7 +373,7 @@ public class ShortLineList : MonoBehaviour, IEnumerable<ShortLine>
 	#endregion
 
 
-	#region open / close
+	#region button behaviour
 
 	public void Open()
 	{
@@ -395,6 +389,38 @@ public class ShortLineList : MonoBehaviour, IEnumerable<ShortLine>
 		OpenButton.gameObject.SetActive(true);
 		scrollRect_.GetComponent<RectTransform>().anchoredPosition = new Vector3(-LineWidth + ClosedLineWidth, scrollRect_.GetComponent<RectTransform>().anchoredPosition.y);
 		GameContext.Window.OnHeaderWidthChanged();
+	}
+
+	public void DoneAll()
+	{
+		List<Line> doneLines = new List<Line>(from shortline in doneLines_ select shortline.BindedLine);
+
+		AnimManager.AddShakeAnim(scrollRect_, 15.0f, 0.15f, 0.025f, ParamType.PositionY);
+
+		foreach(Tree tree in GameContext.Window)
+		{
+			tree.ActionManager.StartChain();
+		}
+		foreach( Line line in doneLines )
+		{
+			line.Tree.ActionManager.Execute(new Action(
+				execute: () =>
+				{
+					ShortLine shortline = FindBindedLine(line);
+					if( shortline != null )
+					{
+						RemoveShortLine(shortline);
+					}
+				},
+				undo: () =>
+				{
+					InstantiateShortLine(line);
+				}));
+		}
+		foreach( Tree tree in GameContext.Window )
+		{
+			tree.ActionManager.EndChain();
+		}
 	}
 	
 	#endregion

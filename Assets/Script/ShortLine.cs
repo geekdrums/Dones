@@ -164,7 +164,6 @@ public class ShortLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragHa
 		{
 			strikeLine_.gameObject.SetActive(true);
 			checkMark_.gameObject.SetActive(true);
-			Background = GameContext.Config.ShortLineBackColor;
 			textComponent_.color = GameContext.Config.DoneTextColor;
 			UpdateStrikeLine();
 
@@ -179,7 +178,6 @@ public class ShortLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragHa
 		{
 			strikeLine_.gameObject.SetActive(false);
 			checkMark_.gameObject.SetActive(false);
-			Background = GameContext.Config.ShortLineColor;
 			textComponent_.color = Color.white;
 		}
 

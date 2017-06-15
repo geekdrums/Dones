@@ -13,7 +13,7 @@ using UnityEditor;
 #endif
 
 // [ Window ] - Tree - Line
-public class Window : MonoBehaviour
+public class Window : MonoBehaviour, IEnumerable<Tree>
 {
 	#region editor params
 
@@ -320,6 +320,23 @@ public class Window : MonoBehaviour
 	public void OnEndDrag(TabButton tab)
 	{
 		AnimManager.AddAnim(tab, GetTabPosition(tab), ParamType.Position, AnimType.Time, GameContext.Config.AnimTime);
+	}
+
+	#endregion
+
+
+	#region IEnumerable<Tree>
+
+	public IEnumerator<Tree> GetEnumerator()
+	{
+		foreach( Tree tree in trees_ )
+		{
+			yield return tree;
+		}
+	}
+	IEnumerator IEnumerable.GetEnumerator()
+	{
+		return this.GetEnumerator();
 	}
 
 	#endregion
