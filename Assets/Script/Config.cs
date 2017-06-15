@@ -20,6 +20,7 @@ public class Config : MonoBehaviour
 	public Color ShortLineColor;
 	public Color ShortLineSelectionColor;
 	public Color ShortLineBackColor;
+	public Color ShortLineBackSelectionColor;
 	public Color ShortLineAccentColor;
 
 	// Use this for initialization

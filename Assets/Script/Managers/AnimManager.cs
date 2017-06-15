@@ -672,17 +672,18 @@ public class AnimManager : MonoBehaviour
 	// Update is called once per frame
 	void Update()
 	{
-		foreach( AnimInfoBase anim in Animations )
-		{
-			anim.Update();
-		}
-		Animations.RemoveAll((AnimInfoBase anim) => anim.IsEnd);
-		foreach(AnimInfoBase removeAnim in removeAnims_)
+		foreach( AnimInfoBase removeAnim in removeAnims_ )
 		{
 			removeAnim.IsEnd = true;
 			Animations.Remove(removeAnim);
 		}
 		removeAnims_.Clear();
+
+		foreach( AnimInfoBase anim in Animations )
+		{
+			anim.Update();
+		}
+		Animations.RemoveAll((AnimInfoBase anim) => anim.IsEnd);
 	}
 
 	private static GameObject ToGameObject(Object obj)
@@ -764,6 +765,8 @@ public class AnimManager : MonoBehaviour
 
 	public static void RemoveOtherAnim(Object obj, ParamType type = ParamType.Any)
 	{
-		Instance.Animations.RemoveAll((AnimInfoBase anim) => anim.Object == obj && anim.IsPlaying && (type == ParamType.Any || type == anim.Param));
+		Instance.removeAnims_.AddRange(from other in Instance.Animations
+									   where other.Object == ToGameObject(obj) && (type == ParamType.Any || type == other.Param) && other.IsPlaying
+									   select other);
 	}
 }

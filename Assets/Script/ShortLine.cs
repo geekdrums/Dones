@@ -89,14 +89,6 @@ public class ShortLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragHa
 			.Where(list => list[0] > GameContext.Config.DoubleClickInterval)
 			.Where(list => list.Count > 1 ? list[1] <= GameContext.Config.DoubleClickInterval : false)
 			.Subscribe(_ => ShowBindedLine()).AddTo(this);
-
-		StartCoroutine(InitializeColor());
-	}
-
-	IEnumerator InitializeColor()
-	{
-		yield return new WaitForEndOfFrame();
-		Background = IsDone ? GameContext.Config.ShortLineBackColor : GameContext.Config.ShortLineColor;
 	}
 
 	// Update is called once per frame
@@ -138,25 +130,17 @@ public class ShortLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragHa
 	public override void OnSelect(BaseEventData eventData)
 	{
 		base.OnSelect(eventData);
-		if( IsDone == false )
-		{
-			isSelected_ = true;
-			transition = Transition.None;
-			Background = GameContext.Config.ShortLineSelectionColor;
-			ownerList_.OnSelect(this);
-		}
+		isSelected_ = true;
+		Background = IsDone ? GameContext.Config.ShortLineBackSelectionColor : GameContext.Config.ShortLineSelectionColor;
+		ownerList_.OnSelect(this);
 	}
 
 	public override void OnDeselect(BaseEventData eventData)
 	{
 		base.OnDeselect(eventData);
-		if( IsDone == false )
-		{
-			isSelected_ = false;
-			transition = Transition.ColorTint;
-			Background = GameContext.Config.ShortLineColor;
-			ownerList_.OnDeselect(this);
-		}
+		isSelected_ = false;
+		Background = IsDone ? GameContext.Config.ShortLineBackColor : GameContext.Config.ShortLineColor;
+		ownerList_.OnDeselect(this);
 	}
 
 	#endregion
@@ -166,10 +150,11 @@ public class ShortLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragHa
 
 	public void Done()
 	{
-		BindedLine.Tree.ActionManager.Execute(new Action(
+		Line line = BindedLine;
+		line.Tree.ActionManager.Execute(new Action(
 			execute: () =>
 			{
-				IsDone = !IsDone;
+				line.IsDone = !line.IsDone;
 			}));
 	}
 

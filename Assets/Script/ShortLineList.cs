@@ -61,6 +61,8 @@ public class ShortLineList : MonoBehaviour, IEnumerable<ShortLine>
 		bool alt = Input.GetKey(KeyCode.LeftAlt);
 		bool ctrlOnly = ctrl && !alt && !shift;
 
+		List<ShortLine> list = selectedLine_.IsDone ? doneLines_ : lines_;
+
 		if( Input.GetKeyDown(KeyCode.UpArrow) )
 		{
 			if( selectedIndex_ > 0 )
@@ -68,42 +70,54 @@ public class ShortLineList : MonoBehaviour, IEnumerable<ShortLine>
 				--selectedIndex_;
 				if( alt )
 				{
-					lines_.Remove(selectedLine_);
-					lines_.Insert(selectedIndex_, selectedLine_);
+					list.Remove(selectedLine_);
+					list.Insert(selectedIndex_, selectedLine_);
 					AnimManager.AddAnim(selectedLine_, GetTargetPosition(selectedLine_), ParamType.Position, AnimType.Time, GameContext.Config.AnimTime);
-					AnimManager.AddAnim(lines_[selectedIndex_+1], GetTargetPosition(lines_[selectedIndex_ + 1]), ParamType.Position, AnimType.Time, GameContext.Config.AnimTime);
+					AnimManager.AddAnim(list[selectedIndex_+1], GetTargetPosition(list[selectedIndex_ + 1]), ParamType.Position, AnimType.Time, GameContext.Config.AnimTime);
 				}
 				else
 				{
-					lines_[selectedIndex_].Select();
+					list[selectedIndex_].Select();
 				}
+			}
+			else if( selectedLine_.IsDone && lines_.Count > 0 && alt == false )
+			{
+				selectedIndex_ = lines_.Count - 1;
+				lines_[lines_.Count - 1].Select();
 			}
 		}
 		else if( Input.GetKeyDown(KeyCode.DownArrow) )
 		{
-			if( selectedIndex_ < lines_.Count - 1 )
+			if( selectedIndex_ < list.Count - 1 )
 			{
 				++selectedIndex_;
 				if( alt )
 				{
-					lines_.Remove(selectedLine_);
-					lines_.Insert(selectedIndex_, selectedLine_);
+					list.Remove(selectedLine_);
+					list.Insert(selectedIndex_, selectedLine_);
 					AnimManager.AddAnim(selectedLine_, GetTargetPosition(selectedLine_), ParamType.Position, AnimType.Time, GameContext.Config.AnimTime);
-					AnimManager.AddAnim(lines_[selectedIndex_ - 1], GetTargetPosition(lines_[selectedIndex_ - 1]), ParamType.Position, AnimType.Time, GameContext.Config.AnimTime);
+					AnimManager.AddAnim(list[selectedIndex_ - 1], GetTargetPosition(list[selectedIndex_ - 1]), ParamType.Position, AnimType.Time, GameContext.Config.AnimTime);
 				}
 				else
 				{
-					lines_[selectedIndex_].Select();
+					list[selectedIndex_].Select();
 				}
+			}
+			else if( selectedLine_.IsDone == false && doneLines_.Count > 0 && alt == false )
+			{
+				selectedIndex_ = 0;
+				doneLines_[0].Select();
 			}
 		}
 		else if( Input.GetKeyDown(KeyCode.Space) && ctrlOnly )
 		{
 			selectedLine_.Done();
-			UpdateSelection(selectedIndex_);
+			UpdateSelection(list, selectedIndex_);
 		}
 		else if( Input.GetKeyDown(KeyCode.Delete) || Input.GetKeyDown(KeyCode.Backspace) )
 		{
+			selectedLine_.Remove();
+			/*
 			ShortLine line = selectedLine_;
 			int index = selectedIndex_;
 			Line bindedLine = line.BindedLine;
@@ -115,7 +129,7 @@ public class ShortLineList : MonoBehaviour, IEnumerable<ShortLine>
 						bindedLine.IsOnList = false;
 					}
 					RemoveShortLine(line);
-					UpdateSelection(index);
+					UpdateSelection(list, index);
 				},
 				undo: ()=>
 				{
@@ -124,10 +138,11 @@ public class ShortLineList : MonoBehaviour, IEnumerable<ShortLine>
 						bindedLine.IsOnList = true;
 					}
 					InstantiateShortLine(bindedLine, index);
-					UpdateSelection(index);
+					UpdateSelection(list, index);
 					line = selectedLine_;
 				}
 				));
+			*/
 		}
 	}
 
@@ -191,8 +206,14 @@ public class ShortLineList : MonoBehaviour, IEnumerable<ShortLine>
 
 	public void RemoveShortLine(ShortLine shortline)
 	{
+		bool needSelectionUpdate = false;
+		if( shortline == selectedLine_ )
+		{
+			needSelectionUpdate = true;
+		}
+
 		float animTime = 0.2f;
-		AnimManager.AddAnim(shortline, GameContext.Config.ShortLineBackColor, ParamType.Color, AnimType.Time, animTime, 0.0f, AnimEndOption.Destroy);
+		AnimManager.AddAnim(shortline, ColorManager.MakeAlpha(GameContext.Config.ShortLineBackColor, 0.0f), ParamType.Color, AnimType.Time, animTime, 0.0f, AnimEndOption.Destroy);
 		AnimManager.AddAnim(shortline.GetComponentInChildren<Text>(), GameContext.Config.ShortLineBackColor, ParamType.TextColor, AnimType.Time, animTime);
 		AnimManager.AddAnim(shortline.GetComponentInChildren<UIMidairPrimitive>(), 0.0f, ParamType.PrimitiveArc, AnimType.Time, animTime);
 
@@ -219,6 +240,11 @@ public class ShortLineList : MonoBehaviour, IEnumerable<ShortLine>
 		AnimDoneLinesToTargetPosition(index, doneLines_.Count - 1);
 
 		UpdateLayoutElement();
+
+		if( needSelectionUpdate )
+		{
+			UpdateSelection(shortline.BindedLine.IsDone ? doneLines_ : lines_, selectedIndex_);
+		}
 	}
 
 	void UpdateLayoutElement()
@@ -234,10 +260,19 @@ public class ShortLineList : MonoBehaviour, IEnumerable<ShortLine>
 
 	public void OnSelect(ShortLine line)
 	{
+		selectedLine_ = line;
 		if( lines_.Contains(line) )
 		{
-			selectedLine_ = line;
 			selectedIndex_ = lines_.IndexOf(selectedLine_);
+		}
+		else if( doneLines_.Contains(line) )
+		{
+			selectedIndex_ = doneLines_.IndexOf(selectedLine_);
+		}
+		else
+		{
+			selectedIndex_ = -1;
+			Debug.LogError("couldn't find " + line.ToString() + " in any list.");
 		}
 	}
 
@@ -246,6 +281,7 @@ public class ShortLineList : MonoBehaviour, IEnumerable<ShortLine>
 		if( selectedLine_ == line )
 		{
 			selectedLine_ = null;
+			selectedIndex_ = -1;
 		}
 	}
 
@@ -395,11 +431,11 @@ public class ShortLineList : MonoBehaviour, IEnumerable<ShortLine>
 		}
 	}
 
-	void UpdateSelection(int oldUpdateIndex)
+	void UpdateSelection(List<ShortLine> list, int oldSelectIndex)
 	{
-		if( oldUpdateIndex < lines_.Count )
+		if( oldSelectIndex < list.Count )
 		{
-			lines_[oldUpdateIndex].Select();
+			list[oldSelectIndex].Select();
 		}
 		else
 		{
