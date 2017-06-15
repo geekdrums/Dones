@@ -8,12 +8,6 @@ using UnityEngine.UI;
 [RequireComponent(typeof(RectTransform))]
 public class UIMidairPrimitive : Graphic, IColoredObject
 {
-	static readonly int[] QuadIndices = new int[] { 0, 2, 1, 3, 1, 2 };
-	static readonly Vector2 UVZero = new Vector2(0, 0);
-	static readonly Vector2 UVRight = new Vector2(0, 1);
-	static readonly Vector2 UVUp = new Vector2(1, 0);
-	static readonly Vector2 UVOne = new Vector2(1, 1);
-
 	public float Num = 3;
 	public float ArcRate = 1.0f;
 	public float Width = 1;
@@ -30,8 +24,27 @@ public class UIMidairPrimitive : Graphic, IColoredObject
 	UIVertex[] uiVertices_;
 	UIVertex[] growOutVertices_;
 	UIVertex[] growInVertices_;
+	/*
+	 * 3----------------------------1	growOutVertices_[2*n+1]
+	 * 
+	 * 3------------------------1		growOutVertices_[2*n]
+	 * 3------------------------1		uiVertices_[2*n+1]
+	 * 
+	 * 
+	 * 
+	 * 2------------------0				uiVertices_[2*n]
+	 * 2------------------0				growInVertices_[2*n + 1]
+	 * 
+	 * 2--------------0					growInVertices_[2*n]
+	 */
 	Vector3[] normalizedVertices_;
 	List<int> vertexIndices_;
+
+	static readonly int[] QuadIndices = new int[] { 0, 2, 1, 3, 1, 2 };
+	static readonly Vector2 UVZero = new Vector2(0, 0);
+	static readonly Vector2 UVRight = new Vector2(0, 1);
+	static readonly Vector2 UVUp = new Vector2(1, 0);
+	static readonly Vector2 UVOne = new Vector2(1, 1);
 
 	protected override void OnPopulateMesh(VertexHelper vh)
 	{
@@ -40,41 +53,53 @@ public class UIMidairPrimitive : Graphic, IColoredObject
 			RecalculatePolygon();
 		}
 
-		vh.Clear();
-		List<UIVertex> vertexList = new List<UIVertex>();
-		for( int i = 0; i < vertexIndices_.Count; ++i )
-		{
-			vertexList.Add(uiVertices_[vertexIndices_[i]]);
-		}
-		for( int i = 0; i < vertexIndices_.Count; ++i )
-		{
-			vertexList.Add(growInVertices_[vertexIndices_[i]]);
-		}
-		for( int i = 0; i < vertexIndices_.Count; ++i )
-		{
-			vertexList.Add(growOutVertices_[vertexIndices_[i]]);
-		}
-		vh.AddUIVertexTriangleStream(vertexList);
+		int vertCount = uiVertices_.Length;
 
-		/*
-		if( vh.currentVertCount != uiVertices_.Length )
+		if( vh.currentVertCount != vertCount * 3 )
 		{
 			vh.Clear();
-			List<UIVertex> vertexList = new List<UIVertex>();
-			for( int i = 0; i < vertexIndices_.Count; ++i )
+			for( int i = 0; i < vertCount; ++i )
 			{
-				vertexList.Add(uiVertices_[vertexIndices_[i]]);
+				vh.AddVert(uiVertices_[i]);
 			}
-			vh.AddUIVertexTriangleStream(vertexList);
+			for( int i = 0; i + 2 < vertexIndices_.Count; i += 3 )
+			{
+				vh.AddTriangle(vertexIndices_[i], vertexIndices_[i + 1], vertexIndices_[i + 2]);
+			}
+			
+			for( int i = 0; i < vertCount; ++i )
+			{
+				vh.AddVert(growInVertices_[i]);
+			}
+			for( int i = 0; i + 2 < vertexIndices_.Count; i += 3 )
+			{
+				vh.AddTriangle(vertCount + vertexIndices_[i], vertCount + vertexIndices_[i + 1], vertCount + vertexIndices_[i + 2]);
+			}
+
+			for( int i = 0; i < vertCount; ++i )
+			{
+				vh.AddVert(growOutVertices_[i]);
+			}
+			for( int i = 0; i + 2 < vertexIndices_.Count; i += 3 )
+			{
+				vh.AddTriangle(vertCount * 2 + vertexIndices_[i], vertCount * 2 + vertexIndices_[i + 1], vertCount * 2 + vertexIndices_[i + 2]);
+			}
 		}
 		else
 		{
-			for( int i = 0; i < vh.currentVertCount; ++i )
+			for( int i = 0; i < vertCount; ++i )
 			{
 				vh.SetUIVertex(uiVertices_[i], i);
 			}
+			for( int i = 0; i < vertCount; ++i )
+			{
+				vh.SetUIVertex(growInVertices_[i], vertCount + i);
+			}
+			for( int i = 0; i < vertCount; ++i )
+			{
+				vh.SetUIVertex(growOutVertices_[i], vertCount * 2 + i);
+			}
 		}
-		*/
 	}
 	
 	void CheckVertex()
