@@ -444,6 +444,7 @@ public class ShortLineList : MonoBehaviour, IEnumerable<ShortLine>
 			line.Tree.ActionManager.Execute(new Action(
 				execute: () =>
 				{
+					line.IsOnList = false;
 					ShortLine shortline = FindBindedLine(line);
 					if( shortline != null )
 					{
@@ -452,6 +453,7 @@ public class ShortLineList : MonoBehaviour, IEnumerable<ShortLine>
 				},
 				undo: () =>
 				{
+					line.IsOnList = true;
 					InstantiateShortLine(line);
 				}));
 		}
