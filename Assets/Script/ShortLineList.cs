@@ -210,11 +210,6 @@ public class ShortLineList : MonoBehaviour, IEnumerable<ShortLine>
 		
 		UpdateLayoutElement();
 
-		if( isOpened_ == false )
-		{
-			Open();
-		}
-
 		return shortLine;
 	}
 

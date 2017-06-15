@@ -284,7 +284,9 @@ public class Tree : MonoBehaviour {
 			{
 				UpdateSelection(selectionStartLine_, false);
 			}
-			else if( selectedLines_.Count == 0 && rect.Contains(Input.mousePosition) && Input.mousePosition.x - rect.x > selectionStartLine_.Field.GetTextRectLength() )
+			else if( selectedLines_.Count == 0 && rect.Contains(Input.mousePosition)
+				&& selectionStartLine_.Field.selectionFocusPosition != selectionStartLine_.Field.selectionAnchorPosition
+				&& Input.mousePosition.x - rect.x > selectionStartLine_.Field.GetTextRectLength() )
 			{
 				UpdateSelection(selectionStartLine_, true);
 			}
