@@ -607,6 +607,40 @@ public class Line : IEnumerable<Line>
 		}
 	}
 
+	public bool IsVisible
+	{
+		get
+		{
+			Line parent = parent_;
+			while( parent != null )
+			{
+				if( parent.IsFolded )
+				{
+					return false;
+				}
+				parent = parent.parent_;
+			}
+			return true;
+		}
+		set
+		{
+			if( value )
+			{
+				Tree.ActionManager.StartChain();
+				Line parent = parent_;
+				while( parent != null )
+				{
+					if( parent.IsFolded )
+					{
+						Tree.OnFoldUpdated(parent, false);
+					}
+					parent = parent.parent_;
+				}
+				Tree.ActionManager.EndChain();
+			}
+		}
+	}
+
 	public bool HasVisibleChild { get { return IsFolded == false && children_.Count > 0; } }
 
 	public int VisibleChildCount

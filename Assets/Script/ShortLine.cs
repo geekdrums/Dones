@@ -37,7 +37,19 @@ public class ShortLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragHa
 	public bool IsSelected { get { return isSelected_; } }
 	protected bool isSelected_ = false;
 
-	public string Text { get { return textComponent_.text; } set { textComponent_.text = value; } }
+	public string Text
+	{
+		get { return textComponent_.text; }
+		set
+		{
+			textComponent_.text = value;
+			if( shouldUpdateTextLength_ == false )
+			{
+				shouldUpdateTextLength_ = true;
+				StartCoroutine(UpdateTextLengthCoroutine());
+			}
+		}
+	}
 	Text textComponent_;
 	public override string ToString()
 	{
@@ -67,7 +79,7 @@ public class ShortLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragHa
 
 	ShortLineList ownerList_;
 
-	bool shouldUpdateStrikeLine_;
+	bool shouldUpdateTextLength_;
 
 	#endregion
 
@@ -115,6 +127,10 @@ public class ShortLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragHa
 			if( BindedLine.Tree.IsActive == false )
 			{
 				BindedLine.Tree.IsActive = true;
+			}
+			if( BindedLine.IsVisible == false )
+			{
+				BindedLine.IsVisible = true;
 			}
 			BindedLine.Tree.UpdateScrollTo(BindedLine);
 			BindedLine.Field.Select();
@@ -186,27 +202,38 @@ public class ShortLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragHa
 
 	public void UpdateStrikeLine()
 	{
-		if( shouldUpdateStrikeLine_ == false )
+		if( shouldUpdateTextLength_ == false )
 		{
-			shouldUpdateStrikeLine_ = true;
-			if( this.gameObject.activeInHierarchy )
-			{
-				StartCoroutine(UpdateStrikeLineCoroutine());
-			}
+			shouldUpdateTextLength_ = true;
+			StartCoroutine(UpdateTextLengthCoroutine());
 		}
 	}
 
-	IEnumerator UpdateStrikeLineCoroutine()
+	IEnumerator UpdateTextLengthCoroutine()
 	{
 		yield return new WaitForEndOfFrame();
 
 		TextGenerator gen = textComponent_.cachedTextGenerator;
 
 		float charLength = gen.characters[gen.characters.Count - 1].cursorPos.x - gen.characters[0].cursorPos.x;
-		charLength /= textComponent_.pixelsPerUnit;
+		float maxWidth = ownerList_.LineWidth - 58;
+		if( charLength > maxWidth )
+		{
+			int maxCharCount = 0;
+			for( int i = 1; i < gen.characters.Count; ++i )
+			{
+				if( maxWidth < gen.characters[i].cursorPos.x - gen.characters[0].cursorPos.x )
+				{
+					maxCharCount = i - 1;
+					charLength = gen.characters[i - 1].cursorPos.x - gen.characters[0].cursorPos.x;
+					break;
+				}
+			}
+			Text = Text.Substring(0, maxCharCount) + "...";
+		}
 
 		strikeLine_.SetLength(charLength);
-		shouldUpdateStrikeLine_ = false;
+		shouldUpdateTextLength_ = false;
 	}
 
 	public void Remove()

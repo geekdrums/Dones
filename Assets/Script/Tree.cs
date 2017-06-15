@@ -364,12 +364,12 @@ public class Tree : MonoBehaviour {
 				if( lostChildren.Count > 0 )
 				{
 					Line prev = line.PrevVisibleLine;
-					while( prev.Field.IsSelected )
+					while( prev != null && prev.Field.IsSelected )
 					{
 						// 選択中のやつは消されるので、消されないものの中で一番近いものを選ぶ
 						prev = prev.PrevVisibleLine;
-						if( prev == null ) prev = rootLine_;
 					}
+					if( prev == null ) prev = rootLine_;
 					Line lostParent = line;
 					reparentActions.Add(new Action(
 						execute: () =>
