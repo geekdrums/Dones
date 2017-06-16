@@ -68,6 +68,25 @@ public class ShortLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragHa
 	public Color GetColor() { return image.color; }
 	public void SetColor(Color color) { image.color = color; }
 	
+	public Color TargetColor
+	{
+		get
+		{
+			if( isSelected_ )
+			{
+				return IsDone ? GameContext.Config.ShortLineBackSelectionColor : GameContext.Config.ShortLineSelectionColor;
+			}
+			else if( IsDone )
+			{
+				return GameContext.Config.ShortLineBackColor;
+			}
+			else
+			{
+				return Color.Lerp(GameContext.Config.ShortLineColor, GameContext.Config.ShortLineBackColor, ownerList_.IndexOf(this) * ownerList_.Gradation);
+			}
+		}
+	}
+
 	#endregion
 
 
@@ -76,6 +95,7 @@ public class ShortLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragHa
 	CheckMark checkMark_;
 	UIGaugeRenderer strikeLine_;
 	Button doneButton_;
+	UIMidairPrimitive listMark_;
 
 	ShortLineList ownerList_;
 
@@ -92,6 +112,7 @@ public class ShortLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragHa
 		textComponent_ = GetComponentInChildren<Text>();
 		strikeLine_ = textComponent_.GetComponentInChildren<UIGaugeRenderer>(includeInactive: true);
 		checkMark_ = GetComponentInChildren<CheckMark>(includeInactive: true);
+		listMark_ = GetComponentInChildren<UIMidairPrimitive>(includeInactive: true);
 		ownerList_ = GetComponentInParent<ShortLineList>();
 		doneButton_ = GetComponentInChildren<Button>();
 		this.OnPointerDownAsObservable()
@@ -147,7 +168,7 @@ public class ShortLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragHa
 	{
 		base.OnSelect(eventData);
 		isSelected_ = true;
-		Background = IsDone ? GameContext.Config.ShortLineBackSelectionColor : GameContext.Config.ShortLineSelectionColor;
+		Background = TargetColor;
 		ownerList_.OnSelect(this);
 	}
 
@@ -155,7 +176,7 @@ public class ShortLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragHa
 	{
 		base.OnDeselect(eventData);
 		isSelected_ = false;
-		Background = IsDone ? GameContext.Config.ShortLineBackColor : GameContext.Config.ShortLineColor;
+		Background = TargetColor;
 		ownerList_.OnDeselect(this);
 	}
 
@@ -180,6 +201,7 @@ public class ShortLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragHa
 		{
 			strikeLine_.gameObject.SetActive(true);
 			checkMark_.gameObject.SetActive(true);
+			listMark_.gameObject.SetActive(false);
 			textComponent_.color = GameContext.Config.DoneTextColor;
 			UpdateStrikeLine();
 
@@ -194,6 +216,7 @@ public class ShortLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragHa
 		{
 			strikeLine_.gameObject.SetActive(false);
 			checkMark_.gameObject.SetActive(false);
+			listMark_.gameObject.SetActive(true);
 			textComponent_.color = Color.white;
 		}
 

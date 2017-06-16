@@ -756,17 +756,17 @@ public class AnimManager : MonoBehaviour
 		return Instance.Animations.Find((AnimInfoBase anim) => anim.Object == gameObject) != null;
 	}
 
-	public static void RemoveOtherAnim(AnimInfoBase animInfo)
+	public static void RemoveOtherAnim(AnimInfoBase animInfo, bool includeDaly = false)
 	{
 		Instance.removeAnims_.AddRange(from other in Instance.Animations
-									   where other != animInfo && other.Object == animInfo.Object && other.Param == animInfo.Param && other.IsPlaying
+									   where other != animInfo && other.Object == animInfo.Object && other.Param == animInfo.Param && (includeDaly || other.IsPlaying)
 									   select other);
 	}
 
-	public static void RemoveOtherAnim(Object obj, ParamType type = ParamType.Any)
+	public static void RemoveOtherAnim(Object obj, ParamType type = ParamType.Any, bool includeDaly = true)
 	{
 		Instance.removeAnims_.AddRange(from other in Instance.Animations
-									   where other.Object == ToGameObject(obj) && (type == ParamType.Any || type == other.Param) && other.IsPlaying
+									   where other.Object == ToGameObject(obj) && (type == ParamType.Any || type == other.Param) && (includeDaly || other.IsPlaying)
 									   select other);
 	}
 }
