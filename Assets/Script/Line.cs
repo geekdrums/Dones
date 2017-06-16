@@ -396,6 +396,15 @@ public class Line : IEnumerable<Line>
 			}
 			child.AdjustLayout();
 		}
+
+		if( child.IsOnList )
+		{
+			ShortLine shortline = GameContext.Window.LineList.FindBindedLine(child);
+			if( shortline == null )
+			{
+				GameContext.Window.LineList.InstantiateShortLine(child);
+			}
+		}
 	}
 	public void Remove(Line child)
 	{
@@ -406,9 +415,9 @@ public class Line : IEnumerable<Line>
 			child.toggleSubscription_.Dispose();
 			child.parent_ = null;
 			Tree.OnRemove(child);
-			if( IsOnList )
+			if( child.IsOnList )
 			{
-				ShortLine shortline = GameContext.Window.LineList.FindBindedLine(this);
+				ShortLine shortline = GameContext.Window.LineList.FindBindedLine(child);
 				if( shortline != null )
 				{
 					GameContext.Window.LineList.RemoveShortLine(shortline);

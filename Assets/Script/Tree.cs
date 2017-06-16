@@ -1229,7 +1229,7 @@ public class Tree : MonoBehaviour {
 	#endregion
 
 
-	#region clipboard
+	#region copy and paste
 
 	public static string Clipboard
 	{
@@ -1261,7 +1261,7 @@ public class Tree : MonoBehaviour {
 					}
 				}
 			}
-			Clipboard = clipboardLines.ToString();
+			Clipboard = clipboardLines.ToString().TrimEnd(System.Environment.NewLine.ToCharArray());
 		}
 	}
 
@@ -1320,7 +1320,7 @@ public class Tree : MonoBehaviour {
 			else if( pasteStart == null )
 			{
 				Line pasteParent = focusedLine_.Parent;
-				int pasteIndex = focusedLine_.Index + 1;
+				int pasteIndex = focusedLine_.Index;
 				pasteStart = new Line();
 				actionManager_.Execute(new Action(
 					execute: () =>
