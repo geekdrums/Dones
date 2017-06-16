@@ -76,6 +76,7 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 		// Editorではいいんだけど、アプリ版はこうしないとScrollがバグってその後一切操作できなくなる。。
 		yield return new WaitForEndOfFrame();
 		LoadSettings();
+		LoadLineList();
 	}
 
 	// Update is called once per frame
@@ -108,6 +109,7 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 	void OnApplicationQuit()
 	{
 		SaveSettings();
+		SaveLineList();
 	}
 
 	#endregion
@@ -342,7 +344,7 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 	#endregion
 
 
-	#region settings
+	#region settings save / load
 
 	enum Settings
 	{
@@ -461,6 +463,67 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 
 	#endregion
 
+
+	#region todo list save/load
+
+	void LoadLineList()
+	{
+		if( lineListFile_.Exists == false )
+		{
+			return;
+		}
+
+		StreamReader reader = new StreamReader(lineListFile_.OpenRead());
+		string text = null;
+		int index = 0;
+		while( (text = reader.ReadLine()) != null )
+		{
+			ShortLine shortLine = null;
+			foreach( ShortLine line in LineList )
+			{
+				if( line.BindedLine.Text == text )
+				{
+					shortLine = line;
+					break;
+				}
+			}
+			if( shortLine != null )
+			{
+				LineList.SetLineIndex(shortLine, index);
+				++index;
+			}
+		}
+		reader.Close();
+	}
+
+	void SaveLineList()
+	{
+		if( lineListFile_.Exists == false )
+		{
+			if( Directory.Exists(lineListFile_.DirectoryName) == false )
+			{
+				Directory.CreateDirectory(lineListFile_.DirectoryName);
+			}
+		}
+
+		StreamWriter writer = new StreamWriter(lineListFile_.FullName, append: false);
+
+		foreach( ShortLine shortLine in LineList )
+		{
+			if( shortLine.IsDone )
+			{
+				break;
+			}
+			if( shortLine.BindedLine != null )
+			{
+				writer.WriteLine(shortLine.BindedLine.Text);
+			}
+		}
+		writer.Flush();
+		writer.Close();
+	}
+
+	#endregion
 
 	#region window title
 

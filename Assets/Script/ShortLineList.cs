@@ -32,7 +32,6 @@ public class ShortLineList : MonoBehaviour, IEnumerable<ShortLine>
 	List<ShortLine> doneLines_ = new List<ShortLine>();
 	ShortLine selectedLine_;
 	int selectedIndex_ = -1;
-	int dragStartIndex_ = -1;
 	bool isOpened_ = true;
 
 	LayoutElement layout_;
@@ -276,6 +275,20 @@ public class ShortLineList : MonoBehaviour, IEnumerable<ShortLine>
 		}
 	}
 
+	public void SetLineIndex(ShortLine shortLine, int index)
+	{
+		if( lines_.Contains(shortLine) && index < lines_.Count )
+		{
+			int oldIndex = lines_.IndexOf(shortLine);
+			if( oldIndex != index )
+			{
+				lines_.Remove(shortLine);
+				lines_.Insert(index, shortLine);
+				AnimLinesToTargetPosition(index, oldIndex);
+			}
+		}
+	}
+
 	void UpdateLayoutElement()
 	{
 		layout_.preferredHeight = LineHeight * (lines_.Count + doneLines_.Count);
@@ -352,7 +365,6 @@ public class ShortLineList : MonoBehaviour, IEnumerable<ShortLine>
 	{
 		if( lines_.Contains(line) )
 		{
-			dragStartIndex_ = lines_.IndexOf(line);
 			AnimManager.AddAnim(line, 5.0f, ParamType.PositionX, AnimType.Time, GameContext.Config.AnimTime);
 			line.transform.SetAsLastSibling();
 		}
@@ -384,27 +396,7 @@ public class ShortLineList : MonoBehaviour, IEnumerable<ShortLine>
 		if( lines_.Contains(line) )
 		{
 			selectedIndex_ = lines_.IndexOf(line);
-
-			int newIndex = selectedIndex_;
-			int oldIndex = dragStartIndex_;
-			line.BindedLine.Tree.ActionManager.Execute(new Action(
-				execute:()=>
-				{
-					AnimManager.AddAnim(line, GetTargetPosition(line), ParamType.Position, AnimType.Time, GameContext.Config.AnimTime);
-				},
-				undo: () =>
-				{
-					lines_.Remove(line);
-					lines_.Insert(oldIndex, line);
-					AnimLinesToTargetPosition(newIndex, oldIndex);
-				},
-				redo: () => 
-				{
-					lines_.Remove(line);
-					lines_.Insert(newIndex, line);
-					AnimLinesToTargetPosition(newIndex, oldIndex);
-				}
-				));
+			AnimManager.AddAnim(line, GetTargetPosition(line), ParamType.Position, AnimType.Time, GameContext.Config.AnimTime);
 		}
 	}
 
@@ -539,6 +531,7 @@ public class ShortLineList : MonoBehaviour, IEnumerable<ShortLine>
 		}
 		for( int i = startIndex; i <= endIndex; ++i )
 		{
+			AnimManager.RemoveOtherAnim(lines_[i], ParamType.Position);
 			AnimManager.AddAnim(lines_[i], GetTargetPosition(lines_[i]), ParamType.Position, AnimType.Time, GameContext.Config.AnimTime);
 		}
 	}
@@ -557,6 +550,7 @@ public class ShortLineList : MonoBehaviour, IEnumerable<ShortLine>
 		}
 		for( int i = startIndex; i <= endIndex; ++i )
 		{
+			AnimManager.RemoveOtherAnim(doneLines_[i], ParamType.Position);
 			AnimManager.AddAnim(doneLines_[i], GetTargetPosition(doneLines_[i]), ParamType.Position, AnimType.Time, GameContext.Config.AnimTime);
 		}
 	}
