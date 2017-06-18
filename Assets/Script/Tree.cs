@@ -760,7 +760,7 @@ public class Tree : MonoBehaviour {
 				   }
 				   ));
 			}
-			else if( prev.Parent == line.Parent && line.TextLength == 0 )
+			else if( prev.Parent == line.Parent && line.TextLength == 0 && line.Count == 0 )
 			{
 				Line parent = line.Parent;
 				int index = line.Index;
@@ -911,6 +911,7 @@ public class Tree : MonoBehaviour {
 
 				// テキスト合体
 				string oldText = line.Text;
+				int oldCaret = line.Field.CaretPosision;
 				actionManager_.Execute(new Action(
 				   execute: () =>
 				   {
@@ -918,6 +919,7 @@ public class Tree : MonoBehaviour {
 				   },
 				   undo: () =>
 				   {
+					   line.Field.CaretPosision = oldCaret;
 					   line.Text = oldText;
 				   }
 				   ));
@@ -1297,15 +1299,21 @@ public class Tree : MonoBehaviour {
 			}
 
 			string oldText = pasteStart.Text;
+			string oldTag = pasteStart.GetTagStrings();
 			int oldCaretPos = pasteStart.Field.CaretPosision;
 			actionManager_.Execute(new Action(
 				execute: () =>
 				{
+					string beforeRefText = pasteText;
+					pasteStart.LoadTag(ref pasteText);
 					pasteStart.Field.Paste(pasteText);
+					pasteText = beforeRefText;
 				},
 				undo: () =>
 				{
 					pasteStart.Field.CaretPosision = oldCaretPos;
+					string refTag = oldTag;
+					pasteStart.LoadTag(ref refTag);
 					pasteStart.Text = oldText;
 				}
 				));

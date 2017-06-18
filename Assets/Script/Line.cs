@@ -832,6 +832,24 @@ public class Line : IEnumerable<Line>
 		builder.AppendLine();
 	}
 
+	public string GetTagStrings()
+	{
+		StringBuilder builder = new StringBuilder();
+		if( IsFolded )
+		{
+			builder.Append(FoldTag);
+		}
+		if( IsDone )
+		{
+			builder.Append(DoneTag);
+		}
+		if( IsOnList )
+		{
+			builder.Append(OnListTag);
+		}
+		return builder.ToString();
+	}
+
 	public void LoadTag(ref string text)
 	{
 		if( text.EndsWith(OnListTag) )
@@ -839,15 +857,29 @@ public class Line : IEnumerable<Line>
 			text = text.Remove(text.Length - OnListTag.Length);
 			IsOnList = true;
 		}
+		else
+		{
+			IsOnList = false;
+		}
+
 		if( text.EndsWith(DoneTag) )
 		{
 			text = text.Remove(text.Length - DoneTag.Length);
 			IsDone = true;
 		}
+		else
+		{
+			IsDone = false;
+		}
+
 		if( text.EndsWith(FoldTag) )
 		{
 			text = text.Remove(text.Length - FoldTag.Length);
 			IsFolded = true;
+		}
+		else
+		{
+			IsFolded = false;
 		}
 	}
 
