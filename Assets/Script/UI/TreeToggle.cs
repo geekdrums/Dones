@@ -72,7 +72,6 @@ public class TreeToggle : Toggle {
 		(targetGraphic as UIMidairPrimitive).SetColor(TargetColor);
 		targetGraphic.CrossFadeColor(Color.white, 0, true, true);
 		AnimManager.AddAnim(targetGraphic, interactable && isOn ? 0 : 90, ParamType.RotationZ, AnimType.Time, GameContext.Config.AnimTime);
-		//AnimManager.AddAnim((targetGraphic as UIMidairPrimitive), interactable && isOn ? 1.0f : 2.0f, ParamType.PrimitiveRadius, AnimType.Time, GameContext.Config.AnimTime);
 		if( verticalLine_ != null )
 		{
 			float lineHeight = 0;

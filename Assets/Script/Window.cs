@@ -350,7 +350,7 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 	{
 		InitialFiles,
 		InitialDirectory,
-		IsFullScreen,
+		ScreenSize,
 		IsToDoListOpened,
 		Count
 	}
@@ -358,7 +358,7 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 	static string[] SettingsTags = new string[(int)Settings.Count] {
 		"[initial files]",
 		"[initial directory]",
-		"[full screen]",
+		"[screen]",
 		"[todo list]"
 		};
 
@@ -399,15 +399,9 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 					initialDirectory_ = text;
 				}
 				break;
-			case Settings.IsFullScreen:
-				if( text == "true" )
-				{
-					UnityEngine.Screen.fullScreen = true;
-				}
-				else if( text == "false" )
-				{
-					UnityEngine.Screen.fullScreen = false;
-				}
+			case Settings.ScreenSize:
+				string[] size = text.Split(',');
+				UnityEngine.Screen.SetResolution(int.Parse(size[0]), int.Parse(size[1]), size[2] == "true");
 				break;
 			case Settings.IsToDoListOpened:
 				if( text == "open" )
@@ -452,8 +446,8 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 			writer.WriteLine(SettingsTags[(int)Settings.InitialDirectory]);
 			writer.WriteLine(initialDirectory_);
 		}
-		writer.WriteLine(SettingsTags[(int)Settings.IsFullScreen]);
-		writer.WriteLine(UnityEngine.Screen.fullScreen ? "true" : "false");
+		writer.WriteLine(SettingsTags[(int)Settings.ScreenSize]);
+		writer.WriteLine(String.Format("{0},{1},{2}", UnityEngine.Screen.width, UnityEngine.Screen.height, UnityEngine.Screen.fullScreen ? "true" : "false"));
 		writer.WriteLine(SettingsTags[(int)Settings.IsToDoListOpened]);
 		writer.WriteLine(LineList.IsOpened ? "open" : "close");
 
