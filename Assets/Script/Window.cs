@@ -97,6 +97,22 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 			{
 				NewFile();
 			}
+			else if( Input.GetKeyDown(KeyCode.LeftArrow) && Input.GetKey(KeyCode.LeftCommand) )
+			{
+				int index = trees_.IndexOf(activeTree_);
+				if( index > 0 )
+				{
+					trees_[index - 1].IsActive = true;
+				}
+			}
+			else if( Input.GetKeyDown(KeyCode.RightArrow) && Input.GetKey(KeyCode.LeftCommand) )
+			{
+				int index = trees_.IndexOf(activeTree_);
+				if( index < trees_.Count - 1 )
+				{
+					trees_[index + 1].IsActive = true;
+				}
+			}
 		}
 
 		if(	currentScreenWidth_ != UnityEngine.Screen.width )
