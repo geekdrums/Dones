@@ -55,6 +55,12 @@ public class Line : IEnumerable<Line>
 				if( Toggle != null )
 				{
 					Toggle.SetFold(IsFolded);
+					Line parent = Parent;
+					while( parent != null && parent.Toggle != null )
+					{
+						parent.Toggle.OnVisibleChildCountChanged();
+						parent = parent.Parent;
+					}
 				}
 			}
 		}
@@ -303,11 +309,16 @@ public class Line : IEnumerable<Line>
 			Field.SetIsOnList(isOnList_, withAnim: false);
 
 			Toggle = Field.GetComponentInChildren<TreeToggle>();
-			toggleSubscription_ = children_.ObserveCountChanged(true).Select(x => x > 0).DistinctUntilChanged().Subscribe(hasChild =>
+			toggleSubscription_ = children_.ObserveCountChanged(true).DistinctUntilChanged().Subscribe(x =>
 			{
-				Toggle.interactable = hasChild;
-				AnimManager.AddAnim(Toggle.targetGraphic, Toggle.interactable && Toggle.isOn ? 0 : 90, ParamType.RotationZ, AnimType.Time, GameContext.Config.AnimTime);
-			}).AddTo(Field);
+				Toggle.OnVisibleChildCountChanged();
+				Line parent = Parent;
+				while( parent != null && parent.Toggle != null)
+				{
+					parent.Toggle.OnVisibleChildCountChanged();
+					parent = parent.Parent;
+				}
+			});
 			Toggle.SetFold(IsFolded);
 
 			if( parent_ != null && parent_.IsFolded )

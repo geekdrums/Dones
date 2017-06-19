@@ -145,7 +145,10 @@ public class UIMidairPrimitive : Graphic, IColoredObject
 	void RecalculateRadius()
 	{
 		CheckVertex();
-		float OutR = Radius / Mathf.Cos(Mathf.PI / N);
+		float outR = Radius / Mathf.Cos(Mathf.PI / N);
+		float inR = Mathf.Max(0, (Radius - Width)) / Mathf.Cos(Mathf.PI / N);
+		float growOutR = outR + GrowSize;
+		float growInR = Mathf.Max(0, inR - GrowSize);
 		for( int i = 0; i < ArcN + 1; ++i )
 		{
 			if( 2 * i >= uiVertices_.Length )
@@ -154,7 +157,12 @@ public class UIMidairPrimitive : Graphic, IColoredObject
 			}
 			else
 			{
-				uiVertices_[2 * i + 1].position = normalizedVertices_[i] * OutR;
+				uiVertices_[2 * i].position = normalizedVertices_[i] * inR;
+				uiVertices_[2 * i + 1].position = normalizedVertices_[i] * outR;
+				growInVertices_[2 * i].position = normalizedVertices_[i] * growInR;
+				growInVertices_[2 * i + 1].position = normalizedVertices_[i] * inR;
+				growOutVertices_[2 * i].position = normalizedVertices_[i] * outR;
+				growOutVertices_[2 * i + 1].position = normalizedVertices_[i] * growOutR;
 			}
 		}
 		
@@ -164,7 +172,8 @@ public class UIMidairPrimitive : Graphic, IColoredObject
 	void RecalculateWidth()
 	{
 		CheckVertex();
-		float InR = Mathf.Max(0, (Radius - Width)) / Mathf.Cos(Mathf.PI / N);
+		float inR = Mathf.Max(0, (Radius - Width)) / Mathf.Cos(Mathf.PI / N);
+		float growInR = Mathf.Max(0, inR - GrowSize);
 		for( int i = 0; i < ArcN + 1; ++i )
 		{
 			if( 2 * i >= uiVertices_.Length )
@@ -173,11 +182,30 @@ public class UIMidairPrimitive : Graphic, IColoredObject
 			}
 			else
 			{
-				uiVertices_[2 * i].position = normalizedVertices_[i] * InR;
+				uiVertices_[2 * i].position = normalizedVertices_[i] * inR;
+				growInVertices_[2 * i].position = normalizedVertices_[i] * growInR;
+				growInVertices_[2 * i + 1].position = normalizedVertices_[i] * inR;
 			}
 		}
 		
 		SetVerticesDirty();
+	}
+
+	void UpdateColor()
+	{
+		if( uiVertices_ == null )
+		{
+			RecalculatePolygon();
+		}
+		else
+		{
+			for( int i = 0; i < uiVertices_.Length; ++i )
+			{
+				uiVertices_[i].color = color;
+				growInVertices_[i].color = ColorManager.MakeAlpha(color, (i % 2 == 0 ? 0 : GrowAlpha));
+				growOutVertices_[i].color = ColorManager.MakeAlpha(color, (i % 2 == 0 ? GrowAlpha : 0));
+			}
+		}
 	}
 
 	void RecalculatePolygon()
@@ -195,13 +223,10 @@ public class UIMidairPrimitive : Graphic, IColoredObject
 		for( int i = 0; i < uiVertices_.Length; ++i )
 		{
 			uiVertices_[i] = UIVertex.simpleVert;
-			uiVertices_[i].color = color;
-
 			growInVertices_[i] = UIVertex.simpleVert;
-			growInVertices_[i].color = ColorManager.MakeAlpha(color, (i % 2 == 0 ? 0 : GrowAlpha));
 			growOutVertices_[i] = UIVertex.simpleVert;
-			growOutVertices_[i].color = ColorManager.MakeAlpha(color, (i % 2 == 0 ? GrowAlpha : 0));
 		}
+		UpdateColor();
 		normalizedVertices_ = new Vector3[ArcN + 1];
 
 		float outR = Radius / Mathf.Cos(Mathf.PI / N);
@@ -315,7 +340,7 @@ public class UIMidairPrimitive : Graphic, IColoredObject
 	{
 		Radius = newSize;
 		RecalculateRadius();
-		RecalculateWidth();
+		//RecalculateWidth();
 	}
 	public void SetWidth(float newWidth)
 	{
@@ -327,10 +352,7 @@ public class UIMidairPrimitive : Graphic, IColoredObject
 	public void SetColor(Color newColor)
 	{
 		color = newColor;
-		for( int i = 0; i < uiVertices_.Length; ++i )
-		{
-			uiVertices_[i].color = color;
-		}
+		UpdateColor();
 		SetVerticesDirty();
 	}
 

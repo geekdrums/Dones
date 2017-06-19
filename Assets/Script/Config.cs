@@ -23,6 +23,9 @@ public class Config : MonoBehaviour
 	public Color ShortLineBackSelectionColor;
 	public Color ShortLineAccentColor;
 
+	public Color ToggleColor;
+	public Color ToggleOpenedColor;
+
 	// Use this for initialization
 	void Awake()
 	{

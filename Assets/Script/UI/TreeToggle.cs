@@ -8,10 +8,15 @@ using UniRx.Triggers;
 public class TreeToggle : Toggle {
 
 	TextField textField_;
+	UIGaugeRenderer verticalLine_;
+	bool wasAnimRequested_ = false;
+
+	public Color TargetColor { get { return interactable == false ? Color.clear : (textField_ != null && textField_.BindedLine.IsFolded ? GameContext.Config.ToggleColor : GameContext.Config.ToggleOpenedColor); } }
 
 	// Use this for initialization
 	protected override void Start () {
 		textField_ = GetComponentInParent<TextField>();
+		verticalLine_ = GetComponentInChildren<UIGaugeRenderer>(includeInactive: true);
 		onValueChanged.AsObservable().Subscribe(x =>
 		{
 			Line line = textField_.BindedLine;
@@ -23,21 +28,61 @@ public class TreeToggle : Toggle {
 		}).AddTo(this);
 	}
 
-	
-	// Update is called once per frame
-	void Update () {
+	protected override void OnEnable()
+	{
+		base.OnEnable();
+		AnimToTargetVisual();
 	}
 
-	public void SetFold(bool isFolded, bool withAnim = true)
+	protected override void OnDisable()
+	{
+		base.OnDisable();
+		wasAnimRequested_ = false;
+	}
+
+	// Update is called once per frame
+	void Update () {
+
+	}
+
+	public void SetFold(bool isFolded)
 	{
 		isOn = !isFolded;
-		if( withAnim )
+		AnimToTargetVisual();
+	}
+
+	public void OnVisibleChildCountChanged()
+	{
+		AnimToTargetVisual();
+	}
+
+	void AnimToTargetVisual()
+	{
+		if( wasAnimRequested_ == false && gameObject.activeInHierarchy )
 		{
-			AnimManager.AddAnim(targetGraphic, interactable && isOn ? 0 : 90, ParamType.RotationZ, AnimType.Time, GameContext.Config.AnimTime);
+			wasAnimRequested_ = true;
+			StartCoroutine(AnimToTargetVisualCoroutine());
 		}
-		else
+	}
+	IEnumerator AnimToTargetVisualCoroutine()
+	{
+		yield return new WaitForEndOfFrame();
+
+		this.interactable = textField_ != null && textField_.BindedLine.Count > 0;
+		(targetGraphic as UIMidairPrimitive).SetColor(TargetColor);
+		targetGraphic.CrossFadeColor(Color.white, 0, true, true);
+		AnimManager.AddAnim(targetGraphic, interactable && isOn ? 0 : 90, ParamType.RotationZ, AnimType.Time, GameContext.Config.AnimTime);
+		//AnimManager.AddAnim((targetGraphic as UIMidairPrimitive), interactable && isOn ? 1.0f : 2.0f, ParamType.PrimitiveRadius, AnimType.Time, GameContext.Config.AnimTime);
+		if( verticalLine_ != null )
 		{
-			transform.localRotation = Quaternion.AngleAxis(isOn ? 0 : 90, Vector3.forward);
+			float lineHeight = 0;
+			if( textField_ != null )
+			{
+				lineHeight = textField_.BindedLine.VisibleChildCount * GameContext.Config.HeightPerLine;
+			}
+			AnimManager.AddAnim(verticalLine_, lineHeight, ParamType.GaugeLength, AnimType.Time, GameContext.Config.AnimTime);
 		}
+
+		wasAnimRequested_ = false;
 	}
 }
