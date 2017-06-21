@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -436,6 +437,23 @@ public class TextField : InputField, IColoredObject
 						{
 							BindedLine.Tree.OnFoldUpdated(BindedLine.Parent, true);
 						}
+					}
+					break;
+				case KeyCode.T:
+					if( ctrlOnly && BindedLine.Tree.HasSelection == false )
+					{
+						DateTime date = DateTime.Now;
+						string oldText = text;
+						BindedLine.Tree.ActionManager.Execute(new Action(
+							execute: () =>
+							{
+								Paste(date.ToString("yyyy/M/dd (ddd)"));
+							},
+							undo: () =>
+							{
+								text = oldText;
+							}
+							));
 					}
 					break;
 				case KeyCode.Delete:

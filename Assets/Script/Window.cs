@@ -149,6 +149,7 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 
 	void OnApplicationQuit()
 	{
+#if !UNITY_EDITOR
 		if( saveConfirmed_ == false )
 		{
 			saveConfirmed_ = true;
@@ -162,6 +163,7 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 				}
 			}
 		}
+#endif
 
 		SaveSettings();
 		SaveLineList();
