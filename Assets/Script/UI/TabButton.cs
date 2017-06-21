@@ -143,7 +143,7 @@ public class TabButton : UnityEngine.UI.Button, IDragHandler, IBeginDragHandler,
 		Destroy(this.gameObject);
 	}
 
-	public void CloseConfirmCallback(ModalDialog.DialogResult result)
+	void CloseConfirmCallback(ModalDialog.DialogResult result)
 	{
 		switch(result)
 		{

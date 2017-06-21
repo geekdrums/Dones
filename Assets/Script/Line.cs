@@ -341,7 +341,10 @@ public class Line : IEnumerable<Line>
 
 	public void UnBind()
 	{
-		Field.BindedLine = null;
+		if( Field != null )
+		{
+			Field.BindedLine = null;
+		}
 		Binding = null;
 		Field = null;
 	}

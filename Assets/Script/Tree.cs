@@ -1696,7 +1696,70 @@ public class Tree : MonoBehaviour {
 
 		file_ = new FileInfo(path);
 
+		Reload();
+	}
+
+	public void Save(bool saveAs = false)
+	{
+		if( file_ == null || saveAs )
+		{
+			SaveFileDialog saveFileDialog = new SaveFileDialog();
+			saveFileDialog.Filter = "dones file (*.dtml)|*.dtml";
+			saveFileDialog.FileName = rootLine_.Text;
+			DialogResult dialogResult = saveFileDialog.ShowDialog();
+			if( dialogResult == DialogResult.OK )
+			{
+				file_ = new FileInfo(saveFileDialog.FileName);
+				rootLine_.Text = file_.Name;
+#if UNITY_STANDALONE_WIN
+				GameContext.Window.SetTitle(TitleText + " - Dones");
+#endif
+			}
+			else
+			{
+				return;
+			}
+		}
+
+		StringBuilder builder = new StringBuilder();
+		foreach( Line line in rootLine_.GetAllChildren() )
+		{
+			line.AppendStringTo(builder, appendTag: true);
+		}
+
+		StreamWriter writer = new StreamWriter(file_.FullName, append: false);
+		writer.Write(builder.ToString());
+		writer.Flush();
+		writer.Close();
+
+		isEdited_ = false;
+		tabButton_.Text = TitleText;
+	}
+
+	public void Reload()
+	{
+		if( file_ == null )
+		{
+			return;
+		}
+
 		SuspendLayout();
+		if( rootLine_ != null )
+		{
+			targetScrollValue_ = scrollRect_.verticalScrollbar.value = 1.0f;
+			ClearSelection();
+			rootLine_ = null;
+			focusedLine_ = null;
+			foreach( TextField field in usingFields_ )
+			{
+				field.BindedLine.UnBind();
+				field.transform.SetParent(heapParent_.transform);
+				field.gameObject.SetActive(false);
+			}
+			usingFields_.Clear();
+			GC.Collect();
+		}
+
 		rootLine_ = new Line(file_.Name);
 		rootLine_.Bind(this.gameObject);
 
@@ -1752,43 +1815,6 @@ public class Tree : MonoBehaviour {
 		ResumeLayout();
 
 		tabButton_.BindedTree = this;
-		tabButton_.Text = TitleText;
-	}
-
-	public void Save(bool saveAs = false)
-	{
-		if( file_ == null || saveAs )
-		{
-			SaveFileDialog saveFileDialog = new SaveFileDialog();
-			saveFileDialog.Filter = "dones file (*.dtml)|*.dtml";
-			saveFileDialog.FileName = rootLine_.Text;
-			DialogResult dialogResult = saveFileDialog.ShowDialog();
-			if( dialogResult == DialogResult.OK )
-			{
-				file_ = new FileInfo(saveFileDialog.FileName);
-				rootLine_.Text = file_.Name;
-#if UNITY_STANDALONE_WIN
-				GameContext.Window.SetTitle(TitleText + " - Dones");
-#endif
-			}
-			else
-			{
-				return;
-			}
-		}
-
-		StringBuilder builder = new StringBuilder();
-		foreach( Line line in rootLine_.GetAllChildren() )
-		{
-			line.AppendStringTo(builder, appendTag: true);
-		}
-
-		StreamWriter writer = new StreamWriter(file_.FullName, append: false);
-		writer.Write(builder.ToString());
-		writer.Flush();
-		writer.Close();
-
-		isEdited_ = false;
 		tabButton_.Text = TitleText;
 	}
 

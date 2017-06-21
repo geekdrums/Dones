@@ -135,6 +135,10 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 				LoadTree(recentClosedFiles_.Pop(), true);
 			}
 		}
+		if( Input.GetKeyDown(KeyCode.F5) && activeTree_.File != null )
+		{
+			activeTree_.Reload();
+		}
 
 		if(	currentScreenWidth_ != UnityEngine.Screen.width )
 		{
@@ -167,7 +171,7 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 #endif
 	}
 
-	public void CloseConfirmCallback(ModalDialog.DialogResult result)
+	void CloseConfirmCallback(ModalDialog.DialogResult result)
 	{
 		switch( result )
 		{
