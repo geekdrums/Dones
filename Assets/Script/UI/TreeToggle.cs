@@ -68,20 +68,22 @@ public class TreeToggle : Toggle {
 	{
 		yield return new WaitForEndOfFrame();
 
-		this.interactable = textField_ != null && textField_.BindedLine.Count > 0;
-		(targetGraphic as UIMidairPrimitive).SetColor(TargetColor);
-		targetGraphic.CrossFadeColor(Color.white, 0, true, true);
-		AnimManager.AddAnim(targetGraphic, interactable && isOn ? 0 : 90, ParamType.RotationZ, AnimType.Time, GameContext.Config.AnimTime);
-		if( verticalLine_ != null )
+		if( textField_ != null && textField_.BindedLine != null )
 		{
-			float lineHeight = 0;
-			if( textField_ != null )
+			this.interactable = textField_ != null && textField_.BindedLine.Count > 0;
+			(targetGraphic as UIMidairPrimitive).SetColor(TargetColor);
+			targetGraphic.CrossFadeColor(Color.white, 0, true, true);
+			AnimManager.AddAnim(targetGraphic, interactable && isOn ? 0 : 90, ParamType.RotationZ, AnimType.Time, GameContext.Config.AnimTime);
+			if( verticalLine_ != null )
 			{
-				lineHeight = textField_.BindedLine.VisibleChildCount * GameContext.Config.HeightPerLine;
+				float lineHeight = 0;
+				if( textField_ != null )
+				{
+					lineHeight = textField_.BindedLine.VisibleChildCount * GameContext.Config.HeightPerLine;
+				}
+				AnimManager.AddAnim(verticalLine_, lineHeight, ParamType.GaugeLength, AnimType.Time, GameContext.Config.AnimTime);
 			}
-			AnimManager.AddAnim(verticalLine_, lineHeight, ParamType.GaugeLength, AnimType.Time, GameContext.Config.AnimTime);
 		}
-
 		wasAnimRequested_ = false;
 	}
 }

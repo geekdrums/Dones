@@ -1347,7 +1347,7 @@ public class Tree : MonoBehaviour {
 				execute: () =>
 				{
 					pasteStart.LoadTag(ref pasteText);
-					pasteStart.Text = pasteText;
+					pasteStart.Field.Paste(pasteText);
 					RequestLayout(layoutStart);
 				},
 				undo: () =>

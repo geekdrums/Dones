@@ -13,6 +13,9 @@ public class Config : MonoBehaviour
 	public float TextInputFixIntervalTime = 1.0f;
 	public float DoubleClickInterval = 0.25f;
 
+	public Color LinkColor;
+	public Color StrikeColor;
+
 	public Color SelectionColor;
 	public Color TextColor;
 	public Color DoneTextColor;

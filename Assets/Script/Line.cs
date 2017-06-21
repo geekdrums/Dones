@@ -72,6 +72,8 @@ public class Line : IEnumerable<Line>
 		get { return isDone_; }
 		set
 		{
+			if( isLinkText_ ) return;
+
 			if( isDone_ != value )
 			{
 				isDone_ = value;
@@ -97,6 +99,8 @@ public class Line : IEnumerable<Line>
 		get { return isOnList_; }
 		set
 		{
+			if( isLinkText_ ) return;
+
 			if( isOnList_ != value )
 			{
 				isOnList_ = value;
@@ -108,6 +112,9 @@ public class Line : IEnumerable<Line>
 		}
 	}
 	protected bool isOnList_ = false;
+
+	public bool IsLinkText { get { return isLinkText_; } }
+	protected bool isLinkText_ = false;
 
 	public Vector3 TargetPosition { get; protected set; }
 
@@ -133,6 +140,7 @@ public class Line : IEnumerable<Line>
 		{
 			GameContext.Window.LineList.InstantiateShortLine(this);
 		}
+		CheckIsLink();
 	}
 
 
@@ -263,7 +271,7 @@ public class Line : IEnumerable<Line>
 		lastTextActionTime_ = Time.time;
 		text_ = newText;
 
-		if( IsDone || IsOnList )
+		if( IsDone || IsOnList || IsLinkText )
 		{
 			Field.OnTextLengthChanged();
 		}
@@ -307,6 +315,9 @@ public class Line : IEnumerable<Line>
 			});
 			Field.SetDone(isDone_, withAnim: false);
 			Field.SetIsOnList(isOnList_, withAnim: false);
+
+			if( IsLinkText )
+				Field.SetIsLinkText(IsLinkText);
 
 			Toggle = Field.GetComponentInChildren<TreeToggle>();
 			toggleSubscription_ = children_.ObserveCountChanged(true).DistinctUntilChanged().Subscribe(x =>
@@ -895,6 +906,12 @@ public class Line : IEnumerable<Line>
 		{
 			IsFolded = false;
 		}
+	}
+	public void CheckIsLink()
+	{
+		isLinkText_ = text_.StartsWith("http");
+		if( Field != null )
+			Field.SetIsLinkText(isLinkText_);
 	}
 
 	#endregion

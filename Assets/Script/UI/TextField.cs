@@ -46,6 +46,8 @@ public class TextField : InputField, IColoredObject
 	}
 	protected bool isSelected_;
 
+	protected bool isPointerEntered_ = false;
+
 	public int CaretPosision
 	{
 		get { return cachedCaretPos_; }
@@ -111,6 +113,7 @@ public class TextField : InputField, IColoredObject
 		DeleteSelection();
 		BindedLine.Text = text.Insert(m_CaretPosition, pasteText);
 		caretSelectPositionInternal = caretPositionInternal += pasteText.Length;
+		BindedLine.CheckIsLink();
 	}
 
 	public void DeleteSelection()
@@ -204,11 +207,43 @@ public class TextField : InputField, IColoredObject
 		}
 	}
 
+	public void SetIsLinkText(bool isLink)
+	{
+		strikeLine_.gameObject.SetActive(isLink);
+		Foreground = GetDesiredTextColor();
+		if( isLink )
+		{
+			strikeLine_.transform.localPosition = new Vector3(strikeLine_.transform.localPosition.x, -5, strikeLine_.transform.localPosition.z);
+			strikeLine_.SetColor(GameContext.Config.LinkColor);
+			OnTextLengthChanged();
+		}
+		else
+		{
+			strikeLine_.transform.localPosition = new Vector3(strikeLine_.transform.localPosition.x, 0, strikeLine_.transform.localPosition.z);
+			strikeLine_.SetColor(GameContext.Config.StrikeColor);
+		}
+	}
+
 	Color GetDesiredTextColor()
 	{
 		if( BindedLine != null )
 		{
-			return (BindedLine.IsDone ? GameContext.Config.DoneTextColor : (BindedLine.IsOnList ? GameContext.Config.ShortLineColor : GameContext.Config.TextColor));
+			if( BindedLine.IsDone )
+			{
+				return GameContext.Config.DoneTextColor;
+			}
+			else if( BindedLine.IsOnList )
+			{
+				return GameContext.Config.ShortLineColor;
+			}
+			else if( BindedLine.IsLinkText )
+			{
+				return GameContext.Config.LinkColor;
+			}
+			else
+			{
+				return GameContext.Config.TextColor;
+			}
 		}
 		return GameContext.Config.TextColor;
 	}
@@ -310,7 +345,37 @@ public class TextField : InputField, IColoredObject
 		UpdateLabel();
 		eventData.Use();
 	}
-	
+
+	public override void OnPointerEnter(PointerEventData eventData)
+	{
+		base.OnPointerEnter(eventData);
+		if( Input.GetMouseButton(0) == false )
+		{
+			isPointerEntered_ = true;
+		}
+	}
+
+	public override void OnPointerExit(PointerEventData eventData)
+	{
+		base.OnPointerExit(eventData);
+		isPointerEntered_ = false;
+	}
+
+	public override void OnPointerUp(PointerEventData eventData)
+	{
+		base.OnPointerUp(eventData);
+
+		if( BindedLine.IsLinkText && isPointerEntered_ )
+		{
+			Vector2 localMousePos;
+			RectTransformUtility.ScreenPointToLocalPointInRectangle(textComponent.rectTransform, eventData.position, eventData.pressEventCamera, out localMousePos);
+			if( GetCharacterIndexFromPosition(localMousePos) < text.Length )
+			{
+				Application.OpenURL(text);
+			}
+		}
+	}
+
 	protected Event processingEvent_ = new Event();
 	public override void OnUpdateSelected(BaseEventData eventData)
 	{
