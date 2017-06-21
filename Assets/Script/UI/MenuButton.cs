@@ -23,7 +23,7 @@ public class MenuButton : Button {
 		{
 			if( currentSelectionState != SelectionState.Highlighted )
 			{
-				OnClick();
+				Close();
 			}
 		}
 	}
@@ -31,7 +31,14 @@ public class MenuButton : Button {
 	public void OnClick()
 	{
 		isOpening_ = !isOpening_;
-		menuObject_.SetActive(isOpening_);
+		if( isOpening_ )
+		{
+			menuObject_.SetActive(true);
+		}
+		else
+		{
+			Close();
+		}
 	}
 
 
@@ -40,6 +47,14 @@ public class MenuButton : Button {
 		if( isOpening_ )
 		{
 			isOpening_ = false;
+			foreach(Button menubutton in menuObject_.GetComponentsInChildren<Button>())
+			{
+				Transform subMenu = menubutton.transform.Find("SubMenu");
+				if( subMenu != null )
+				{
+					subMenu.gameObject.SetActive(false);
+				}
+			}
 			menuObject_.SetActive(false);
 		}
 	}

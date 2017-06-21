@@ -26,6 +26,7 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 	public RectTransform TabMenuParent;
 	public MenuButton FileMenu;
 	public ShortLineList LineList;
+	public GameObject RecentFilesSubMenu;
 
 	public float DesiredTabWidth = 200.0f;
 
@@ -46,6 +47,8 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 
 	Vector2 initialTreeOffsetMax_;
 	Vector2 initialTabOffsetMax_;
+	List<string> recentOpenedFiles_ = new List<string>();
+	int numRecentFilesMenu = 0;
 
 	public float HeaderWidth { get { return LineList.Width + 5.0f; } }
 
@@ -68,6 +71,7 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 		lineListFile_ = new FileInfo(System.Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + "/Dones/linelist.txt");
 		initialTreeOffsetMax_ = TreeScrollView.offsetMax;
 		initialTabOffsetMax_ = TabMenuParent.offsetMax;
+		numRecentFilesMenu = RecentFilesSubMenu.GetComponentsInChildren<UnityEngine.UI.Button>().Length;
 		StartCoroutine(InitialLoadCoroutine());
 	}
 
@@ -193,11 +197,53 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 		FileMenu.Close();
 	}
 
+	public void RecentFiles()
+	{
+		if( recentOpenedFiles_.Count > 0 )
+		{
+			RecentFilesSubMenu.SetActive(true);
+			UnityEngine.UI.Button[] buttons = RecentFilesSubMenu.GetComponentsInChildren<UnityEngine.UI.Button>(includeInactive: true);
+			for( int i = 0; i < buttons.Length; ++i )
+			{
+				if( i < recentOpenedFiles_.Count )
+				{
+					buttons[i].gameObject.SetActive(true);
+					buttons[i].GetComponentInChildren<Text>().text = recentOpenedFiles_[i];
+				}
+				else
+				{
+					buttons[i].gameObject.SetActive(false);
+				}
+			}
+		}
+	}
+
+	public void LoadRecentFile(int index)
+	{
+		LoadTree(recentOpenedFiles_[index], true);
+		FileMenu.Close();
+	}
+
+	#endregion
+	
+	
+	#region load utils
+
+	void AddRecentOpenedFiles(string path)
+	{
+		path = path.Replace('\\', '/');
+		if( recentOpenedFiles_.Count < numRecentFilesMenu && recentOpenedFiles_.Contains(path) == false )
+		{
+			recentOpenedFiles_.Add(path);
+		}
+	}
+
 	void LoadTree(string path, bool isActive)
 	{
+		AddRecentOpenedFiles(path);
 		foreach( Tree existTree in trees_ )
 		{
-			if( existTree.File != null && existTree.File.FullName == path )
+			if( existTree.File != null && existTree.File.FullName.Replace('\\', '/') == path.Replace('\\', '/') )
 			{
 				if( existTree != activeTree_ )
 				{
@@ -365,6 +411,7 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 	enum Settings
 	{
 		InitialFiles,
+		RecentFiles,
 		InitialDirectory,
 		ScreenSize,
 		IsToDoListOpened,
@@ -373,7 +420,8 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 
 	static string[] SettingsTags = new string[(int)Settings.Count] {
 		"[initial files]",
-		"[initial directory]",
+		"[recent files]",
+		"[initial files]",
 		"[screen]",
 		"[todo list]"
 		};
@@ -407,6 +455,12 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 				if( text.EndsWith(".dtml") && File.Exists(text) )
 				{
 					LoadTree(text, isActive: activeTree_ == null);
+				}
+				break;
+			case Settings.RecentFiles:
+				if( text.EndsWith(".dtml") && File.Exists(text) )
+				{
+					AddRecentOpenedFiles(text);
 				}
 				break;
 			case Settings.InitialDirectory:
@@ -456,6 +510,11 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 			{
 				writer.WriteLine(tree.File.FullName.ToString());
 			}
+		}
+		writer.WriteLine(SettingsTags[(int)Settings.RecentFiles]);
+		foreach( string recentFile in recentOpenedFiles_ )
+		{
+			writer.WriteLine(recentFile);
 		}
 		if( initialDirectory_ != null )
 		{

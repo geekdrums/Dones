@@ -619,7 +619,7 @@ public class Line : IEnumerable<Line>
 		get
 		{
 			int level = 0;
-			if( parent_ != null )
+			if( parent_ != null && parent_.parent_ != null )
 			{
 				level = parent_.Level + 1;
 			}
@@ -819,7 +819,7 @@ public class Line : IEnumerable<Line>
 	public static string OnListTag = "<o>";
 	public void AppendStringTo(StringBuilder builder, bool appendTag = false)
 	{
-		int level = Level - 1;
+		int level = Level;
 		for( int i = 0; i < level; ++i )
 		{
 			builder.Append(TabString);

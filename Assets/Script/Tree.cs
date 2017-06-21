@@ -620,7 +620,7 @@ public class Tree : MonoBehaviour {
 		// 逆順で下から処理
 		foreach( Line line in GetSelectedOrFocusedLines(ascending: false) )
 		{
-			if( line.Parent.Parent != null && ( line.Parent.Field.IsSelected == false || line.Parent.Level <= 1 ) )
+			if( line.Parent.Parent != null && ( line.Parent.Field.IsSelected == false || line.Parent.Level <= 0 ) )
 			{
 				int index = line.Index;
 				Line oldParent = line.Parent;
@@ -1255,7 +1255,7 @@ public class Tree : MonoBehaviour {
 			foreach( Line line in selectedLines_.Values )
 			{
 				line.AppendStringTo(clipboardLines, appendTag);
-				if( line.IsFolded )
+				if( line.IsFolded && appendTag )
 				{
 					foreach( Line child in line.GetAllChildren() )
 					{
@@ -1361,6 +1361,7 @@ public class Tree : MonoBehaviour {
 		}
 
 		int oldLevel = currentLevel;
+		int startLevel = pasteStart.Level;
 		Line parent = pasteStart.Parent;
 		Line brother = pasteStart;
 		for( int i = 1; i < cilpboardLines.Length; ++i )
@@ -1391,7 +1392,7 @@ public class Tree : MonoBehaviour {
 			}
 			else// currentLevel < oldLevel 
 			{
-				for( int level = oldLevel; level > currentLevel; --level )
+				for( int level = oldLevel; currentLevel < level && startLevel < brother.Level; --level )
 				{
 					if( parent.Parent == null ) break;
 
