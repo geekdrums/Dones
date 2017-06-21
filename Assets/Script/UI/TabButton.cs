@@ -125,13 +125,39 @@ public class TabButton : UnityEngine.UI.Button, IDragHandler, IBeginDragHandler,
 
 	public void Close()
 	{
-		// todo: 保存していない場合、保存するか確認するウィンドウを出す
+		if( BindedTree.IsEdited )
+		{
+			GameContext.Window.ModalDialog.Show(BindedTree.TitleText + "ファイルへの変更を保存しますか？", this.CloseConfirmCallback);
+			return;
+		}
 
+		DoClose();
+	}
+
+	void DoClose()
+	{
 		if( IsOn )
 			IsOn = false;
 
 		GameContext.Window.OnTreeClosed(BindedTree);
 		Destroy(this.gameObject);
+	}
+
+	public void CloseConfirmCallback(ModalDialog.DialogResult result)
+	{
+		switch(result)
+		{
+		case ModalDialog.DialogResult.Yes:
+			BindedTree.Save();
+			DoClose();
+			break;
+		case ModalDialog.DialogResult.No:
+			DoClose();
+			break;
+		case ModalDialog.DialogResult.Cancel:
+			// do nothing
+			break;
+		}
 	}
 
 	void UpdateColor()

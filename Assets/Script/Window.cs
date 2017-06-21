@@ -25,8 +25,9 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 	public GameObject TabParent;
 	public RectTransform TabMenuParent;
 	public MenuButton FileMenu;
-	public ShortLineList LineList;
 	public GameObject RecentFilesSubMenu;
+	public ShortLineList LineList;
+	public ModalDialog ModalDialog;
 
 	public float DesiredTabWidth = 200.0f;
 
@@ -48,7 +49,9 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 	Vector2 initialTreeOffsetMax_;
 	Vector2 initialTabOffsetMax_;
 	List<string> recentOpenedFiles_ = new List<string>();
+	Stack<string> recentClosedFiles_ = new Stack<string>();
 	int numRecentFilesMenu = 0;
+	bool saveConfirmed_ = false;
 
 	public float HeaderWidth { get { return LineList.Width + 5.0f; } }
 
@@ -118,6 +121,13 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 				}
 			}
 		}
+		if( ctrl && shift )
+		{
+			if( Input.GetKeyDown(KeyCode.T) && recentClosedFiles_.Count > 0 )
+			{
+				LoadTree(recentClosedFiles_.Pop(), true);
+			}
+		}
 
 		if(	currentScreenWidth_ != UnityEngine.Screen.width )
 		{
@@ -128,8 +138,45 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 
 	void OnApplicationQuit()
 	{
+		if( saveConfirmed_ == false )
+		{
+			saveConfirmed_ = true;
+			foreach( Tree tree in trees_ )
+			{
+				if( tree.IsEdited )
+				{
+					GameContext.Window.ModalDialog.Show("ファイルへの変更を保存しますか？", this.CloseConfirmCallback);
+					UnityEngine.Application.CancelQuit();
+					return;
+				}
+			}
+		}
+
 		SaveSettings();
 		SaveLineList();
+	}
+
+	public void CloseConfirmCallback(ModalDialog.DialogResult result)
+	{
+		switch( result )
+		{
+		case ModalDialog.DialogResult.Yes:
+			foreach( Tree tree in trees_ )
+			{
+				if( tree.IsEdited )
+				{
+					tree.Save();
+				}
+			}
+			UnityEngine.Application.Quit();
+			break;
+		case ModalDialog.DialogResult.No:
+			UnityEngine.Application.Quit();
+			break;
+		case ModalDialog.DialogResult.Cancel:
+			saveConfirmed_ = false;
+			break;
+		}
 	}
 
 	#endregion
@@ -282,8 +329,10 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 
 	public void OnTreeClosed(Tree closedTree)
 	{
-		// todo: 保存確認
-
+		if( closedTree.File != null )
+		{
+			recentClosedFiles_.Push(closedTree.File.FullName);
+		}
 		List<ShortLine> removeList = new List<ShortLine>();
 		foreach( ShortLine shortLine in LineList )
 		{
@@ -593,6 +642,7 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 	}
 
 	#endregion
+
 
 	#region window title
 

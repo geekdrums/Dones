@@ -65,7 +65,7 @@ public class Tree : MonoBehaviour {
 	public override string ToString() { return TitleText; }
 
 	public bool IsActive { get { return (tabButton_ != null ? tabButton_.IsOn : false); } set { if( tabButton_ != null ) tabButton_.IsOn = value; } }
-
+	public bool IsEdited { get { return isEdited_; } }
 
 	// utils
 	protected IEnumerable<Line> GetSelectedOrFocusedLines(bool ascending = true)
