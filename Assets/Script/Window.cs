@@ -1,4 +1,7 @@
-﻿using UnityEngine;
+﻿#if UNITY_STANDALONE_WIN
+//#define HOOK_WNDPROC
+#endif
+using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
 using System;
@@ -65,6 +68,10 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 		GameContext.Window = this;
 		currentScreenWidth_ = UnityEngine.Screen.width;
 		currentTabWidth_ = DesiredTabWidth;
+
+#if HOOK_WNDPROC
+		InitWndProc();
+#endif
 	}
 
 	// Use this for initialization
@@ -154,6 +161,10 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 
 		SaveSettings();
 		SaveLineList();
+
+#if HOOK_WNDPROC
+		TermWndProc();
+#endif
 	}
 
 	public void CloseConfirmCallback(ModalDialog.DialogResult result)
@@ -663,7 +674,7 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 
 	#region drop file
 
-#if UNITY_EDITOR
+#if !HOOK_WNDPROC && UNITY_EDITOR
 	void OnGUI()
 	{
 		var evt = Event.current;
@@ -679,12 +690,13 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 			case EventType.DragPerform:
 				{
 					DragAndDrop.AcceptDrag();
+					bool isActive = true;
 					foreach( string path in DragAndDrop.paths )
 					{
 						if( path.EndsWith(".dtml") )
 						{
-							LoadTree(path, isActive: true);
-							break;
+							LoadTree(path, isActive);
+							isActive = false;
 						}
 					}
 					evt.Use();
@@ -693,7 +705,7 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 			}
 		}
 	}
-#elif false // UNITY_STANDALONE_WIN
+#elif HOOK_WNDPROC
 
 	// 参考：
 	// Unity(x86/x64)でWindowsメッセージを受け取る方法 - Qiita http://qiita.com/DandyMania/items/d1404c313f67576d395f
@@ -701,23 +713,18 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 
 	const int GWL_WNDPROC = -4;
 
-	void Awake()
-	{
-		Init();
-	}
-
 	void OnGUI()
 	{
 		// ウィンドウハンドルが切り替わったので初期化 
 		if( hMainWindow.Handle == IntPtr.Zero )
 		{
-			Init();
+			InitWndProc();
 		}
 	}
 
-	void OnDestroy()//OnApplicationQuit()
+	void OnDisable()
 	{
-		Term();
+		TermWndProc();
 	}
 
 	#region hook window event
@@ -728,34 +735,39 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 	private IntPtr oldWndProcPtr;
 	private WndProcDelegate newWndProc;
 
-	void Init()
+	void InitWndProc()
 	{
 		// ウインドウプロシージャをフックする
 		hMainWindow = new HandleRef(null, GetActiveWindow());
 		newWndProc = new WndProcDelegate(WndProc);
 		newWndProcPtr = Marshal.GetFunctionPointerForDelegate(newWndProc);
-		oldWndProcPtr = SetWindowLongPtr(hMainWindow, GWL_WNDPROC, newWndProcPtr);
+		oldWndProcPtr = SetWindowLongPtr(hMainWindow.Handle, GWL_WNDPROC, newWndProcPtr);
 		DragAcceptFiles(hMainWindow.Handle, true);
 	}
 
-	void Term()
+	void TermWndProc()
 	{
-		// todo: 終了時にクラッシュするので、どうすればいいかわからん。
-		SetWindowLongPtr(hMainWindow, GWL_WNDPROC, oldWndProcPtr);
-		hMainWindow = new HandleRef(null, IntPtr.Zero);
-		oldWndProcPtr = IntPtr.Zero;
-		newWndProcPtr = IntPtr.Zero;
-		newWndProc = null;
+		if( newWndProc != null )
+		{
+			SetWindowLongPtr(hMainWindow.Handle, GWL_WNDPROC, oldWndProcPtr);
+			hMainWindow = new HandleRef(null, IntPtr.Zero);
+			newWndProcPtr = IntPtr.Zero;
+			oldWndProcPtr = IntPtr.Zero;
+			newWndProc = null;
+		}
 	}
 	
-	[DllImport("user32.dll")]
-	static extern System.IntPtr GetActiveWindow();
-
 	[DllImport("user32.dll", EntryPoint = "SetWindowLong")]
 	private static extern int SetWindowLong32(HandleRef hWnd, int nIndex, int dwNewLong);
 
 	[DllImport("user32.dll", EntryPoint = "SetWindowLongPtr")]
 	private static extern IntPtr SetWindowLongPtr64(HandleRef hWnd, int nIndex, IntPtr dwNewLong);
+
+	[DllImport("user32.dll")]
+	static extern IntPtr SetWindowLongPtr(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
+
+	[DllImport("user32.dll")]
+	static extern IntPtr SetWindowLong(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
 
 	[DllImport("user32.dll", EntryPoint = "DefWindowProcA")]
 	private static extern IntPtr DefWindowProc(IntPtr hWnd, uint wMsg, IntPtr wParam, IntPtr lParam);
@@ -763,20 +775,13 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 	[DllImport("user32.dll", EntryPoint = "CallWindowProc")]
 	private static extern IntPtr CallWindowProc(IntPtr lpPrevWndFunc, IntPtr hWnd, uint wMsg, IntPtr wParam, IntPtr lParam);
 
-	public static IntPtr SetWindowLongPtr(HandleRef hWnd, int nIndex, IntPtr dwNewLong)
-	{
-		if( IntPtr.Size == 8 )
-		{
-			return SetWindowLongPtr64(hWnd, nIndex, dwNewLong);
-		}
-		else
-		{
-			return new IntPtr(SetWindowLong32(hWnd, nIndex, dwNewLong.ToInt32()));
-		}
-	}
-
 	private IntPtr WndProc(IntPtr hwnd, uint msg, IntPtr wParam, IntPtr lParam)
 	{
+		if( msg == WM_NCDESTROY || msg == WM_WINDOWPOSCHANGING )
+		{
+			TermWndProc();
+			return DefWindowProc(hwnd, msg, wParam, lParam);
+		}
 		if( msg == WM_DROPFILES )
 		{
 			HandleDropFiles(wParam);
@@ -800,6 +805,10 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 	static extern void DragFinish(IntPtr hDrop);
 
 	const int WM_DROPFILES = 0x233;
+	const int WM_MOUSEHWHEEL = 0x20E;
+	const int WM_NCHITTEST = 0x084;
+	const int WM_NCDESTROY = 0x082;
+	const int WM_WINDOWPOSCHANGING = 0x046;
 
 	private void HandleDropFiles(IntPtr hDrop)
 	{
@@ -807,17 +816,18 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 
 		var count = DragQueryFile(hDrop, 0xFFFFFFFF, null, 0);
 
+		bool isActive = true;
 		for( uint i = 0; i < count; i++ )
 		{
 			int size = (int)DragQueryFile(hDrop, i, null, 0);
 
 			var filename = new StringBuilder(size + 1);
 			DragQueryFile(hDrop, i, filename, MAX_PATH);
-			
+
 			if( filename.ToString().EndsWith(".dtml") )
 			{
-				LoadTree(filename.ToString());
-				break;
+				LoadTree(filename.ToString(), isActive);
+				isActive = false;
 			}
 		}
 
