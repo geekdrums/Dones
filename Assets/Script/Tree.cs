@@ -716,6 +716,8 @@ public class Tree : MonoBehaviour {
 					line.Text = newString;
 					insertParent.Insert(insertIndex, line);
 					insertParent.AdjustLayoutRecursive(insertIndex + 1);
+					target.CheckIsLink();
+					line.CheckIsLink();
 					line.Field.CaretPosision = 0;
 					line.Field.IsFocused = true;
 				},
@@ -724,6 +726,7 @@ public class Tree : MonoBehaviour {
 					target.Text = oldString;
 					insertParent.Remove(line);
 					insertParent.AdjustLayoutRecursive(insertIndex);
+					target.CheckIsLink();
 					target.Field.CaretPosision = caretPos;
 					target.Field.IsFocused = true;
 				}
