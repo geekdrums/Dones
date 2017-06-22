@@ -1301,22 +1301,33 @@ public class Tree : MonoBehaviour {
 				pasteStart = focusedLine_;
 			}
 
+			bool loadTag = pasteStart.Text == "";
 			string oldText = pasteStart.Text;
 			string oldTag = pasteStart.GetTagStrings();
 			int oldCaretPos = pasteStart.Field.CaretPosision;
 			actionManager_.Execute(new Action(
 				execute: () =>
 				{
-					string beforeRefText = pasteText;
-					pasteStart.LoadTag(ref pasteText);
-					pasteStart.Field.Paste(pasteText);
-					pasteText = beforeRefText;
+					if( loadTag )
+					{
+						string beforeRefText = pasteText;
+						pasteStart.LoadTag(ref pasteText);
+						pasteStart.Field.Paste(pasteText);
+						pasteText = beforeRefText;
+					}
+					else
+					{
+						pasteStart.Field.Paste(pasteText);
+					}
 				},
 				undo: () =>
 				{
 					pasteStart.Field.CaretPosision = oldCaretPos;
-					string refTag = oldTag;
-					pasteStart.LoadTag(ref refTag);
+					if( loadTag )
+					{
+						string refTag = oldTag;
+						pasteStart.LoadTag(ref refTag);
+					}
 					pasteStart.Text = oldText;
 				}
 				));

@@ -210,16 +210,18 @@ public class TextField : InputField, IColoredObject
 
 	public void SetIsLinkText(bool isLink)
 	{
-		strikeLine_.gameObject.SetActive(isLink);
-		Foreground = GetDesiredTextColor();
 		if( isLink )
 		{
+			strikeLine_.gameObject.SetActive(isLink);
+			Foreground = GetDesiredTextColor();
 			strikeLine_.transform.localPosition = new Vector3(strikeLine_.transform.localPosition.x, -5, strikeLine_.transform.localPosition.z);
 			strikeLine_.SetColor(GameContext.Config.LinkColor);
 			OnTextLengthChanged();
 		}
-		else
+		else if( BindedLine.IsDone == false )
 		{
+			strikeLine_.gameObject.SetActive(isLink);
+			Foreground = GetDesiredTextColor();
 			strikeLine_.transform.localPosition = new Vector3(strikeLine_.transform.localPosition.x, 0, strikeLine_.transform.localPosition.z);
 			strikeLine_.SetColor(GameContext.Config.StrikeColor);
 		}
