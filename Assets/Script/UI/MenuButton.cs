@@ -44,18 +44,15 @@ public class MenuButton : Button {
 
 	public void Close()
 	{
-		if( isOpening_ )
+		isOpening_ = false;
+		foreach(Button menubutton in menuObject_.GetComponentsInChildren<Button>())
 		{
-			isOpening_ = false;
-			foreach(Button menubutton in menuObject_.GetComponentsInChildren<Button>())
+			Transform subMenu = menubutton.transform.Find("SubMenu");
+			if( subMenu != null )
 			{
-				Transform subMenu = menubutton.transform.Find("SubMenu");
-				if( subMenu != null )
-				{
-					subMenu.gameObject.SetActive(false);
-				}
+				subMenu.gameObject.SetActive(false);
 			}
-			menuObject_.SetActive(false);
 		}
+		menuObject_.SetActive(false);
 	}
 }

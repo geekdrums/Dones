@@ -162,7 +162,7 @@ public class TabButton : UnityEngine.UI.Button, IDragHandler, IBeginDragHandler,
 
 	void UpdateColor()
 	{
-		Background = isOn_ ? ColorManager.Theme.Bright : ColorManager.Base.Middle;
+		Background = isOn_ ? ColorManager.Theme.Bright : ColorManager.Base.Front;
 		textComponent_.color = isOn_ ? ColorManager.Base.Front : GameContext.Config.TextColor;
 	}
 
