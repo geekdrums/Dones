@@ -449,7 +449,7 @@ public class TextField : InputField, IColoredObject
 						BindedLine.Tree.ActionManager.Execute(new Action(
 							execute: () =>
 							{
-								Paste(date.ToString("yyyy/M/dd (ddd)"));
+								Paste(date.ToString("yyyy/M/d (ddd)"));
 							},
 							undo: () =>
 							{

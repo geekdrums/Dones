@@ -255,7 +255,7 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 	{
 		if( activeTree_ != null )
 		{
-			activeTree_.Save(saveAs: true);
+			activeTree_.SaveAs();
 		}
 
 		FileMenu.Close();
@@ -318,9 +318,8 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 		}
 		TreeNote tree = Instantiate(TreePrefab.gameObject, TreeParent.transform).GetComponent<TreeNote>();
 		TabButton tab = Instantiate(TabButtonPrefab.gameObject, TabParent.transform).GetComponent<TabButton>();
-		tree.Load(path, tab);
+		tree.Load(path, tab, isActive);
 		OnTreeCreated(tree);
-		tree.IsActive = isActive;
 	}
 
 	#endregion
@@ -399,7 +398,7 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 		{
 			currentTabWidth_ = (UnityEngine.Screen.width - HeaderWidth) / trees_.Count;
 		}
-		foreach( Tree tree in trees_ )
+		foreach( TreeNote tree in trees_ )
 		{
 			tree.Tab.Width = currentTabWidth_;
 			tree.Tab.TargetPosition = GetTabPosition(tree.Tab);

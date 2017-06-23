@@ -16,13 +16,38 @@ public class TreeNote : Tree
 {
 	public LogTree LogTree;
 
+
+	#region properties
+
+	public bool IsActive { get { return (tabButton_ != null ? tabButton_.IsOn : false); } set { if( tabButton_ != null ) tabButton_.IsOn = value; } }
+	public override bool IsEdited
+	{
+		get
+		{
+			return isEdited_;
+		}
+		protected set
+		{
+			isEdited_ = value;
+			tabButton_.Text = TitleText + (isEdited_ ? "*" : "");
+		}
+	}
+	public TabButton Tab { get { return tabButton_; } }
+	protected TabButton tabButton_;
+
 	protected ScrollRect scrollRect_;
 	protected float targetScrollValue_ = 1.0f;
 	protected bool isScrollAnimating_;
 
+	#endregion
+
+
+	#region unity functions
+
 	protected override void Awake()
 	{
 		base.Awake();
+		scrollRect_ = GetComponentInParent<ScrollRect>();
 
 		actionManager_ = new ActionManager();
 		actionManager_.ChainStarted += this.actionManager__ChainStarted;
@@ -55,9 +80,18 @@ public class TreeNote : Tree
 		base.Update();
 	}
 
+	#endregion
 
-	public override void UpdateScrollTo(Line targetLine)
+
+	#region tab, scroll
+
+	public override void ScrollTo(Line targetLine)
 	{
+		if( IsActive == false )
+		{
+			IsActive = true;
+		}
+
 		float scrollHeight = scrollRect_.GetComponent<RectTransform>().rect.height;
 		float targetHeight = -(targetLine.Field.transform.position.y - this.transform.position.y);
 		float heightPerLine = GameContext.Config.HeightPerLine;
@@ -80,23 +114,34 @@ public class TreeNote : Tree
 			return;
 		}
 	}
-
-	public override void OnTabSelected()
-	{
-		base.OnTabSelected();
-		scrollRect_ = GetComponentInParent<ScrollRect>();
-		scrollRect_.verticalScrollbar.value = targetScrollValue_;
-	}
 	
-	public override void OnTabDeselected()
+	public void OnTabSelected()
 	{
-		base.OnTabDeselected();
-		if( scrollRect_ != null )
+		GameContext.CurrentActionManager = actionManager_;
+
+		UpdateLayoutElement();
+		scrollRect_.verticalScrollbar.value = targetScrollValue_;
+
+		if( focusedLine_ == null )
 		{
-			targetScrollValue_ = scrollRect_.verticalScrollbar.value;
-			scrollRect_ = null;
+			focusedLine_ = rootLine_[0];
 		}
+		focusedLine_.Field.IsFocused = true;
+
+		SubscribeKeyInput();
+
+#if UNITY_STANDALONE_WIN
+		GameContext.Window.SetTitle(TitleText + " - Dones");
+#endif
 	}
+
+	public void OnTabDeselected()
+	{
+		targetScrollValue_ = scrollRect_.verticalScrollbar.gameObject.activeInHierarchy ? scrollRect_.verticalScrollbar.value : 1.0f;
+	}
+
+	#endregion
+
 
 	#region file
 
@@ -114,55 +159,59 @@ public class TreeNote : Tree
 		tabButton_.Text = TitleText;
 	}
 
-	public void Load(string path, TabButton tab)
+	public void Load(string path, TabButton tab, bool isActive)
 	{
 		if( file_ != null )
 		{
 			return;
 		}
 
-		tabButton_ = tab;
-
 		file_ = new FileInfo(path);
 
+		tabButton_ = tab;
+
+		gameObject.SetActive(isActive);
+
 		LoadInternal();
+
+		tabButton_.BindedTree = this;
+		IsActive = isActive;
+		tabButton_.Text = TitleText;
+		targetScrollValue_ = 1.0f;
 	}
 
-	public override void Save(bool saveAs = false)
+	public override void Save()
 	{
-		if( file_ == null || saveAs )
+		if( file_ == null )
 		{
-			SaveFileDialog saveFileDialog = new SaveFileDialog();
-			saveFileDialog.Filter = "dones file (*.dtml)|*.dtml";
-			saveFileDialog.FileName = rootLine_.Text;
-			DialogResult dialogResult = saveFileDialog.ShowDialog();
-			if( dialogResult == DialogResult.OK )
-			{
-				file_ = new FileInfo(saveFileDialog.FileName);
-				rootLine_.Text = file_.Name;
+			SaveAs();
+		}
+		else
+		{
+			base.Save();
+		}
+	}
+
+	public void SaveAs()
+	{
+		SaveFileDialog saveFileDialog = new SaveFileDialog();
+		saveFileDialog.Filter = "dones file (*.dtml)|*.dtml";
+		saveFileDialog.FileName = rootLine_.Text;
+		DialogResult dialogResult = saveFileDialog.ShowDialog();
+		if( dialogResult == DialogResult.OK )
+		{
+			file_ = new FileInfo(saveFileDialog.FileName);
+			rootLine_.Text = file_.Name;
 #if UNITY_STANDALONE_WIN
-				GameContext.Window.SetTitle(TitleText + " - Dones");
+			GameContext.Window.SetTitle(TitleText + " - Dones");
 #endif
-			}
-			else
-			{
-				return;
-			}
 		}
-
-		StringBuilder builder = new StringBuilder();
-		foreach( Line line in rootLine_.GetAllChildren() )
+		else
 		{
-			line.AppendStringTo(builder, appendTag: true);
+			return;
 		}
 
-		StreamWriter writer = new StreamWriter(file_.FullName, append: false);
-		writer.Write(builder.ToString());
-		writer.Flush();
-		writer.Close();
-
-		isEdited_ = false;
-		tabButton_.Text = TitleText;
+		base.Save();
 	}
 
 	public void Reload()
@@ -189,66 +238,7 @@ public class TreeNote : Tree
 		}
 
 		LoadInternal();
-	}
-
-	protected void LoadInternal()
-	{
-		SuspendLayout();
-		rootLine_ = new Line(file_.Name);
-		rootLine_.Bind(this.gameObject);
-
-		StreamReader reader = new StreamReader(file_.OpenRead());
-		Line parent = rootLine_;
-		Line brother = null;
-		string text = null;
-		int currentLevel, oldLevel = 0;
-		while( (text = reader.ReadLine()) != null )
-		{
-			currentLevel = 0;
-			while( text.StartsWith(Line.TabString) )
-			{
-				++currentLevel;
-				text = text.Remove(0, 1);
-			}
-
-			Line line = new Line(text, loadTag: true);
-
-			Line addParent;
-
-			if( currentLevel > oldLevel )
-			{
-				addParent = brother;
-				parent = brother;
-			}
-			else if( currentLevel == oldLevel )
-			{
-				addParent = parent;
-			}
-			else// currentLevel < oldLevel 
-			{
-				for( int level = oldLevel; level > currentLevel; --level )
-				{
-					if( parent.Parent == null ) break;
-
-					brother = parent;
-					parent = parent.Parent;
-				}
-				addParent = parent;
-			}
-
-			addParent.Add(line);
-
-			brother = line;
-			oldLevel = currentLevel;
-		}
-		if( rootLine_.Count == 0 )
-		{
-			rootLine_.Add(new Line(""));
-		}
-		reader.Close();
-		ResumeLayout();
-
-		tabButton_.BindedTree = this;
+		
 		tabButton_.Text = TitleText;
 	}
 

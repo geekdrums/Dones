@@ -145,15 +145,11 @@ public class ShortLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragHa
 	{
 		if( BindedLine != null )
 		{
-			if( BindedLine.Tree.IsActive == false )
-			{
-				BindedLine.Tree.IsActive = true;
-			}
 			if( BindedLine.IsVisible == false )
 			{
 				BindedLine.IsVisible = true;
 			}
-			BindedLine.Tree.UpdateScrollTo(BindedLine);
+			BindedLine.Tree.ScrollTo(BindedLine);
 			BindedLine.Field.Select();
 			BindedLine.Field.IsFocused = true;
 		}

@@ -45,7 +45,6 @@ public class Tree : MonoBehaviour {
 	// components
 	protected LayoutElement layout_;
 	protected ContentSizeFitter contentSizeFitter_;
-	protected TabButton tabButton_;
 
 
 	// file
@@ -55,15 +54,13 @@ public class Tree : MonoBehaviour {
 	// properties
 	public ActionManager ActionManager { get { return actionManager_; } }
 	public FileInfo File { get { return file_; } }
-	public TabButton Tab { get { return tabButton_; } }
 	public Line FocusedLine { get { return focusedLine_; } }
 	public Line RootLine { get { return rootLine_; } }
 
 	public string TitleText { get { return rootLine_ != null ? rootLine_.Text : ""; } }
 	public override string ToString() { return TitleText; }
 
-	public bool IsEdited { get { return isEdited_; } }
-	public bool IsActive { get { return (tabButton_ != null ? tabButton_.IsOn : false); } set { if( tabButton_ != null ) tabButton_.IsOn = value; } }
+	public virtual bool IsEdited { get { return isEdited_; } protected set { isEdited_ = value; } }
 
 	// utils
 	protected IEnumerable<Line> GetSelectedOrFocusedLines(bool ascending = true)
@@ -99,6 +96,8 @@ public class Tree : MonoBehaviour {
 
 	protected virtual void Awake()
 	{
+		layout_ = GetComponentInParent<LayoutElement>();
+		contentSizeFitter_ = GetComponentInParent<ContentSizeFitter>();
 	}
 
 	// Update is called once per frame
@@ -488,10 +487,9 @@ public class Tree : MonoBehaviour {
 			AdjustRequestedLayouts();
 		}
 
-		if( isEdited_ == false )
+		if( IsEdited == false )
 		{
-			isEdited_ = true;
-			tabButton_.Text = TitleText + "*";
+			IsEdited = true;
 		}
 	}
 
@@ -657,14 +655,14 @@ public class Tree : MonoBehaviour {
 				{
 					parent.Insert(index, line);
 					parent.AdjustLayoutRecursive(index + 1);
-					UpdateScrollTo(target);
+					ScrollTo(target);
 				},
 				undo: () =>
 				{
 					parent.Remove(line);
 					parent.AdjustLayoutRecursive(index);
 					target.Field.CaretPosision = caretPos;
-					UpdateScrollTo(target);
+					ScrollTo(target);
 				}
 				));
 		}
@@ -1486,7 +1484,7 @@ public class Tree : MonoBehaviour {
 			selectionStartLine_ = line;
 		}
 
-		UpdateScrollTo(focusedLine_);
+		ScrollTo(focusedLine_);
 	}
 
 	public void OnFocusEnded(Line line)
@@ -1528,33 +1526,10 @@ public class Tree : MonoBehaviour {
 	{
 		usingFields_.Remove(field);
 	}
-
-	public virtual void OnTabSelected()
+	
+	public virtual void ScrollTo(Line targetLine)
 	{
-		layout_ = GetComponentInParent<LayoutElement>();
-		contentSizeFitter_ = GetComponentInParent<ContentSizeFitter>();
 
-		GameContext.CurrentActionManager = actionManager_;
-
-		UpdateLayoutElement();
-
-		if( focusedLine_ == null )
-		{
-			focusedLine_ = rootLine_[0];
-		}
-		focusedLine_.Field.IsFocused = true;
-
-		SubscribeKeyInput();
-
-#if UNITY_STANDALONE_WIN
-		GameContext.Window.SetTitle(TitleText + " - Dones");
-#endif
-	}
-
-	public virtual void OnTabDeselected()
-	{
-		layout_ = null;
-		contentSizeFitter_ = null;
 	}
 
 	#endregion
@@ -1564,7 +1539,7 @@ public class Tree : MonoBehaviour {
 
 	protected void UpdateLayoutElement()
 	{
-		if( suspendLayoutCount_ <= 0 && layout_ != null )
+		if( suspendLayoutCount_ <= 0 && layout_ != null && rootLine_ != null && gameObject.activeInHierarchy )
 		{
 			Line lastLine = rootLine_.LastVisibleLine;
 			if( lastLine != null && lastLine.Field != null )
@@ -1626,16 +1601,81 @@ public class Tree : MonoBehaviour {
 	#endregion
 
 
-	#region virtual functions
+	#region files
 
-	public virtual void Save(bool saveAs = false)
+	public virtual void Save()
 	{
+		StringBuilder builder = new StringBuilder();
+		foreach( Line line in rootLine_.GetAllChildren() )
+		{
+			line.AppendStringTo(builder, appendTag: true);
+		}
 
+		StreamWriter writer = new StreamWriter(file_.FullName, append: false);
+		writer.Write(builder.ToString());
+		writer.Flush();
+		writer.Close();
+
+		IsEdited = false;
 	}
-
-	public virtual void UpdateScrollTo(Line targetLine)
+	
+	protected void LoadInternal()
 	{
+		SuspendLayout();
+		rootLine_ = new Line(file_.Name);
+		rootLine_.Bind(this.gameObject);
 
+		StreamReader reader = new StreamReader(file_.OpenRead());
+		Line parent = rootLine_;
+		Line brother = null;
+		string text = null;
+		int currentLevel, oldLevel = 0;
+		while( (text = reader.ReadLine()) != null )
+		{
+			currentLevel = 0;
+			while( text.StartsWith(Line.TabString) )
+			{
+				++currentLevel;
+				text = text.Remove(0, 1);
+			}
+
+			Line line = new Line(text, loadTag: true);
+
+			Line addParent;
+
+			if( currentLevel > oldLevel )
+			{
+				addParent = brother;
+				parent = brother;
+			}
+			else if( currentLevel == oldLevel )
+			{
+				addParent = parent;
+			}
+			else// currentLevel < oldLevel 
+			{
+				for( int level = oldLevel; level > currentLevel; --level )
+				{
+					if( parent.Parent == null ) break;
+
+					brother = parent;
+					parent = parent.Parent;
+				}
+				addParent = parent;
+			}
+
+			addParent.Add(line);
+
+			brother = line;
+			oldLevel = currentLevel;
+		}
+		if( rootLine_.Count == 0 )
+		{
+			rootLine_.Add(new Line(""));
+		}
+		reader.Close();
+		ResumeLayout();
+		IsEdited = false;
 	}
 
 	#endregion

@@ -28,8 +28,6 @@ public class TabButton : UnityEngine.UI.Button, IDragHandler, IBeginDragHandler,
 			{
 				BindedTree.OnTabDeselected();
 			}
-			BindedTree.transform.SetParent(isOn_ ? GameContext.Window.TreeParent.transform : this.transform);
-			BindedTree.transform.localPosition = GameContext.Window.TreePrefab.transform.localPosition;
 			BindedTree.gameObject.SetActive(isOn_);
 			if( isOn_ )
 			{
