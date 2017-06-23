@@ -414,7 +414,7 @@ public class Tree : MonoBehaviour {
 
 			Line parent = line.Parent;
 			int index = line.Index;
-			Line layoutStart = line.NextVisibleLine;
+			Line layoutStart = line.NextSiblingLine;
 			deleteActions.Add(new Action(
 				execute: () =>
 				{
@@ -471,11 +471,13 @@ public class Tree : MonoBehaviour {
 			execute: () =>
 			{
 				oldParent.Insert(oldIndex, newLine);
+				RequestLayout(newLine.NextVisibleLine);
 				newLine.Field.IsFocused = true;
 				OnFocused(newLine);
 			},
 			undo: () =>
 			{
+				RequestLayout(newLine.NextVisibleLine);
 				oldParent.Remove(newLine);
 			}
 			));
