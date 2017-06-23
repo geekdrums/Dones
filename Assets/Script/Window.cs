@@ -39,8 +39,8 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 
 	#region params
 
-	Tree activeTree_;
-	List<Tree> trees_ = new List<Tree>();
+	TreeNote activeTree_;
+	List<TreeNote> trees_ = new List<TreeNote>();
 	FileInfo settingFile_;
 	FileInfo lineListFile_;
 
@@ -232,7 +232,7 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 
 	public void NewFile()
 	{
-		Tree tree = Instantiate(TreePrefab.gameObject, TreeParent.transform).GetComponent<Tree>();
+		TreeNote tree = Instantiate(TreePrefab.gameObject, TreeParent.transform).GetComponent<TreeNote>();
 		TabButton tab = Instantiate(TabButtonPrefab.gameObject, TabParent.transform).GetComponent<TabButton>();
 		tree.NewFile(tab);
 		OnTreeCreated(tree);
@@ -305,7 +305,7 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 	void LoadTree(string path, bool isActive)
 	{
 		AddRecentOpenedFiles(path);
-		foreach( Tree existTree in trees_ )
+		foreach( TreeNote existTree in trees_ )
 		{
 			if( existTree.File != null && existTree.File.FullName.Replace('\\', '/') == path.Replace('\\', '/') )
 			{
@@ -316,7 +316,7 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 				return;
 			}
 		}
-		Tree tree = Instantiate(TreePrefab.gameObject, TreeParent.transform).GetComponent<Tree>();
+		TreeNote tree = Instantiate(TreePrefab.gameObject, TreeParent.transform).GetComponent<TreeNote>();
 		TabButton tab = Instantiate(TabButtonPrefab.gameObject, TabParent.transform).GetComponent<TabButton>();
 		tree.Load(path, tab);
 		OnTreeCreated(tree);
@@ -328,14 +328,14 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 
 	#region events
 
-	public void OnTreeCreated(Tree newTree)
+	public void OnTreeCreated(TreeNote newTree)
 	{
 		trees_.Add(newTree);
 
 		UpdateTabLayout();
 	}
 
-	public void OnTreeActivated(Tree tree)
+	public void OnTreeActivated(TreeNote tree)
 	{
 		if( activeTree_ != null && tree != activeTree_ )
 		{
@@ -344,7 +344,7 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 		activeTree_ = tree;
 	}
 
-	public void OnTreeClosed(Tree closedTree)
+	public void OnTreeClosed(TreeNote closedTree)
 	{
 		if( closedTree.File != null )
 		{

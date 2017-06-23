@@ -19,40 +19,38 @@ public class Tree : MonoBehaviour {
 
 	public TextField FieldPrefab;
 	public int FieldCount = 100;
-	
+
 	#endregion
 
 
 	#region params
 
-	List<TextField> usingFields_ = new List<TextField>();
-	GameObject heapParent_;
-	Line rootLine_;
-	Line focusedLine_;
-	Line selectionStartLine_, selectionEndLine_;
-	SortedList<int, Line> selectedLines_ = new SortedList<int, Line>();
-	ActionManager actionManager_ = new ActionManager();
+	protected List<TextField> usingFields_ = new List<TextField>();
+	protected GameObject heapParent_;
+	protected Line rootLine_;
+	protected Line focusedLine_;
+	protected Line selectionStartLine_, selectionEndLine_;
+	protected SortedList<int, Line> selectedLines_ = new SortedList<int, Line>();
+	protected ActionManager actionManager_;
 
 	// input states
-	bool wasDeleteKeyConsumed_ = false;
-	bool wasCtrlMInput_ = false;
+	protected bool wasDeleteKeyConsumed_ = false;
+	protected bool wasCtrlMInput_ = false;
 
 	// layout
-	bool isAllFolded_ = false;
-	List<Line> requestLayoutLines_ = new List<Line>();
-	int suspendLayoutCount_ = 0;
-	float targetScrollValue_ = 1.0f;
-	bool isScrollAnimating_;
+	protected bool isAllFolded_ = false;
+	protected List<Line> requestLayoutLines_ = new List<Line>();
+	protected int suspendLayoutCount_ = 0;
 
 	// components
-	LayoutElement layout_;
-	ContentSizeFitter contentSizeFitter_;
-	ScrollRect scrollRect_;
-	TabButton tabButton_;
+	protected LayoutElement layout_;
+	protected ContentSizeFitter contentSizeFitter_;
+	protected TabButton tabButton_;
+
 
 	// file
-	FileInfo file_ = null;
-	bool isEdited_ = false;
+	protected FileInfo file_ = null;
+	protected bool isEdited_ = false;
 
 	// properties
 	public ActionManager ActionManager { get { return actionManager_; } }
@@ -64,8 +62,8 @@ public class Tree : MonoBehaviour {
 	public string TitleText { get { return rootLine_ != null ? rootLine_.Text : ""; } }
 	public override string ToString() { return TitleText; }
 
-	public bool IsActive { get { return (tabButton_ != null ? tabButton_.IsOn : false); } set { if( tabButton_ != null ) tabButton_.IsOn = value; } }
 	public bool IsEdited { get { return isEdited_; } }
+	public bool IsActive { get { return (tabButton_ != null ? tabButton_.IsOn : false); } set { if( tabButton_ != null ) tabButton_.IsOn = value; } }
 
 	// utils
 	protected IEnumerable<Line> GetSelectedOrFocusedLines(bool ascending = true)
@@ -99,36 +97,14 @@ public class Tree : MonoBehaviour {
 
 	#region unity functions
 
-	// Use this for initialization
-	void Awake () {
-		actionManager_.ChainStarted += this.actionManager__ChainStarted;
-		actionManager_.ChainEnded += this.actionManager__ChainEnded;
-		actionManager_.Executed += this.actionManager__Executed;
-
-		heapParent_ = new GameObject("heap");
-		heapParent_.transform.parent = this.transform;
-		for( int i = 0; i < FieldCount; ++i )
-		{
-			TextField field = Instantiate(FieldPrefab.gameObject).GetComponent<TextField>();
-			field.transform.SetParent(heapParent_.transform);
-		}
-		heapParent_.SetActive(false);
+	protected virtual void Awake()
+	{
 	}
-	
+
 	// Update is called once per frame
-	void Update()
+	protected virtual void Update()
 	{
 		if( rootLine_ == null ) return;
-
-		if( isScrollAnimating_ )
-		{
-			scrollRect_.verticalScrollbar.value = Mathf.Lerp(scrollRect_.verticalScrollbar.value, targetScrollValue_, 0.2f);
-			if( Mathf.Abs(scrollRect_.verticalScrollbar.value - targetScrollValue_) < 0.01f )
-			{
-				scrollRect_.verticalScrollbar.value = targetScrollValue_;
-				isScrollAnimating_ = false;
-			}
-		}
 
 		bool ctrl = Input.GetKey(KeyCode.LeftControl);
 		bool shift = Input.GetKey(KeyCode.LeftShift);
@@ -490,17 +466,17 @@ public class Tree : MonoBehaviour {
 
 	#region actionManager
 
-	void actionManager__ChainStarted(object sender, EventArgs e)
+	protected void actionManager__ChainStarted(object sender, EventArgs e)
 	{
 		SuspendLayout();
 	}
 
-	void actionManager__ChainEnded(object sender, EventArgs e)
+	protected void actionManager__ChainEnded(object sender, EventArgs e)
 	{
 		ResumeLayout();
 	}
 
-	void actionManager__Executed(object sender, ActionEventArgs e)
+	protected void actionManager__Executed(object sender, ActionEventArgs e)
 	{
 		if( focusedLine_ != null && e.Action is Line.TextAction == false )
 		{
@@ -1553,16 +1529,14 @@ public class Tree : MonoBehaviour {
 		usingFields_.Remove(field);
 	}
 
-	public void OnActivated()
+	public virtual void OnTabSelected()
 	{
 		layout_ = GetComponentInParent<LayoutElement>();
 		contentSizeFitter_ = GetComponentInParent<ContentSizeFitter>();
-		scrollRect_ = GetComponentInParent<ScrollRect>();
 
 		GameContext.CurrentActionManager = actionManager_;
 
 		UpdateLayoutElement();
-		scrollRect_.verticalScrollbar.value = targetScrollValue_;
 
 		if( focusedLine_ == null )
 		{
@@ -1577,16 +1551,10 @@ public class Tree : MonoBehaviour {
 #endif
 	}
 
-	public void OnDeactivated()
+	public virtual void OnTabDeselected()
 	{
-		if( scrollRect_ != null )
-		{
-			targetScrollValue_ = scrollRect_.verticalScrollbar.value;
-		}
-
 		layout_ = null;
 		contentSizeFitter_ = null;
-		scrollRect_ = null;
 	}
 
 	#endregion
@@ -1604,31 +1572,6 @@ public class Tree : MonoBehaviour {
 				layout_.preferredHeight = -(lastLine.TargetAbsolutePosition.y - this.transform.position.y) + GameContext.Config.HeightPerLine * 1.0f;
 				contentSizeFitter_.SetLayoutVertical();
 			}
-		}
-	}
-
-	public void UpdateScrollTo(Line targetLine)
-	{
-		float scrollHeight = scrollRect_.GetComponent<RectTransform>().rect.height;
-		float targetHeight = -(targetLine.Field.transform.position.y - this.transform.position.y);
-		float heightPerLine = GameContext.Config.HeightPerLine;
-
-		// focusLineが下側に出て見えなくなった場合
-		float targetUnderHeight = -(targetLine.Field.transform.position.y - scrollRect_.transform.position.y) + heightPerLine / 2 - scrollHeight;
-		if( targetUnderHeight > 0 )
-		{
-			targetScrollValue_ = Mathf.Clamp01(1.0f - (targetHeight + heightPerLine * 1.5f - scrollHeight) / (layout_.preferredHeight - scrollHeight));
-			isScrollAnimating_ = true;
-			return;
-		}
-
-		// focusLineが上側に出て見えなくなった場合
-		float targetOverHeight = (targetLine.Field.transform.position.y + heightPerLine - scrollRect_.transform.position.y);
-		if( targetOverHeight > 0 )
-		{
-			targetScrollValue_ = Mathf.Clamp01((layout_.preferredHeight - scrollHeight - targetHeight + heightPerLine) / (layout_.preferredHeight - scrollHeight));
-			isScrollAnimating_ = true;
-			return;
 		}
 	}
 
@@ -1681,155 +1624,18 @@ public class Tree : MonoBehaviour {
 	}
 
 	#endregion
-	
 
-	#region file
-	
-	public void NewFile(TabButton tab)
+
+	#region virtual functions
+
+	public virtual void Save(bool saveAs = false)
 	{
-		tabButton_ = tab;
 
-		SuspendLayout();
-		rootLine_ = new Line("new");
-		rootLine_.Bind(this.gameObject);
-		rootLine_.Add(new Line(""));
-		ResumeLayout();
-
-		tabButton_.BindedTree = this;
-		tabButton_.Text = TitleText;
 	}
 
-	public void Load(string path, TabButton tab)
+	public virtual void UpdateScrollTo(Line targetLine)
 	{
-		if( file_ != null )
-		{
-			return;
-		}
 
-		tabButton_ = tab;
-
-		file_ = new FileInfo(path);
-
-		Reload();
-	}
-
-	public void Save(bool saveAs = false)
-	{
-		if( file_ == null || saveAs )
-		{
-			SaveFileDialog saveFileDialog = new SaveFileDialog();
-			saveFileDialog.Filter = "dones file (*.dtml)|*.dtml";
-			saveFileDialog.FileName = rootLine_.Text;
-			DialogResult dialogResult = saveFileDialog.ShowDialog();
-			if( dialogResult == DialogResult.OK )
-			{
-				file_ = new FileInfo(saveFileDialog.FileName);
-				rootLine_.Text = file_.Name;
-#if UNITY_STANDALONE_WIN
-				GameContext.Window.SetTitle(TitleText + " - Dones");
-#endif
-			}
-			else
-			{
-				return;
-			}
-		}
-
-		StringBuilder builder = new StringBuilder();
-		foreach( Line line in rootLine_.GetAllChildren() )
-		{
-			line.AppendStringTo(builder, appendTag: true);
-		}
-
-		StreamWriter writer = new StreamWriter(file_.FullName, append: false);
-		writer.Write(builder.ToString());
-		writer.Flush();
-		writer.Close();
-
-		isEdited_ = false;
-		tabButton_.Text = TitleText;
-	}
-
-	public void Reload()
-	{
-		if( file_ == null )
-		{
-			return;
-		}
-
-		SuspendLayout();
-		if( rootLine_ != null )
-		{
-			targetScrollValue_ = scrollRect_.verticalScrollbar.value = 1.0f;
-			ClearSelection();
-			rootLine_ = null;
-			focusedLine_ = null;
-			foreach( TextField field in usingFields_ )
-			{
-				field.BindedLine.UnBind();
-				field.transform.SetParent(heapParent_.transform);
-				field.gameObject.SetActive(false);
-			}
-			usingFields_.Clear();
-			GC.Collect();
-		}
-
-		rootLine_ = new Line(file_.Name);
-		rootLine_.Bind(this.gameObject);
-
-		StreamReader reader = new StreamReader(file_.OpenRead());
-		Line parent = rootLine_;
-		Line brother = null;
-		string text = null;
-		int currentLevel, oldLevel = 0;
-		while( (text = reader.ReadLine()) != null )
-		{
-			currentLevel = 0;
-			while( text.StartsWith(Line.TabString) )
-			{
-				++currentLevel;
-				text = text.Remove(0, 1);
-			}
-
-			Line line = new Line(text, loadTag: true);
-
-			Line addParent;
-
-			if( currentLevel > oldLevel )
-			{
-				addParent = brother;
-				parent = brother;
-			}
-			else if( currentLevel == oldLevel )
-			{
-				addParent = parent;
-			}
-			else// currentLevel < oldLevel 
-			{
-				for( int level = oldLevel; level > currentLevel; --level )
-				{
-					if( parent.Parent == null ) break;
-
-					brother = parent;
-					parent = parent.Parent;
-				}
-				addParent = parent;
-			}
-
-			addParent.Add(line);
-
-			brother = line;
-			oldLevel = currentLevel;
-		}
-		if( rootLine_.Count == 0 )
-		{
-			rootLine_.Add(new Line(""));
-		}
-		reader.Close();
-		ResumeLayout();
-
-		tabButton_.BindedTree = this;
-		tabButton_.Text = TitleText;
 	}
 
 	#endregion

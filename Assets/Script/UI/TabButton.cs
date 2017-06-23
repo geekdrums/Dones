@@ -10,7 +10,7 @@ public class TabButton : UnityEngine.UI.Button, IDragHandler, IBeginDragHandler,
 {
 	#region params
 
-	public Tree BindedTree;
+	public TreeNote BindedTree;
 	
 	public bool IsOn
 	{
@@ -26,14 +26,14 @@ public class TabButton : UnityEngine.UI.Button, IDragHandler, IBeginDragHandler,
 			}
 			else
 			{
-				BindedTree.OnDeactivated();
+				BindedTree.OnTabDeselected();
 			}
 			BindedTree.transform.SetParent(isOn_ ? GameContext.Window.TreeParent.transform : this.transform);
 			BindedTree.transform.localPosition = GameContext.Window.TreePrefab.transform.localPosition;
 			BindedTree.gameObject.SetActive(isOn_);
 			if( isOn_ )
 			{
-				BindedTree.OnActivated();
+				BindedTree.OnTabSelected();
 			}
 
 			if( image_ != null )
