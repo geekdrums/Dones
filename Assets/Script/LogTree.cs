@@ -25,67 +25,105 @@ public class LogTree : Tree
 		ownerLogNote_ = GetComponentInParent<LogNote>();
 	}
 
+	public void Initialize(ActionManager actionManager, GameObject heapParent)
+	{
+		actionManager_ = actionManager;
+		heapParent_ = heapParent;
+		
+		actionManager_.ChainStarted += this.actionManager__ChainStarted;
+		actionManager_.ChainEnded += this.actionManager__ChainEnded;
+		actionManager_.Executed += this.actionManager__Executed;
+	}
+
 
 	#region add / remove log
 
 	public void AddLog(Line line)
 	{
-		// clone parents
+		SuspendLayout();
+		if( rootLine_.Count == 1 && rootLine_[0].Text == "" )
+		{
+			rootLine_.Remove(rootLine_[0]);
+		}
+
+		// clone & stack parents
+		Stack<Line> cloneLines = new Stack<Line>();
 		Line cloneLine = line.Clone();
-		Line addLine = cloneLine;
+		cloneLines.Push(cloneLine);
 		Line originalParent = line.Parent;
 		while( originalParent.Parent != null )
 		{
 			Line cloneParent = originalParent.Clone();
-			cloneParent.Add(addLine);
-			addLine = cloneParent;
+			cloneParent.IsDone = false;
+			cloneLines.Push(cloneParent);
 			originalParent = originalParent.Parent;
 		}
 
 		// search for same parents
+		Line addLine = cloneLines.Pop();
 		Line addParent = rootLine_;
-		Line foundChild = rootLine_;
-		while( foundChild != null )
+		bool found = true;
+		while( found && addLine != null )
 		{
-			bool found = false;
-			addParent = foundChild;
+			found = false;
 			foreach( Line child in addParent )
 			{
 				if( child.IsClone && child.Text == addLine.Text )
 				{
 					found = true;
-					foundChild = child;
+					addParent = child;
+					if( cloneLines.Count > 0 )
+					{
+						addLine = cloneLines.Pop();
+					}
+					else
+					{
+						// 同一のlineが見つかったので、Doneだけ更新する
+						child.IsDone = addLine.IsDone;
+						addLine = null;
+					}
 					break;
 				}
 			}
-
-			if( found )
-			{
-				if( addLine.Count > 0 )
-				{
-					// 同じ親が見つかったので、追加するのはこの子供以降でOK
-					addLine = addLine[0];
-				}
-				else
-				{
-					// 既に同じLineが親を含めて全部あった
-					foundChild.IsDone = addLine.IsDone;
-					return;
-				}
-			}
-			else
-			{
-				break;
-			}
 		}
 
-		// add clone and its children
-		addParent.Add(addLine);
-		line.CloneRecursive(cloneLine);
+		// add clone and its parents
+		if( addLine != null )
+		{
+			addParent.Add(addLine);
+			RequestLayout(addParent.NextSiblingLine);
+			addParent = addLine;
+			while( cloneLines.Count > 0 )
+			{
+				addLine = cloneLines.Pop();
+				addParent.Add(addLine);
+				addParent = addLine;
+			}
+		}
+		// and its children
+		AddLogChildRecursive(line, addParent);
+		ResumeLayout();
+	}
+	
+	void AddLogChildRecursive(Line original, Line cloneParent)
+	{
+		foreach( Line originalChild in original )
+		{
+			if( originalChild.IsDone == false && cloneParent.FirstOrDefault((Line l) => l.Text == originalChild.Text) == null )
+			{
+				Line cloneChild = originalChild.Clone();
+				cloneParent.Add(cloneChild);
+				if( originalChild.Count > 0 )
+				{
+					AddLogChildRecursive(originalChild, cloneChild);
+				}
+			}
+		}
 	}
 
 	public void RemoveLog(Line line)
 	{
+		SuspendLayout();
 		// stack parents
 		Stack<Line> originalLines = new Stack<Line>();
 		originalLines.Push(line);
@@ -97,50 +135,102 @@ public class LogTree : Tree
 		}
 
 		// search for clone line
-		Line removeLine = rootLine_;
+		Line removeLine = null;
+		Line searchParent = rootLine_;
 		Line searchChild = originalLines.Pop();
-		while( originalLines.Count > 0 )
+		bool found = true;
+		while( found && removeLine == null )
 		{
-			bool found = false;
-			foreach( Line child in removeLine )
+			found = false;
+			foreach( Line child in searchParent )
 			{
 				if( child.IsClone && child.Text == searchChild.Text )
 				{
 					found = true;
-					removeLine = child;
-					searchChild = originalLines.Pop();
+					searchParent = child;
+					if( originalLines.Count > 0 )
+					{
+						searchChild = originalLines.Pop();
+					}
+					else
+					{
+						removeLine = child;
+					}
 					break;
 				}
-			}
-
-			if( found == false )
-			{
-				removeLine = null;
-				break;
 			}
 		}
 
 		// remove clone and its parents
 		if( removeLine != null )
 		{
-			Line cloneParent = removeLine.Parent;
-			removeLine.Parent.Remove(removeLine);
-			while( cloneParent.Parent.Parent != null )
+			RequestLayout(removeLine.NextSiblingLine);
+			Line removeParent = removeLine.Parent;
+			bool hasDoneChild = RemoveLogChildRecursive(removeLine);
+			
+			if( hasDoneChild )
 			{
-				cloneParent = cloneParent.Parent;
-				if( cloneParent.Count == 1 )
+				removeLine.IsDone = line.IsDone;
+			}
+			else
+			{
+				while( removeParent.Parent != null )
 				{
-					// それしか無いならCloneしてる意味が無いので消す
-					cloneParent.Remove(cloneParent[0]);
-				}
-				else
-				{
-					// 他にもあるなら共通の親として使われているので残す
-					break;
+					if( removeParent.Count == 0 && removeParent.IsDone == false )
+					{
+						// Childも無くてDoneもしてないなら、残さなくてよい
+						Line nextParent = removeParent.Parent;
+						RequestLayout(removeParent.NextSiblingLine);
+						removeParent.Parent.Remove(removeParent);
+						removeParent = nextParent;
+					}
+					else
+					{
+						// Doneしてるやつの共通の親またはそれ自身がDoneなので残す
+						break;
+					}
 				}
 			}
 		}
+
+		if( rootLine_.Count == 0 )
+		{
+			rootLine_.Add(new Line(""));
+		}
+		ResumeLayout();
 	}
+
+	bool RemoveLogChildRecursive(Line removeLine)
+	{
+		bool hasDoneChild = false;
+		List<Line> recursiveCheckLineList = new List<Line>();
+		foreach( Line removeChild in removeLine )
+		{
+			if( removeChild.IsDone )
+			{
+				hasDoneChild = true;
+			}
+			else
+			{
+				recursiveCheckLineList.Add(removeChild);
+			}
+		}
+		foreach( Line recursiveCheckLine in recursiveCheckLineList )
+		{
+			if( RemoveLogChildRecursive(recursiveCheckLine) )
+			{
+				hasDoneChild = true;
+			}
+		}
+
+		if( hasDoneChild == false )
+		{
+			RequestLayout(removeLine.NextSiblingLine);
+			removeLine.Parent.Remove(removeLine);
+		}
+		return hasDoneChild;
+	}
+
 
 	#endregion
 
@@ -151,9 +241,9 @@ public class LogTree : Tree
 	public void NewTree(DateTime date)
 	{
 		Date = date;
-		rootLine_ = new Line(file_.Name);
-		rootLine_.Bind(this.gameObject);
+		rootLine_ = new Line("new.dones");
 		rootLine_.Add(new Line(""));
+		rootLine_.Bind(this.gameObject);
 		IsEdited = true;
 	}
 

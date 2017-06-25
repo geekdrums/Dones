@@ -6,11 +6,11 @@ using UnityEngine.EventSystems;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
-public class TabButton : UnityEngine.UI.Button, IDragHandler, IBeginDragHandler, IEndDragHandler
+public class LogTabButton : UnityEngine.UI.Button, IDragHandler, IBeginDragHandler, IEndDragHandler
 {
 	#region params
 
-	public TreeNote BindedNote;
+	public LogNote BindedNote;
 	
 	public bool IsOn
 	{
@@ -22,16 +22,16 @@ public class TabButton : UnityEngine.UI.Button, IDragHandler, IBeginDragHandler,
 
 			if( isOn_ )
 			{
-				GameContext.Window.OnTreeActivated(BindedNote);
+				//GameContext.Window.OnTreeActivated(BindedNote);
 			}
 			else
 			{
-				BindedNote.OnTabDeselected();
+				//BindedNote.OnTabDeselected();
 			}
 			BindedNote.gameObject.SetActive(isOn_);
 			if( isOn_ )
 			{
-				BindedNote.OnTabSelected();
+				//BindedNote.OnTabSelected();
 			}
 
 			if( image_ != null )
@@ -123,11 +123,11 @@ public class TabButton : UnityEngine.UI.Button, IDragHandler, IBeginDragHandler,
 
 	public void Close()
 	{
-		if( BindedNote.IsEdited )
-		{
-			GameContext.Window.ModalDialog.Show(BindedNote.TitleText + "ファイルへの変更を保存しますか？", this.CloseConfirmCallback);
-			return;
-		}
+		//if( BindedNote.IsEdited )
+		//{
+		//	GameContext.Window.ModalDialog.Show(BindedNote.TitleText + "ファイルへの変更を保存しますか？", this.CloseConfirmCallback);
+		//	return;
+		//}
 
 		DoClose();
 	}
@@ -137,8 +137,8 @@ public class TabButton : UnityEngine.UI.Button, IDragHandler, IBeginDragHandler,
 		if( IsOn )
 			IsOn = false;
 
-		GameContext.Window.OnTreeClosed(BindedNote);
-		Destroy(this.gameObject);
+		//GameContext.Window.OnTreeClosed(BindedNote);
+		//Destroy(this.gameObject);
 	}
 
 	void CloseConfirmCallback(ModalDialog.DialogResult result)
@@ -160,8 +160,8 @@ public class TabButton : UnityEngine.UI.Button, IDragHandler, IBeginDragHandler,
 
 	void UpdateColor()
 	{
-		Background = isOn_ ? ColorManager.Theme.Bright : ColorManager.Base.Middle;
-		textComponent_.color = isOn_ ? ColorManager.Base.Front : GameContext.Config.TextColor;
+		//Background = isOn_ ? ColorManager.Theme.Bright : ColorManager.Base.Middle;
+		//textComponent_.color = isOn_ ? ColorManager.Base.Front : GameContext.Config.TextColor;
 	}
 
 	IEnumerator UpdateTransformCoroutine()
@@ -190,17 +190,17 @@ public class TabButton : UnityEngine.UI.Button, IDragHandler, IBeginDragHandler,
 
 	public void OnBeginDrag(PointerEventData eventData)
 	{
-		GameContext.Window.OnBeginDrag(this);
+		//GameContext.Window.OnBeginDrag(this);
 	}
 
 	public void OnDrag(PointerEventData eventData)
 	{
-		GameContext.Window.OnDragging(this, eventData);
+		//GameContext.Window.OnDragging(this, eventData);
 	}
 
 	public void OnEndDrag(PointerEventData eventData)
 	{
-		GameContext.Window.OnEndDrag(this);
+		//GameContext.Window.OnEndDrag(this);
 	}
 
 	#endregion

@@ -15,9 +15,6 @@ using System.Windows.Forms;
 // Window - [ TreeNote ] - Line
 public class TreeNote : Tree
 {
-	public LogNote LogNote;
-
-
 	#region properties
 
 	public bool IsActive { get { return (tabButton_ != null ? tabButton_.IsOn : false); } set { if( tabButton_ != null ) tabButton_.IsOn = value; } }
@@ -35,6 +32,9 @@ public class TreeNote : Tree
 	}
 	public TabButton Tab { get { return tabButton_; } }
 	protected TabButton tabButton_;
+
+	public LogNote LogNote { get { return logNote_; } }
+	protected LogNote logNote_;
 
 	protected ScrollRect scrollRect_;
 	protected float targetScrollValue_ = 1.0f;
@@ -167,9 +167,10 @@ public class TreeNote : Tree
 
 	#region file
 
-	public void NewFile(TabButton tab)
+	public void NewFile(TabButton tab, LogNote logNote)
 	{
 		tabButton_ = tab;
+		logNote_ = logNote;
 
 		SuspendLayout();
 		rootLine_ = new Line("new");
@@ -177,7 +178,7 @@ public class TreeNote : Tree
 		rootLine_.Add(new Line(""));
 		ResumeLayout();
 
-		tabButton_.BindedTree = this;
+		tabButton_.BindedNote = this;
 		tabButton_.Text = TitleText;
 
 		if( LogNote != null )
@@ -186,7 +187,7 @@ public class TreeNote : Tree
 		}
 	}
 
-	public void Load(string path, TabButton tab, bool isActive)
+	public void Load(string path, TabButton tab, LogNote logNote, bool isActive)
 	{
 		if( file_ != null )
 		{
@@ -196,12 +197,13 @@ public class TreeNote : Tree
 		file_ = new FileInfo(path);
 
 		tabButton_ = tab;
+		logNote_ = logNote;
 
 		gameObject.SetActive(isActive);
 
 		LoadInternal();
 
-		tabButton_.BindedTree = this;
+		tabButton_.BindedNote = this;
 		IsActive = isActive;
 		tabButton_.Text = TitleText;
 		targetScrollValue_ = 1.0f;

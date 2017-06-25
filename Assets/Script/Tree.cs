@@ -1441,14 +1441,13 @@ public class Tree : MonoBehaviour {
 		}
 	}
 
-	public void OnRemove(Line line)
+	public void OnLostParent(Line line)
 	{
-		TextField field = line.Field;
-		if( field != null && field.gameObject.activeInHierarchy )
+		if( line.Field != null )
 		{
-			usingFields_.Remove(field);
-			field.transform.SetParent(heapParent_.transform);
-			field.gameObject.SetActive(false);
+			usingFields_.Remove(line.Field);
+			line.Field.transform.SetParent(heapParent_.transform);
+			line.Field.gameObject.SetActive(false);
 		}
 	}
 

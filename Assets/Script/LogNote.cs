@@ -17,6 +17,7 @@ public class LogNote : MonoBehaviour
 {
 	public int LoadDateCount = 7;
 	public GameObject LogTreePrefab;
+	public GameObject DateUIPrefab; 
 
 	public LogTree TodayTree { get { return todayTree_; } }
 	private LogTree todayTree_;
@@ -24,10 +25,21 @@ public class LogNote : MonoBehaviour
 	public TreeNote TreeNote { get { return treeNote_; } }
 	TreeNote treeNote_;
 
-	List<LogTree> logTrees_;
+	List<LogTree> logTrees_ = new List<LogTree>();
 	DateTime today_;
 	DateTime endDate_;
 
+	ActionManager actionManager_;
+	GameObject heapParent_;
+
+	void Awake()
+	{
+		actionManager_ = new ActionManager();
+
+		heapParent_ = new GameObject("heap");
+		heapParent_.transform.parent = this.transform;
+		heapParent_.SetActive(false);
+	}
 
 	public void OnDoneChanged(Line line)
 	{
@@ -53,9 +65,24 @@ public class LogNote : MonoBehaviour
 		endDate_ = today_;
 
 		todayTree_ = Instantiate(LogTreePrefab.gameObject, this.transform).GetComponent<LogTree>();
+		DateUI dateUI = Instantiate(DateUIPrefab.gameObject, todayTree_.transform).GetComponent<DateUI>();
+		dateUI.Set(today_);
+		todayTree_.Initialize(actionManager_, heapParent_);
 		if( treeNote_.File != null )
 		{
-			todayTree_.Load(ToFileName(treeNote_.File, today_), today_);
+			string filename = ToFileName(treeNote_.File, today_);
+			if( File.Exists(filename) == false )
+			{
+				string folderName = treeNote_.File.FullName.Replace(".dtml", ".dones");
+				if( Directory.Exists(folderName) == false )
+				{
+					Directory.CreateDirectory(folderName);
+				}
+				StreamWriter writer = File.CreateText(filename);
+				writer.Flush();
+				writer.Close();
+			}
+			todayTree_.Load(filename, today_);
 		}
 		else
 		{
@@ -73,6 +100,9 @@ public class LogNote : MonoBehaviour
 			if( File.Exists(filename) )
 			{
 				LogTree logTree = Instantiate(LogTreePrefab.gameObject, this.transform).GetComponent<LogTree>();
+				DateUI dateUI = Instantiate(DateUIPrefab.gameObject, todayTree_.transform).GetComponent<DateUI>();
+				dateUI.Set(date);
+				logTree.Initialize(actionManager_, heapParent_);
 				logTree.Load(filename, date);
 				logTrees_.Add(logTree);
 			}
@@ -106,7 +136,7 @@ public class LogNote : MonoBehaviour
 
 	public static string ToFileName(FileInfo treeFile, DateTime date)
 	{
-		return String.Format("{0}/{1}.dones/{1}-{2}.dones", treeFile.DirectoryName, treeFile.Name, date.ToString("yyyy-MM-dd"));
+		return String.Format("{0}/{1}.dones/{1}{2}.dtml", treeFile.DirectoryName, treeFile.Name.Replace(".dtml", ""), date.ToString("-yyyy-MM-dd"));
 	}
 
 	#endregion

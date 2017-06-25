@@ -20,13 +20,16 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 {
 	#region editor params
 
-	public Tree TreePrefab;
+	public TreeNote TreeNotePrefab;
 	public TabButton TabButtonPrefab;
+	public LogNote LogNotePrefab;
 
 	public GameObject TreeParent;
-	public RectTransform TreeScrollView;
+	public GameObject LogTreeParent;
 	public GameObject TabParent;
+	//public GameObject LogTabParent;
 	public RectTransform TabMenuParent;
+	public RectTransform LogTabMenuParent;
 	public MenuButton FileMenu;
 	public GameObject RecentFilesSubMenu;
 	public ShortLineList LineList;
@@ -49,7 +52,7 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 	float currentScreenWidth_;
 	float currentTabWidth_;
 
-	Vector2 initialTreeOffsetMax_;
+	Vector2 initialLogTabOffsetMax_;
 	Vector2 initialTabOffsetMax_;
 	List<string> recentOpenedFiles_ = new List<string>();
 	Stack<string> recentClosedFiles_ = new Stack<string>();
@@ -79,8 +82,8 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 	{
 		settingFile_ = new FileInfo(System.Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + "/Dones/settings.txt");
 		lineListFile_ = new FileInfo(System.Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + "/Dones/linelist.txt");
-		initialTreeOffsetMax_ = TreeScrollView.offsetMax;
 		initialTabOffsetMax_ = TabMenuParent.offsetMax;
+		initialLogTabOffsetMax_ = LogTabMenuParent.offsetMax;
 		numRecentFilesMenu = RecentFilesSubMenu.GetComponentsInChildren<UnityEngine.UI.Button>().Length;
 		StartCoroutine(InitialLoadCoroutine());
 	}
@@ -232,9 +235,10 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 
 	public void NewFile()
 	{
-		TreeNote tree = Instantiate(TreePrefab.gameObject, TreeParent.transform).GetComponent<TreeNote>();
+		TreeNote tree = Instantiate(TreeNotePrefab.gameObject, TreeParent.transform).GetComponent<TreeNote>();
 		TabButton tab = Instantiate(TabButtonPrefab.gameObject, TabParent.transform).GetComponent<TabButton>();
-		tree.NewFile(tab);
+		LogNote logNote = Instantiate(LogNotePrefab.gameObject, LogTreeParent.transform).GetComponent<LogNote>();
+		tree.NewFile(tab, logNote);
 		OnTreeCreated(tree);
 		tree.IsActive = true;
 
@@ -316,9 +320,10 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 				return;
 			}
 		}
-		TreeNote tree = Instantiate(TreePrefab.gameObject, TreeParent.transform).GetComponent<TreeNote>();
+		TreeNote tree = Instantiate(TreeNotePrefab.gameObject, TreeParent.transform).GetComponent<TreeNote>();
 		TabButton tab = Instantiate(TabButtonPrefab.gameObject, TabParent.transform).GetComponent<TabButton>();
-		tree.Load(path, tab, isActive);
+		LogNote logNote = Instantiate(LogNotePrefab.gameObject, LogTreeParent.transform).GetComponent<LogNote>();
+		tree.Load(path, tab, logNote, isActive);
 		OnTreeCreated(tree);
 	}
 
@@ -379,10 +384,10 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 
 	public void OnHeaderWidthChanged()
 	{
-		TreeScrollView.anchoredPosition = new Vector3(HeaderWidth, TreeScrollView.anchoredPosition.y);
 		TabMenuParent.anchoredPosition = new Vector3(HeaderWidth, TabMenuParent.anchoredPosition.y);
-		TreeScrollView.offsetMax = initialTreeOffsetMax_;
 		TabMenuParent.offsetMax = initialTabOffsetMax_;
+		LogTabMenuParent.anchoredPosition = new Vector3(HeaderWidth, LogTabMenuParent.anchoredPosition.y);
+		LogTabMenuParent.offsetMax = initialLogTabOffsetMax_;
 		UpdateTabLayout();
 	}
 
@@ -407,22 +412,22 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 
 	Vector3 GetTabPosition(TabButton tab)
 	{
-		return Vector3.right * currentTabWidth_ * (trees_.IndexOf(tab.BindedTree));
+		return Vector3.right * currentTabWidth_ * (trees_.IndexOf(tab.BindedNote));
 	}
 	
 	public void OnBeginDrag(TabButton tab)
 	{
 		tab.IsOn = true;
-		if( tab.BindedTree.FocusedLine != null )
+		if( tab.BindedNote.FocusedLine != null )
 		{
-			tab.BindedTree.FocusedLine.Field.IsFocused = false;
+			tab.BindedNote.FocusedLine.Field.IsFocused = false;
 		}
 		tab.transform.SetAsLastSibling();
 	}
 
 	public void OnDragging(TabButton tab, PointerEventData eventData)
 	{
-		int index = trees_.IndexOf(tab.BindedTree);
+		int index = trees_.IndexOf(tab.BindedNote);
 		tab.transform.localPosition += new Vector3(eventData.delta.x, 0);
 		if( tab.transform.localPosition.x < 0 )
 		{
@@ -436,8 +441,8 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 		int desiredIndex = Mathf.Clamp((int)(tab.transform.localPosition.x / currentTabWidth_), 0, trees_.Count - 1);
 		if( index != desiredIndex )
 		{
-			trees_.Remove(tab.BindedTree);
-			trees_.Insert(desiredIndex, tab.BindedTree);
+			trees_.Remove(tab.BindedNote);
+			trees_.Insert(desiredIndex, tab.BindedNote);
 			int sign = (int)Mathf.Sign(desiredIndex - index);
 			for( int i = index; i != desiredIndex; i += sign )
 			{

@@ -407,23 +407,8 @@ public class Line : IEnumerable<Line>
 				oldParent.children_.Remove(child);
 			}
 		}
-		
-		if( child.Field == null || child.Field.BindedLine != child )
-		{
-			Tree.Bind(child);
-		}
-		else if( child.Field.BindedLine == child && child.Field.gameObject.activeSelf == false )
-		{
-			child.ReBind();
-		}
-		else
-		{
-			if( child.Binding.transform.parent != this.Binding.transform )
-			{
-				child.Binding.transform.SetParent(this.Binding.transform, worldPositionStays: true);
-			}
-			child.AdjustLayout();
-		}
+
+		child.OnFoundParent();
 
 		if( child.IsOnList )
 		{
@@ -439,18 +424,58 @@ public class Line : IEnumerable<Line>
 		children_.Remove(child);
 		if( child.parent_ == this && child.Binding != null )
 		{
-			child.fieldSubscription_.Dispose();
-			child.toggleSubscription_.Dispose();
 			child.parent_ = null;
-			Tree.OnRemove(child);
-			if( child.IsOnList )
+			child.OnLostParent();
+		}
+	}
+
+	protected void OnFoundParent()
+	{
+		if( Field == null || Field.BindedLine != this )
+		{
+			// Fieldがまだ無い、またはヒープに返して他のLineに使われた
+			Tree.Bind(this);
+			foreach( Line child in this.GetAllChildren() )
 			{
-				ShortLine shortline = GameContext.Window.LineList.FindBindedLine(child);
-				if( shortline != null )
-				{
-					GameContext.Window.LineList.RemoveShortLine(shortline);
-				}
+				child.OnFoundParent();
 			}
+		}
+		else if( Field.BindedLine == this && Field.gameObject.activeSelf == false )
+		{
+			// ヒープに返したが、他のものには使われていなかった
+			ReBind();
+			foreach( Line child in this.GetAllChildren() )
+			{
+				child.OnFoundParent();
+			}
+		}
+		else // Field != null && Field.BindedLine == this && && Field.gameObject.activeSelf
+		{
+			// 適切なFieldをもう持っている
+			if( Binding.transform.parent != this.Binding.transform )
+			{
+				Binding.transform.SetParent(this.Binding.transform, worldPositionStays: true);
+			}
+			AdjustLayout();
+		}
+	}
+
+	protected void OnLostParent()
+	{
+		fieldSubscription_.Dispose();
+		toggleSubscription_.Dispose();
+		Tree.OnLostParent(this);
+		if( IsOnList )
+		{
+			ShortLine shortline = GameContext.Window.LineList.FindBindedLine(this);
+			if( shortline != null )
+			{
+				GameContext.Window.LineList.RemoveShortLine(shortline);
+			}
+		}
+		foreach(Line child in this.GetAllChildren())
+		{
+			child.OnLostParent();
 		}
 	}
 
@@ -944,19 +969,6 @@ public class Line : IEnumerable<Line>
 		line.isOnList_ = false;
 		line.isClone_ = true;
 		return line;
-	}
-
-	public void CloneRecursive(Line cloneParent)
-	{
-		foreach( Line originalChild in this )
-		{
-			Line cloneChild = originalChild.Clone();
-			cloneParent.Add(cloneChild);
-			if( originalChild.Count > 0 )
-			{
-				originalChild.CloneRecursive(cloneChild);
-			}
-		}
 	}
 
 	#endregion
