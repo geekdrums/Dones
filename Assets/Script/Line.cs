@@ -116,6 +116,9 @@ public class Line : IEnumerable<Line>
 	public bool IsLinkText { get { return isLinkText_; } }
 	protected bool isLinkText_ = false;
 
+	public bool IsClone { get { return isClone_; } set { isClone_ = value; } }
+	protected bool isClone_ = false;
+	
 	public Vector3 TargetPosition { get; protected set; }
 
 	public GameObject Binding { get; protected set; }
@@ -125,9 +128,9 @@ public class Line : IEnumerable<Line>
 	
 	protected IDisposable fieldSubscription_;
 	protected IDisposable toggleSubscription_;
-	
-	#endregion
 
+	#endregion
+	
 
 	public Line(string text = "", bool loadTag = false)
 	{
@@ -824,6 +827,7 @@ public class Line : IEnumerable<Line>
 
 	#endregion
 
+
 	#region save & load
 
 	public static string TabString = "	";
@@ -831,6 +835,8 @@ public class Line : IEnumerable<Line>
 	public static string FoldTag = "<f>";
 	public static string DoneTag = "<d>";
 	public static string OnListTag = "<o>";
+	public static string CloneTag = "<c>";
+
 	public void AppendStringTo(StringBuilder builder, bool appendTag = false)
 	{
 		int level = Level;
@@ -841,6 +847,10 @@ public class Line : IEnumerable<Line>
 		builder.Append(Text);
 		if( appendTag )
 		{
+			if( IsClone )
+			{
+				builder.Append(CloneTag);
+			}
 			if( IsFolded )
 			{
 				builder.Append(FoldTag);
@@ -906,12 +916,47 @@ public class Line : IEnumerable<Line>
 		{
 			IsFolded = false;
 		}
+
+		if( text.EndsWith(CloneTag) )
+		{
+			text = text.Remove(text.Length - CloneTag.Length);
+			IsClone = true;
+		}
+		else
+		{
+			IsClone = false;
+		}
 	}
+
 	public void CheckIsLink()
 	{
 		isLinkText_ = text_.StartsWith("http");
 		if( Field != null )
 			Field.SetIsLinkText(isLinkText_);
+	}
+
+	public Line Clone()
+	{
+		Line line = new Line(text_);
+		line.isDone_ = isDone_;
+		line.isFolded_ = isFolded_;
+		line.isLinkText_ = isLinkText_;
+		line.isOnList_ = false;
+		line.isClone_ = true;
+		return line;
+	}
+
+	public void CloneRecursive(Line cloneParent)
+	{
+		foreach( Line originalChild in this )
+		{
+			Line cloneChild = originalChild.Clone();
+			cloneParent.Add(cloneChild);
+			if( originalChild.Count > 0 )
+			{
+				originalChild.CloneRecursive(cloneChild);
+			}
+		}
 	}
 
 	#endregion

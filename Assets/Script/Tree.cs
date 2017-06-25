@@ -12,7 +12,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
-// Window - [ Tree ] - Line
+// Tree structure of Lines.
 public class Tree : MonoBehaviour {
 
 	#region editor params
@@ -620,23 +620,8 @@ public class Tree : MonoBehaviour {
 		actionManager_.EndChain();
 	}
 
-	protected void OnCtrlSpaceInput()
+	protected virtual void OnCtrlSpaceInput()
 	{
-		actionManager_.StartChain();
-		foreach( Line line in GetSelectedOrFocusedLines() )
-		{
-			if( line.Text != "" )
-			{
-				Line targetLine = line;
-				actionManager_.Execute(new Action(
-					execute: () =>
-					{
-						targetLine.IsDone = !targetLine.IsDone;
-					}
-					));
-			}
-		}
-		actionManager_.EndChain();
 	}
 
 	protected void OnEnterInput()
@@ -1334,15 +1319,18 @@ public class Tree : MonoBehaviour {
 			actionManager_.Execute(new Action(
 				execute: () =>
 				{
+					string beforeRefText = pasteText;
 					pasteStart.LoadTag(ref pasteText);
 					pasteStart.Field.Paste(pasteText);
+					pasteText = beforeRefText;
 					RequestLayout(layoutStart);
 				},
 				undo: () =>
 				{
 					pasteStart.Field.CaretPosision = 0;
 					pasteStart.Text = "";
-					pasteStart.IsDone = false;
+					string noTag = "";
+					pasteStart.LoadTag(ref noTag);
 					RequestLayout(layoutStart);
 				}
 				));
@@ -1604,6 +1592,11 @@ public class Tree : MonoBehaviour {
 	#region files
 
 	public virtual void Save()
+	{
+
+	}
+
+	protected void SaveInternal()
 	{
 		StringBuilder builder = new StringBuilder();
 		foreach( Line line in rootLine_.GetAllChildren() )

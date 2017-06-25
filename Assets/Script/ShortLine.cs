@@ -184,10 +184,15 @@ public class ShortLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragHa
 	public void Done()
 	{
 		Line line = BindedLine;
+		TreeNote treeNote = line.Tree as TreeNote;
 		line.Tree.ActionManager.Execute(new Action(
 			execute: () =>
 			{
 				line.IsDone = !line.IsDone;
+				if( treeNote != null )
+				{
+					treeNote.LogNote.OnDoneChanged(line);
+				}
 			}));
 	}
 

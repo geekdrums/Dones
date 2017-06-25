@@ -12,9 +12,10 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
+// Window - [ TreeNote ] - Line
 public class TreeNote : Tree
 {
-	public LogTree LogTree;
+	public LogNote LogNote;
 
 
 	#region properties
@@ -81,6 +82,27 @@ public class TreeNote : Tree
 	}
 
 	#endregion
+
+
+	protected override void OnCtrlSpaceInput()
+	{
+		actionManager_.StartChain();
+		foreach( Line line in GetSelectedOrFocusedLines() )
+		{
+			if( line.Text != "" )
+			{
+				Line targetLine = line;
+				actionManager_.Execute(new Action(
+					execute: () =>
+					{
+						targetLine.IsDone = !targetLine.IsDone;
+						LogNote.OnDoneChanged(targetLine);
+					}
+					));
+			}
+		}
+		actionManager_.EndChain();
+	}
 
 
 	#region tab, scroll
@@ -157,6 +179,11 @@ public class TreeNote : Tree
 
 		tabButton_.BindedTree = this;
 		tabButton_.Text = TitleText;
+
+		if( LogNote != null )
+		{
+			LogNote.LoadToday(this);
+		}
 	}
 
 	public void Load(string path, TabButton tab, bool isActive)
@@ -178,6 +205,11 @@ public class TreeNote : Tree
 		IsActive = isActive;
 		tabButton_.Text = TitleText;
 		targetScrollValue_ = 1.0f;
+
+		if( LogNote != null )
+		{
+			LogNote.LoadToday(this);
+		}
 	}
 
 	public override void Save()
@@ -188,7 +220,11 @@ public class TreeNote : Tree
 		}
 		else
 		{
-			base.Save();
+			SaveInternal();
+			if( LogNote != null )
+			{
+				LogNote.Save();
+			}
 		}
 	}
 
@@ -211,7 +247,11 @@ public class TreeNote : Tree
 			return;
 		}
 
-		base.Save();
+		SaveInternal();
+		if( LogNote != null )
+		{
+			LogNote.Save();
+		}
 	}
 
 	public void Reload()
