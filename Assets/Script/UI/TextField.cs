@@ -284,8 +284,8 @@ public class TextField : InputField, IColoredObject
 
 	IEnumerator UpdateTextLengthCoroutine()
 	{
-		yield return new WaitForEndOfFrame();
-
+		yield return new WaitWhile(() => m_TextComponent.cachedTextGenerator.characterCount == 0);
+		
 		float charLength = GetTextRectLength();
 
 		strikeLine_.SetLength(charLength + 10);

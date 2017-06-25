@@ -453,9 +453,9 @@ public class Line : IEnumerable<Line>
 		else // Field != null && Field.BindedLine == this && && Field.gameObject.activeSelf
 		{
 			// 適切なFieldをもう持っている
-			if( Binding.transform.parent != this.Binding.transform )
+			if( Binding.transform.parent != Parent.Binding.transform )
 			{
-				Binding.transform.SetParent(this.Binding.transform, worldPositionStays: true);
+				Binding.transform.SetParent(Parent.Binding.transform, worldPositionStays: true);
 			}
 			AdjustLayout();
 		}
