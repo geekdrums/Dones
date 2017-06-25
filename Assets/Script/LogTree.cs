@@ -15,9 +15,15 @@ using System.Windows.Forms;
 // Window - LogNote - [ LogTree ] - Line
 public class LogTree : Tree
 {
-	public DateTime Date { get; private set; }
+	#region params
 
+	DateTime date_;
 	LogNote ownerLogNote_;
+
+	#endregion
+
+
+	#region initialize
 
 	protected override void Awake()
 	{
@@ -34,6 +40,8 @@ public class LogTree : Tree
 		actionManager_.ChainEnded += this.actionManager__ChainEnded;
 		actionManager_.Executed += this.actionManager__Executed;
 	}
+
+	#endregion
 
 
 	#region add / remove log
@@ -99,6 +107,7 @@ public class LogTree : Tree
 				addParent.Add(addLine);
 				addParent = addLine;
 			}
+			cloneLine.Field.SetIsDone(cloneLine.IsDone);
 		}
 		// and its children
 		AddLogChildRecursive(line, addParent);
@@ -235,12 +244,30 @@ public class LogTree : Tree
 	#endregion
 
 
+	#region layout
+
+	protected override void UpdateLayoutElement()
+	{
+		if( suspendLayoutCount_ <= 0 && layout_ != null && rootLine_ != null && gameObject.activeInHierarchy )
+		{
+			Line lastLine = rootLine_.LastVisibleLine;
+			if( lastLine != null && lastLine.Field != null )
+			{
+				layout_.preferredHeight = Math.Max(GameContext.Config.MinLogTreeHeight, -(lastLine.TargetAbsolutePosition.y - this.transform.position.y) + GameContext.Config.HeightPerLine * 1.0f);
+				contentSizeFitter_.SetLayoutVertical();
+				ownerLogNote_.UpdateLayoutElement();
+			}
+		}
+	}
+
+	#endregion
+
 
 	#region file
 
 	public void NewTree(DateTime date)
 	{
-		Date = date;
+		date_ = date;
 		rootLine_ = new Line("new.dones");
 		rootLine_.Add(new Line(""));
 		rootLine_.Bind(this.gameObject);
@@ -249,7 +276,7 @@ public class LogTree : Tree
 
 	public void Load(string filepath, DateTime date)
 	{
-		Date = date;
+		date_ = date;
 		file_ = new FileInfo(filepath);
 		LoadInternal();
 	}
@@ -258,7 +285,7 @@ public class LogTree : Tree
 	{
 		if( file_ == null )
 		{
-			file_ = new FileInfo(LogNote.ToFileName(ownerLogNote_.TreeNote.File, Date));
+			file_ = new FileInfo(LogNote.ToFileName(ownerLogNote_.TreeNote.File, date_));
 		}
 		SaveInternal();
 	}

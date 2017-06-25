@@ -1524,7 +1524,7 @@ public class Tree : MonoBehaviour {
 
 	#region layout
 
-	protected void UpdateLayoutElement()
+	protected virtual void UpdateLayoutElement()
 	{
 		if( suspendLayoutCount_ <= 0 && layout_ != null && rootLine_ != null && gameObject.activeInHierarchy )
 		{
@@ -1615,6 +1615,7 @@ public class Tree : MonoBehaviour {
 	{
 		SuspendLayout();
 		rootLine_ = new Line(file_.Name);
+		gameObject.name = "Tree - " + TitleText;
 		rootLine_.Bind(this.gameObject);
 
 		StreamReader reader = new StreamReader(file_.OpenRead());

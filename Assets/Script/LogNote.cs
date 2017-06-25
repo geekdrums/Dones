@@ -31,14 +31,17 @@ public class LogNote : MonoBehaviour
 
 	ActionManager actionManager_;
 	GameObject heapParent_;
+	LayoutElement layout_;
+	ContentSizeFitter contentSizeFitter_;
 
 	void Awake()
 	{
-		actionManager_ = new ActionManager();
-
 		heapParent_ = new GameObject("heap");
 		heapParent_.transform.parent = this.transform;
 		heapParent_.SetActive(false);
+
+		layout_ = GetComponentInParent<LayoutElement>();
+		contentSizeFitter_ = GetComponentInParent<ContentSizeFitter>();
 	}
 
 	public void OnDoneChanged(Line line)
@@ -56,11 +59,24 @@ public class LogNote : MonoBehaviour
 		}
 	}
 
+	public void UpdateLayoutElement()
+	{
+		float preferredHeight = 0.0f;
+		foreach(LogTree logTree in logTrees_)
+		{
+			preferredHeight += logTree.GetComponent<LayoutElement>().preferredHeight + 5;
+		}
+		layout_.preferredHeight = preferredHeight;
+		contentSizeFitter_.SetLayoutVertical();
+	}
+
 	#region file
 
 	public void LoadToday(TreeNote treeNote)
 	{
 		treeNote_ = treeNote;
+		actionManager_ = treeNote_.ActionManager;
+
 		today_ = DateTime.Now.Date;
 		endDate_ = today_;
 
@@ -89,6 +105,9 @@ public class LogNote : MonoBehaviour
 			todayTree_.NewTree(today_);
 		}
 		logTrees_.Add(todayTree_);
+
+		// test
+		LoadUntil(today_.AddDays(-LoadDateCount));
 	}
 
 	public void LoadUntil(DateTime endDate)
@@ -96,17 +115,17 @@ public class LogNote : MonoBehaviour
 		DateTime date = endDate_;
 		while( date > endDate )
 		{
+			date = date.AddDays(-1.0);
 			string filename = ToFileName(treeNote_.File, date);
 			if( File.Exists(filename) )
 			{
 				LogTree logTree = Instantiate(LogTreePrefab.gameObject, this.transform).GetComponent<LogTree>();
-				DateUI dateUI = Instantiate(DateUIPrefab.gameObject, todayTree_.transform).GetComponent<DateUI>();
+				DateUI dateUI = Instantiate(DateUIPrefab.gameObject, logTree.transform).GetComponent<DateUI>();
 				dateUI.Set(date);
 				logTree.Initialize(actionManager_, heapParent_);
 				logTree.Load(filename, date);
 				logTrees_.Add(logTree);
 			}
-			date = date.AddDays(-1.0);
 		}
 		endDate_ = endDate;
 	}

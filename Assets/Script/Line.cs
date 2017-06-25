@@ -79,7 +79,7 @@ public class Line : IEnumerable<Line>
 				isDone_ = value;
 				if( Field != null )
 				{
-					Field.SetDone(isDone_);
+					Field.SetIsDone(isDone_);
 				}
 				if( IsOnList )
 				{
@@ -311,12 +311,13 @@ public class Line : IEnumerable<Line>
 			}
 
 			Field.BindedLine = this;
-			Field.text = text_;
+			Field.SetTextDirectly(text_);
 			fieldSubscription_ = Field.onValueChanged.AsObservable().Subscribe(text =>
 			{
 				OnTextChanged(text);
 			});
-			Field.SetDone(isDone_, withAnim: false);
+			Field.SetIsClone(isClone_);
+			Field.SetIsDone(isDone_, withAnim: false);
 			Field.SetIsOnList(isOnList_, withAnim: false);
 
 			if( IsLinkText )
