@@ -127,6 +127,13 @@ public class ActionManager
 				OnChainEnded();
 			}
 		}
+		else
+		{
+			if( chainStack_.Count == 0 )
+			{
+				OnChainEnded();
+			}
+		}
 	}
 
 	private void OnChainStarted()

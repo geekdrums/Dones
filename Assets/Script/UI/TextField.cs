@@ -148,13 +148,13 @@ public class TextField : InputField, IColoredObject
 		// この関数でイベント呼び出しを避ける。
 		m_Text = text;
 		UpdateLabel();
-		if( BindedLine.IsDone || BindedLine.IsOnList ) OnTextLengthChanged();
+		if( BindedLine.IsDone || BindedLine.IsOnList || BindedLine.IsLinkText ) OnTextLengthChanged();
 	}
 
-	public void SetDone(bool isDone, bool withAnim = true)
+	public void SetIsDone(bool isDone, bool withAnim = true)
 	{
-		strikeLine_.gameObject.SetActive(isDone);
-		checkMark_.gameObject.SetActive(isDone);
+		strikeLine_.gameObject.SetActive(isDone && BindedLine.IsClone == false);
+		checkMark_.gameObject.SetActive(false);
 		Foreground = GetDesiredTextColor();
 		if( isDone )
 		{
@@ -163,8 +163,11 @@ public class TextField : InputField, IColoredObject
 
 			if( withAnim )
 			{
-				strikeLine_.Rate = 0.0f;
-				AnimManager.AddAnim(strikeLine_, 1.0f, ParamType.GaugeRate, AnimType.Time, 0.15f);
+				if( BindedLine.IsClone == false )
+				{
+					strikeLine_.Rate = 0.0f;
+					AnimManager.AddAnim(strikeLine_, 1.0f, ParamType.GaugeRate, AnimType.Time, 0.15f);
+				}
 				checkMark_.Check();
 			}
 		}
@@ -227,11 +230,27 @@ public class TextField : InputField, IColoredObject
 		}
 	}
 
+	public void SetIsClone(bool isClone)
+	{
+		Foreground = GetDesiredTextColor();
+	}
+
 	Color GetDesiredTextColor()
 	{
 		if( BindedLine != null )
 		{
-			if( BindedLine.IsDone )
+			if( BindedLine.IsClone )
+			{
+				if( BindedLine.IsDone )
+				{
+					return GameContext.Config.TextColor;
+				}
+				else
+				{
+					return GameContext.Config.CloneTextColor;
+				}
+			}
+			else if( BindedLine.IsDone )
 			{
 				return GameContext.Config.DoneTextColor;
 			}
@@ -265,12 +284,13 @@ public class TextField : InputField, IColoredObject
 
 	IEnumerator UpdateTextLengthCoroutine()
 	{
-		yield return new WaitForEndOfFrame();
-
+		yield return new WaitWhile(() => m_TextComponent.cachedTextGenerator.characterCount == 0);
+		
 		float charLength = GetTextRectLength();
 
 		strikeLine_.SetLength(charLength + 10);
 
+		checkMark_.gameObject.SetActive(BindedLine.IsDone);
 		checkMark_.SetPositionX(charLength + 5);
 		listMark_.GetComponent<RectTransform>().anchoredPosition = new Vector2(charLength + 15, listMark_.transform.localPosition.y);
 
@@ -444,12 +464,29 @@ public class TextField : InputField, IColoredObject
 				case KeyCode.T:
 					if( ctrlOnly && BindedLine.Tree.HasSelection == false )
 					{
+						DateTime now = DateTime.Now;
+						string oldText = text;
+						BindedLine.Tree.ActionManager.Execute(new Action(
+							execute: () =>
+							{
+								Paste(now.ToString("hh:mm"));
+							},
+							undo: () =>
+							{
+								text = oldText;
+							}
+							));
+					}
+					break;
+				case KeyCode.H:
+					if( ctrlOnly && BindedLine.Tree.HasSelection == false )
+					{
 						DateTime date = DateTime.Now;
 						string oldText = text;
 						BindedLine.Tree.ActionManager.Execute(new Action(
 							execute: () =>
 							{
-								Paste(date.ToString("yyyy/M/dd (ddd)"));
+								Paste(date.ToString("yyyy/M/d (ddd)"));
 							},
 							undo: () =>
 							{

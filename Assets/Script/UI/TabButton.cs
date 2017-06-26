@@ -10,7 +10,7 @@ public class TabButton : UnityEngine.UI.Button, IDragHandler, IBeginDragHandler,
 {
 	#region params
 
-	public Tree BindedTree;
+	public TreeNote BindedNote;
 	
 	public bool IsOn
 	{
@@ -22,18 +22,19 @@ public class TabButton : UnityEngine.UI.Button, IDragHandler, IBeginDragHandler,
 
 			if( isOn_ )
 			{
-				GameContext.Window.OnTreeActivated(BindedTree);
+				GameContext.Window.OnTreeActivated(BindedNote);
 			}
 			else
 			{
-				BindedTree.OnDeactivated();
+				BindedNote.OnTabDeselected();
 			}
-			BindedTree.transform.SetParent(isOn_ ? GameContext.Window.TreeParent.transform : this.transform);
-			BindedTree.transform.localPosition = GameContext.Window.TreePrefab.transform.localPosition;
-			BindedTree.gameObject.SetActive(isOn_);
+			BindedNote.gameObject.SetActive(isOn_);
+			BindedNote.LogNote.gameObject.SetActive(isOn_);
+			if( BindedNote.LogNote.Tab != null )
+				BindedNote.LogNote.Tab.gameObject.SetActive(isOn_ && BindedNote.LogNote.IsOpended);
 			if( isOn_ )
 			{
-				BindedTree.OnActivated();
+				BindedNote.OnTabSelected();
 			}
 
 			if( image_ != null )
@@ -125,9 +126,9 @@ public class TabButton : UnityEngine.UI.Button, IDragHandler, IBeginDragHandler,
 
 	public void Close()
 	{
-		if( BindedTree.IsEdited )
+		if( BindedNote.IsEdited )
 		{
-			GameContext.Window.ModalDialog.Show(BindedTree.TitleText + "ファイルへの変更を保存しますか？", this.CloseConfirmCallback);
+			GameContext.Window.ModalDialog.Show(BindedNote.TitleText + "ファイルへの変更を保存しますか？", this.CloseConfirmCallback);
 			return;
 		}
 
@@ -139,7 +140,7 @@ public class TabButton : UnityEngine.UI.Button, IDragHandler, IBeginDragHandler,
 		if( IsOn )
 			IsOn = false;
 
-		GameContext.Window.OnTreeClosed(BindedTree);
+		GameContext.Window.OnTreeClosed(BindedNote);
 		Destroy(this.gameObject);
 	}
 
@@ -148,7 +149,7 @@ public class TabButton : UnityEngine.UI.Button, IDragHandler, IBeginDragHandler,
 		switch(result)
 		{
 		case ModalDialog.DialogResult.Yes:
-			BindedTree.Save();
+			BindedNote.Save();
 			DoClose();
 			break;
 		case ModalDialog.DialogResult.No:
@@ -162,7 +163,7 @@ public class TabButton : UnityEngine.UI.Button, IDragHandler, IBeginDragHandler,
 
 	void UpdateColor()
 	{
-		Background = isOn_ ? ColorManager.Theme.Bright : ColorManager.Base.Middle;
+		Background = isOn_ ? ColorManager.Theme.Bright : ColorManager.Base.Front;
 		textComponent_.color = isOn_ ? ColorManager.Base.Front : GameContext.Config.TextColor;
 	}
 
@@ -192,17 +193,17 @@ public class TabButton : UnityEngine.UI.Button, IDragHandler, IBeginDragHandler,
 
 	public void OnBeginDrag(PointerEventData eventData)
 	{
-		GameContext.Window.OnBeginDrag(this);
+		GameContext.Window.OnBeginTabDrag(this);
 	}
 
 	public void OnDrag(PointerEventData eventData)
 	{
-		GameContext.Window.OnDragging(this, eventData);
+		GameContext.Window.OnTabDragging(this, eventData);
 	}
 
 	public void OnEndDrag(PointerEventData eventData)
 	{
-		GameContext.Window.OnEndDrag(this);
+		GameContext.Window.OnEndTabDrag(this);
 	}
 
 	#endregion

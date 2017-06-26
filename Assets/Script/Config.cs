@@ -12,6 +12,7 @@ public class Config : MonoBehaviour
 	public float ArrowStreamIntervalTime = 0.03f;
 	public float TextInputFixIntervalTime = 1.0f;
 	public float DoubleClickInterval = 0.25f;
+	public float MinLogTreeHeight = 100.0f;
 
 	public Color LinkColor;
 	public Color StrikeColor;
@@ -19,6 +20,7 @@ public class Config : MonoBehaviour
 	public Color SelectionColor;
 	public Color TextColor;
 	public Color DoneTextColor;
+	public Color CloneTextColor;
 
 	public Color ShortLineColor;
 	public Color ShortLineSelectionColor;

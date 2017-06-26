@@ -6,7 +6,7 @@ using UnityEngine.UI;
 
 [RequireComponent(typeof(CanvasRenderer))]
 [RequireComponent(typeof(RectTransform))]
-public class UIGaugeRenderer : Graphic, IColoredObject
+public class UIGaugeRenderer : MaskableGraphic, IColoredObject
 {
 	public float Length = 200.0f;
 	public float Width = 2.0f;

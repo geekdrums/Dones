@@ -6,7 +6,7 @@ using UnityEngine.UI;
 
 [RequireComponent(typeof(CanvasRenderer))]
 [RequireComponent(typeof(RectTransform))]
-public class UIMidairPrimitive : Graphic, IColoredObject
+public class UIMidairPrimitive : MaskableGraphic, IColoredObject
 {
 	public float Num = 3;
 	public float ArcRate = 1.0f;

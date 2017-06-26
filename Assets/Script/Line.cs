@@ -79,7 +79,7 @@ public class Line : IEnumerable<Line>
 				isDone_ = value;
 				if( Field != null )
 				{
-					Field.SetDone(isDone_);
+					Field.SetIsDone(isDone_);
 				}
 				if( IsOnList )
 				{
@@ -116,6 +116,9 @@ public class Line : IEnumerable<Line>
 	public bool IsLinkText { get { return isLinkText_; } }
 	protected bool isLinkText_ = false;
 
+	public bool IsClone { get { return isClone_; } set { isClone_ = value; } }
+	protected bool isClone_ = false;
+	
 	public Vector3 TargetPosition { get; protected set; }
 
 	public GameObject Binding { get; protected set; }
@@ -125,9 +128,9 @@ public class Line : IEnumerable<Line>
 	
 	protected IDisposable fieldSubscription_;
 	protected IDisposable toggleSubscription_;
-	
-	#endregion
 
+	#endregion
+	
 
 	public Line(string text = "", bool loadTag = false)
 	{
@@ -308,12 +311,13 @@ public class Line : IEnumerable<Line>
 			}
 
 			Field.BindedLine = this;
-			Field.text = text_;
+			Field.SetTextDirectly(text_);
 			fieldSubscription_ = Field.onValueChanged.AsObservable().Subscribe(text =>
 			{
 				OnTextChanged(text);
 			});
-			Field.SetDone(isDone_, withAnim: false);
+			Field.SetIsClone(isClone_);
+			Field.SetIsDone(isDone_, withAnim: false);
 			Field.SetIsOnList(isOnList_, withAnim: false);
 
 			if( IsLinkText )
@@ -404,23 +408,8 @@ public class Line : IEnumerable<Line>
 				oldParent.children_.Remove(child);
 			}
 		}
-		
-		if( child.Field == null || child.Field.BindedLine != child )
-		{
-			Tree.Bind(child);
-		}
-		else if( child.Field.BindedLine == child && child.Field.gameObject.activeSelf == false )
-		{
-			child.ReBind();
-		}
-		else
-		{
-			if( child.Binding.transform.parent != this.Binding.transform )
-			{
-				child.Binding.transform.SetParent(this.Binding.transform, worldPositionStays: true);
-			}
-			child.AdjustLayout();
-		}
+
+		child.OnFoundParent();
 
 		if( child.IsOnList )
 		{
@@ -436,18 +425,58 @@ public class Line : IEnumerable<Line>
 		children_.Remove(child);
 		if( child.parent_ == this && child.Binding != null )
 		{
-			child.fieldSubscription_.Dispose();
-			child.toggleSubscription_.Dispose();
 			child.parent_ = null;
-			Tree.OnRemove(child);
-			if( child.IsOnList )
+			child.OnLostParent();
+		}
+	}
+
+	protected void OnFoundParent()
+	{
+		if( Field == null || Field.BindedLine != this )
+		{
+			// Fieldがまだ無い、またはヒープに返して他のLineに使われた
+			Tree.Bind(this);
+			foreach( Line child in this.GetAllChildren() )
 			{
-				ShortLine shortline = GameContext.Window.LineList.FindBindedLine(child);
-				if( shortline != null )
-				{
-					GameContext.Window.LineList.RemoveShortLine(shortline);
-				}
+				child.OnFoundParent();
 			}
+		}
+		else if( Field.BindedLine == this && Field.gameObject.activeSelf == false )
+		{
+			// ヒープに返したが、他のものには使われていなかった
+			ReBind();
+			foreach( Line child in this.GetAllChildren() )
+			{
+				child.OnFoundParent();
+			}
+		}
+		else // Field != null && Field.BindedLine == this && && Field.gameObject.activeSelf
+		{
+			// 適切なFieldをもう持っている
+			if( Binding.transform.parent != Parent.Binding.transform )
+			{
+				Binding.transform.SetParent(Parent.Binding.transform, worldPositionStays: true);
+			}
+			AdjustLayout();
+		}
+	}
+
+	protected void OnLostParent()
+	{
+		fieldSubscription_.Dispose();
+		toggleSubscription_.Dispose();
+		Tree.OnLostParent(this);
+		if( IsOnList )
+		{
+			ShortLine shortline = GameContext.Window.LineList.FindBindedLine(this);
+			if( shortline != null )
+			{
+				GameContext.Window.LineList.RemoveShortLine(shortline);
+			}
+		}
+		foreach(Line child in this.GetAllChildren())
+		{
+			child.OnLostParent();
 		}
 	}
 
@@ -788,6 +817,19 @@ public class Line : IEnumerable<Line>
 		}
 	}
 
+	public Line NextSiblingOrUnkleLine
+	{
+		get
+		{
+			Line sibling = NextSiblingLine;
+			if( sibling != null ) return sibling;
+			else
+			{
+				return parent_.NextSiblingOrUnkleLine;
+			}
+		}
+	}
+
 	public Line PrevSiblingLine
 	{
 		get
@@ -824,6 +866,7 @@ public class Line : IEnumerable<Line>
 
 	#endregion
 
+
 	#region save & load
 
 	public static string TabString = "	";
@@ -831,6 +874,8 @@ public class Line : IEnumerable<Line>
 	public static string FoldTag = "<f>";
 	public static string DoneTag = "<d>";
 	public static string OnListTag = "<o>";
+	public static string CloneTag = "<c>";
+
 	public void AppendStringTo(StringBuilder builder, bool appendTag = false)
 	{
 		int level = Level;
@@ -841,6 +886,10 @@ public class Line : IEnumerable<Line>
 		builder.Append(Text);
 		if( appendTag )
 		{
+			if( IsClone )
+			{
+				builder.Append(CloneTag);
+			}
 			if( IsFolded )
 			{
 				builder.Append(FoldTag);
@@ -906,12 +955,34 @@ public class Line : IEnumerable<Line>
 		{
 			IsFolded = false;
 		}
+
+		if( text.EndsWith(CloneTag) )
+		{
+			text = text.Remove(text.Length - CloneTag.Length);
+			IsClone = true;
+		}
+		else
+		{
+			IsClone = false;
+		}
 	}
+
 	public void CheckIsLink()
 	{
 		isLinkText_ = text_.StartsWith("http");
 		if( Field != null )
 			Field.SetIsLinkText(isLinkText_);
+	}
+
+	public Line Clone()
+	{
+		Line line = new Line(text_);
+		line.isDone_ = isDone_;
+		line.isFolded_ = isFolded_;
+		line.isLinkText_ = isLinkText_;
+		line.isOnList_ = false;
+		line.isClone_ = true;
+		return line;
 	}
 
 	#endregion

@@ -12,60 +12,55 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
-// Window - [ Tree ] - Line
+// Tree structure of Lines.
 public class Tree : MonoBehaviour {
 
 	#region editor params
 
 	public TextField FieldPrefab;
 	public int FieldCount = 100;
-	
+
 	#endregion
 
 
 	#region params
 
-	List<TextField> usingFields_ = new List<TextField>();
-	GameObject heapParent_;
-	Line rootLine_;
-	Line focusedLine_;
-	Line selectionStartLine_, selectionEndLine_;
-	SortedList<int, Line> selectedLines_ = new SortedList<int, Line>();
-	ActionManager actionManager_ = new ActionManager();
+	protected List<TextField> usingFields_ = new List<TextField>();
+	protected GameObject heapParent_;
+	protected Line rootLine_;
+	protected Line focusedLine_;
+	protected Line selectionStartLine_, selectionEndLine_;
+	protected SortedList<int, Line> selectedLines_ = new SortedList<int, Line>();
+	protected ActionManager actionManager_;
 
 	// input states
-	bool wasDeleteKeyConsumed_ = false;
-	bool wasCtrlMInput_ = false;
+	protected bool wasDeleteKeyConsumed_ = false;
+	protected bool wasCtrlMInput_ = false;
 
 	// layout
-	bool isAllFolded_ = false;
-	List<Line> requestLayoutLines_ = new List<Line>();
-	int suspendLayoutCount_ = 0;
-	float targetScrollValue_ = 1.0f;
-	bool isScrollAnimating_;
+	protected bool isAllFolded_ = false;
+	protected List<Line> requestLayoutLines_ = new List<Line>();
+	protected int suspendLayoutCount_ = 0;
 
 	// components
-	LayoutElement layout_;
-	ContentSizeFitter contentSizeFitter_;
-	ScrollRect scrollRect_;
-	TabButton tabButton_;
+	protected LayoutElement layout_;
+	protected ContentSizeFitter contentSizeFitter_;
+
 
 	// file
-	FileInfo file_ = null;
-	bool isEdited_ = false;
+	protected FileInfo file_ = null;
+	protected bool isEdited_ = false;
 
 	// properties
 	public ActionManager ActionManager { get { return actionManager_; } }
 	public FileInfo File { get { return file_; } }
-	public TabButton Tab { get { return tabButton_; } }
 	public Line FocusedLine { get { return focusedLine_; } }
 	public Line RootLine { get { return rootLine_; } }
 
 	public string TitleText { get { return rootLine_ != null ? rootLine_.Text : ""; } }
 	public override string ToString() { return TitleText; }
 
-	public bool IsActive { get { return (tabButton_ != null ? tabButton_.IsOn : false); } set { if( tabButton_ != null ) tabButton_.IsOn = value; } }
-	public bool IsEdited { get { return isEdited_; } }
+	public virtual bool IsEdited { get { return isEdited_; } protected set { isEdited_ = value; } }
 
 	// utils
 	protected IEnumerable<Line> GetSelectedOrFocusedLines(bool ascending = true)
@@ -99,36 +94,16 @@ public class Tree : MonoBehaviour {
 
 	#region unity functions
 
-	// Use this for initialization
-	void Awake () {
-		actionManager_.ChainStarted += this.actionManager__ChainStarted;
-		actionManager_.ChainEnded += this.actionManager__ChainEnded;
-		actionManager_.Executed += this.actionManager__Executed;
-
-		heapParent_ = new GameObject("heap");
-		heapParent_.transform.parent = this.transform;
-		for( int i = 0; i < FieldCount; ++i )
-		{
-			TextField field = Instantiate(FieldPrefab.gameObject).GetComponent<TextField>();
-			field.transform.SetParent(heapParent_.transform);
-		}
-		heapParent_.SetActive(false);
+	protected virtual void Awake()
+	{
+		layout_ = GetComponentInParent<LayoutElement>();
+		contentSizeFitter_ = GetComponentInParent<ContentSizeFitter>();
 	}
-	
+
 	// Update is called once per frame
-	void Update()
+	protected virtual void Update()
 	{
 		if( rootLine_ == null ) return;
-
-		if( isScrollAnimating_ )
-		{
-			scrollRect_.verticalScrollbar.value = Mathf.Lerp(scrollRect_.verticalScrollbar.value, targetScrollValue_, 0.2f);
-			if( Mathf.Abs(scrollRect_.verticalScrollbar.value - targetScrollValue_) < 0.01f )
-			{
-				scrollRect_.verticalScrollbar.value = targetScrollValue_;
-				isScrollAnimating_ = false;
-			}
-		}
 
 		bool ctrl = Input.GetKey(KeyCode.LeftControl);
 		bool shift = Input.GetKey(KeyCode.LeftShift);
@@ -174,6 +149,10 @@ public class Tree : MonoBehaviour {
 			else if( Input.GetKeyDown(KeyCode.D) )
 			{
 				OnCtrlDInput();
+			}
+			else if( Input.GetKeyDown(KeyCode.L) && wasCtrlMInput_ == false )
+			{
+				OnCtrlLInput();
 			}
 			else if( Input.GetKeyDown(KeyCode.Home) )
 			{
@@ -342,6 +321,8 @@ public class Tree : MonoBehaviour {
 
 	protected void SelectAll()
 	{
+		if( focusedLine_ == null ) return;
+
 		ClearSelection();
 
 		selectionStartLine_ = rootLine_[0];
@@ -391,13 +372,20 @@ public class Tree : MonoBehaviour {
 					}
 					if( prev == null ) prev = rootLine_;
 					Line lostParent = line;
+					bool wasFolded = prev.IsFolded;
 					reparentActions.Add(new Action(
 						execute: () =>
 						{
-							for( int i = 0; i < lostChildren.Count; ++i )
+							int startIndex = prev.Count;
+							if( wasFolded )
 							{
-								prev.Insert(i, lostChildren[i]);
+								prev.IsFolded = false;
 							}
+							for( int i = startIndex; i < startIndex + lostChildren.Count; ++i )
+							{
+								prev.Insert(i, lostChildren[i - startIndex]);
+							}
+							RequestLayout(prev[0]);
 						},
 						undo: () =>
 						{
@@ -405,6 +393,11 @@ public class Tree : MonoBehaviour {
 							{
 								lostParent.Add(lostChildren[i]);
 							}
+							if( wasFolded )
+							{
+								prev.IsFolded = true;
+							}
+							RequestLayout(prev[0]);
 							RequestLayout(lostParent);
 							RequestLayout(prev.NextVisibleLine);
 						}
@@ -414,10 +407,15 @@ public class Tree : MonoBehaviour {
 
 			Line parent = line.Parent;
 			int index = line.Index;
+<<<<<<< HEAD
 			Line layoutStart = line.NextSiblingLine;
+=======
+			Line layoutStart = null;
+>>>>>>> refs/remotes/origin/LogTree
 			deleteActions.Add(new Action(
 				execute: () =>
 				{
+					layoutStart = line.NextVisibleLine;
 					line.Parent.Remove(line);
 					if( layoutStart != null && layoutStart.Field.IsSelected == false )
 					{
@@ -492,17 +490,17 @@ public class Tree : MonoBehaviour {
 
 	#region actionManager
 
-	void actionManager__ChainStarted(object sender, EventArgs e)
+	protected void actionManager__ChainStarted(object sender, EventArgs e)
 	{
 		SuspendLayout();
 	}
 
-	void actionManager__ChainEnded(object sender, EventArgs e)
+	protected void actionManager__ChainEnded(object sender, EventArgs e)
 	{
 		ResumeLayout();
 	}
 
-	void actionManager__Executed(object sender, ActionEventArgs e)
+	protected void actionManager__Executed(object sender, ActionEventArgs e)
 	{
 		if( focusedLine_ != null && e.Action is Line.TextAction == false )
 		{
@@ -514,10 +512,9 @@ public class Tree : MonoBehaviour {
 			AdjustRequestedLayouts();
 		}
 
-		if( isEdited_ == false )
+		if( IsEdited == false )
 		{
-			isEdited_ = true;
-			tabButton_.Text = TitleText + "*";
+			IsEdited = true;
 		}
 	}
 
@@ -526,7 +523,7 @@ public class Tree : MonoBehaviour {
 
 	#region Input
 
-	protected void SubscribeKeyInput()
+	public void SubscribeKeyInput()
 	{
 		KeyCode[] throttleKeys = new KeyCode[]
 		{
@@ -608,10 +605,6 @@ public class Tree : MonoBehaviour {
 					}
 					));
 			}
-			//else
-			//{
-			//	break;
-			//}
 		}
 		actionManager_.EndChain();
 	}
@@ -648,23 +641,8 @@ public class Tree : MonoBehaviour {
 		actionManager_.EndChain();
 	}
 
-	protected void OnCtrlSpaceInput()
+	protected virtual void OnCtrlSpaceInput()
 	{
-		actionManager_.StartChain();
-		foreach( Line line in GetSelectedOrFocusedLines() )
-		{
-			if( line.Text != "" )
-			{
-				Line targetLine = line;
-				actionManager_.Execute(new Action(
-					execute: () =>
-					{
-						targetLine.IsDone = !targetLine.IsDone;
-					}
-					));
-			}
-		}
-		actionManager_.EndChain();
 	}
 
 	protected void OnEnterInput()
@@ -683,14 +661,14 @@ public class Tree : MonoBehaviour {
 				{
 					parent.Insert(index, line);
 					parent.AdjustLayoutRecursive(index + 1);
-					UpdateScrollTo(target);
+					ScrollTo(target);
 				},
 				undo: () =>
 				{
 					parent.Remove(line);
 					parent.AdjustLayoutRecursive(index);
 					target.Field.CaretPosision = caretPos;
-					UpdateScrollTo(target);
+					ScrollTo(target);
 				}
 				));
 		}
@@ -1016,6 +994,10 @@ public class Tree : MonoBehaviour {
 					focusedLine_.Field.IsFocused = false;
 					line.Field.IsFocused = true;
 				}
+				else
+				{
+					OnOverflowArrowInput(key);
+				}
 			}
 			break;
 		case KeyCode.RightArrow:
@@ -1028,6 +1010,10 @@ public class Tree : MonoBehaviour {
 					focusedLine_.Field.IsFocused = false;
 					next.Field.CaretPosision = 0;
 					next.Field.IsFocused = true;
+				}
+				else
+				{
+					OnOverflowArrowInput(key);
 				}
 			}
 			break;
@@ -1042,9 +1028,18 @@ public class Tree : MonoBehaviour {
 					prev.Field.CaretPosision = prev.TextLength;
 					prev.Field.IsFocused = true;
 				}
+				else
+				{
+					OnOverflowArrowInput(key);
+				}
 			}
 			break;
 		}
+	}
+
+	protected virtual void OnOverflowArrowInput(KeyCode key)
+	{
+
 	}
 
 	protected void OnShiftArrowInput(KeyCode key)
@@ -1095,6 +1090,8 @@ public class Tree : MonoBehaviour {
 	
 	protected void OnCtrlMLInput()
 	{
+		if( focusedLine_ == null ) return;
+
 		ClearSelection();
 
 		actionManager_.StartChain();
@@ -1205,8 +1202,15 @@ public class Tree : MonoBehaviour {
 		actionManager_.EndChain();
 	}
 
-	protected void OnCtrlDInput()
+	protected virtual void OnCtrlLInput()
 	{
+
+	}
+
+	protected virtual void OnCtrlDInput()
+	{
+		if( focusedLine_ == null ) return;
+
 		actionManager_.StartChain();
 		foreach( Line line in GetSelectedOrFocusedLines() )
 		{
@@ -1362,15 +1366,18 @@ public class Tree : MonoBehaviour {
 			actionManager_.Execute(new Action(
 				execute: () =>
 				{
+					string beforeRefText = pasteText;
 					pasteStart.LoadTag(ref pasteText);
 					pasteStart.Field.Paste(pasteText);
+					pasteText = beforeRefText;
 					RequestLayout(layoutStart);
 				},
 				undo: () =>
 				{
 					pasteStart.Field.CaretPosision = 0;
 					pasteStart.Text = "";
-					pasteStart.IsDone = false;
+					string noTag = "";
+					pasteStart.LoadTag(ref noTag);
 					RequestLayout(layoutStart);
 				}
 				));
@@ -1481,14 +1488,13 @@ public class Tree : MonoBehaviour {
 		}
 	}
 
-	public void OnRemove(Line line)
+	public void OnLostParent(Line line)
 	{
-		TextField field = line.Field;
-		if( field != null && field.gameObject.activeInHierarchy )
+		if( line.Field != null )
 		{
-			usingFields_.Remove(field);
-			field.transform.SetParent(heapParent_.transform);
-			field.gameObject.SetActive(false);
+			usingFields_.Remove(line.Field);
+			line.Field.transform.SetParent(heapParent_.transform);
+			line.Field.gameObject.SetActive(false);
 		}
 	}
 
@@ -1512,7 +1518,7 @@ public class Tree : MonoBehaviour {
 			selectionStartLine_ = line;
 		}
 
-		UpdateScrollTo(focusedLine_);
+		ScrollTo(focusedLine_);
 	}
 
 	public void OnFocusEnded(Line line)
@@ -1554,41 +1560,10 @@ public class Tree : MonoBehaviour {
 	{
 		usingFields_.Remove(field);
 	}
-
-	public void OnActivated()
+	
+	public virtual void ScrollTo(Line targetLine)
 	{
-		layout_ = GetComponentInParent<LayoutElement>();
-		contentSizeFitter_ = GetComponentInParent<ContentSizeFitter>();
-		scrollRect_ = GetComponentInParent<ScrollRect>();
 
-		GameContext.CurrentActionManager = actionManager_;
-
-		UpdateLayoutElement();
-		scrollRect_.verticalScrollbar.value = targetScrollValue_;
-
-		if( focusedLine_ == null )
-		{
-			focusedLine_ = rootLine_[0];
-		}
-		focusedLine_.Field.IsFocused = true;
-
-		SubscribeKeyInput();
-
-#if UNITY_STANDALONE_WIN
-		GameContext.Window.SetTitle(TitleText + " - Dones");
-#endif
-	}
-
-	public void OnDeactivated()
-	{
-		if( scrollRect_ != null )
-		{
-			targetScrollValue_ = scrollRect_.verticalScrollbar.value;
-		}
-
-		layout_ = null;
-		contentSizeFitter_ = null;
-		scrollRect_ = null;
 	}
 
 	#endregion
@@ -1596,9 +1571,9 @@ public class Tree : MonoBehaviour {
 
 	#region layout
 
-	protected void UpdateLayoutElement()
+	public virtual void UpdateLayoutElement()
 	{
-		if( suspendLayoutCount_ <= 0 && layout_ != null )
+		if( suspendLayoutCount_ <= 0 && layout_ != null && rootLine_ != null && gameObject.activeInHierarchy )
 		{
 			Line lastLine = rootLine_.LastVisibleLine;
 			if( lastLine != null && lastLine.Field != null )
@@ -1606,31 +1581,6 @@ public class Tree : MonoBehaviour {
 				layout_.preferredHeight = -(lastLine.TargetAbsolutePosition.y - this.transform.position.y) + GameContext.Config.HeightPerLine * 1.0f;
 				contentSizeFitter_.SetLayoutVertical();
 			}
-		}
-	}
-
-	public void UpdateScrollTo(Line targetLine)
-	{
-		float scrollHeight = scrollRect_.GetComponent<RectTransform>().rect.height;
-		float targetHeight = -(targetLine.Field.transform.position.y - this.transform.position.y);
-		float heightPerLine = GameContext.Config.HeightPerLine;
-
-		// focusLineが下側に出て見えなくなった場合
-		float targetUnderHeight = -(targetLine.Field.transform.position.y - scrollRect_.transform.position.y) + heightPerLine / 2 - scrollHeight;
-		if( targetUnderHeight > 0 )
-		{
-			targetScrollValue_ = Mathf.Clamp01(1.0f - (targetHeight + heightPerLine * 1.5f - scrollHeight) / (layout_.preferredHeight - scrollHeight));
-			isScrollAnimating_ = true;
-			return;
-		}
-
-		// focusLineが上側に出て見えなくなった場合
-		float targetOverHeight = (targetLine.Field.transform.position.y + heightPerLine - scrollRect_.transform.position.y);
-		if( targetOverHeight > 0 )
-		{
-			targetScrollValue_ = Mathf.Clamp01((layout_.preferredHeight - scrollHeight - targetHeight + heightPerLine) / (layout_.preferredHeight - scrollHeight));
-			isScrollAnimating_ = true;
-			return;
 		}
 	}
 
@@ -1683,60 +1633,17 @@ public class Tree : MonoBehaviour {
 	}
 
 	#endregion
-	
 
-	#region file
-	
-	public void NewFile(TabButton tab)
+
+	#region files
+
+	public virtual void Save()
 	{
-		tabButton_ = tab;
 
-		SuspendLayout();
-		rootLine_ = new Line("new");
-		rootLine_.Bind(this.gameObject);
-		rootLine_.Add(new Line(""));
-		ResumeLayout();
-
-		tabButton_.BindedTree = this;
-		tabButton_.Text = TitleText;
 	}
 
-	public void Load(string path, TabButton tab)
+	protected void SaveInternal()
 	{
-		if( file_ != null )
-		{
-			return;
-		}
-
-		tabButton_ = tab;
-
-		file_ = new FileInfo(path);
-
-		Reload();
-	}
-
-	public void Save(bool saveAs = false)
-	{
-		if( file_ == null || saveAs )
-		{
-			SaveFileDialog saveFileDialog = new SaveFileDialog();
-			saveFileDialog.Filter = "dones file (*.dtml)|*.dtml";
-			saveFileDialog.FileName = rootLine_.Text;
-			DialogResult dialogResult = saveFileDialog.ShowDialog();
-			if( dialogResult == DialogResult.OK )
-			{
-				file_ = new FileInfo(saveFileDialog.FileName);
-				rootLine_.Text = file_.Name;
-#if UNITY_STANDALONE_WIN
-				GameContext.Window.SetTitle(TitleText + " - Dones");
-#endif
-			}
-			else
-			{
-				return;
-			}
-		}
-
 		StringBuilder builder = new StringBuilder();
 		foreach( Line line in rootLine_.GetAllChildren() )
 		{
@@ -1748,35 +1655,14 @@ public class Tree : MonoBehaviour {
 		writer.Flush();
 		writer.Close();
 
-		isEdited_ = false;
-		tabButton_.Text = TitleText;
+		IsEdited = false;
 	}
-
-	public void Reload()
+	
+	protected void LoadInternal()
 	{
-		if( file_ == null )
-		{
-			return;
-		}
-
 		SuspendLayout();
-		if( rootLine_ != null )
-		{
-			targetScrollValue_ = scrollRect_.verticalScrollbar.value = 1.0f;
-			ClearSelection();
-			rootLine_ = null;
-			focusedLine_ = null;
-			foreach( TextField field in usingFields_ )
-			{
-				field.BindedLine.UnBind();
-				field.transform.SetParent(heapParent_.transform);
-				field.gameObject.SetActive(false);
-			}
-			usingFields_.Clear();
-			GC.Collect();
-		}
-
 		rootLine_ = new Line(file_.Name);
+		gameObject.name = "Tree - " + TitleText;
 		rootLine_.Bind(this.gameObject);
 
 		StreamReader reader = new StreamReader(file_.OpenRead());
@@ -1829,9 +1715,7 @@ public class Tree : MonoBehaviour {
 		}
 		reader.Close();
 		ResumeLayout();
-
-		tabButton_.BindedTree = this;
-		tabButton_.Text = TitleText;
+		IsEdited = false;
 	}
 
 	#endregion
