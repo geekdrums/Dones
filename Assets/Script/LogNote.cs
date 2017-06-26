@@ -24,6 +24,37 @@ public class LogNote : MonoBehaviour
 
 	public TreeNote TreeNote { get { return treeNote_; } }
 	TreeNote treeNote_;
+	
+	public LogTabButton Tab { get { return tabButton_; } }
+	protected LogTabButton tabButton_;
+
+
+	public float OpenRatio
+	{
+		get { return openRatio_; }
+		set { openRatio_ = value; }
+	}
+	private float openRatio_ = 0.5f;
+
+	public bool IsOpended
+	{
+		get { return isOpended_; }
+		set
+		{
+			isOpended_ = value;
+			if( value )
+			{
+				OnTabOpened();
+			}
+			else
+			{
+				OnTabClosed();
+			}
+		}
+	}
+	private bool isOpended_ = false;
+
+	public string TitleText { get { return treeNote_ != null ? treeNote_.TitleText.Replace(".dtml", ".dones") : ""; } }
 
 	List<LogTree> logTrees_ = new List<LogTree>();
 	DateTime today_;
@@ -36,12 +67,70 @@ public class LogNote : MonoBehaviour
 
 	void Awake()
 	{
+		actionManager_ = new ActionManager();
+
 		heapParent_ = new GameObject("heap");
 		heapParent_.transform.parent = this.transform;
 		heapParent_.SetActive(false);
 
 		layout_ = GetComponentInParent<LayoutElement>();
 		contentSizeFitter_ = GetComponentInParent<ContentSizeFitter>();
+	}
+
+	#region input
+
+	public void SubscribeKeyInput()
+	{
+		foreach( LogTree logTree in logTrees_ )
+		{
+			logTree.SubscribeKeyInput();
+		}
+	}
+
+	public void OnOverflowArrowInput(LogTree tree, KeyCode key)
+	{
+		int index = logTrees_.IndexOf(tree);
+		switch(key)
+		{
+		case KeyCode.DownArrow:
+			{
+				Line next = (index < logTrees_.Count - 1 ? logTrees_[index + 1].RootLine[0] : null);
+				if( next != null )
+				{
+					next.Field.IsFocused = true;
+				}
+			}
+			break;
+		case KeyCode.UpArrow:
+			{
+				Line prev = (index > 0 ? logTrees_[index - 1].RootLine.LastVisibleLine : null);
+				if( prev != null )
+				{
+					prev.Field.IsFocused = true;
+				}
+			}
+			break;
+		case KeyCode.RightArrow:
+			{
+				Line next = (index < logTrees_.Count - 1 ? logTrees_[index + 1].RootLine[0] : null);
+				if( next != null )
+				{
+					next.Field.CaretPosision = 0;
+					next.Field.IsFocused = true;
+				}
+			}
+			break;
+		case KeyCode.LeftArrow:
+			{
+				Line prev = (index > 0 ? logTrees_[index - 1].RootLine.LastVisibleLine : null);
+				if( prev != null )
+				{
+					prev.Field.CaretPosision = prev.TextLength;
+					prev.Field.IsFocused = true;
+				}
+			}
+			break;
+		}
 	}
 
 	public void OnDoneChanged(Line line)
@@ -59,23 +148,53 @@ public class LogNote : MonoBehaviour
 		}
 	}
 
+	#endregion
+
+
+	#region events
+
 	public void UpdateLayoutElement()
 	{
 		float preferredHeight = 0.0f;
-		foreach(LogTree logTree in logTrees_)
+		foreach( LogTree logTree in logTrees_ )
 		{
 			preferredHeight += logTree.GetComponent<LayoutElement>().preferredHeight + 5;
 		}
 		layout_.preferredHeight = preferredHeight;
 		contentSizeFitter_.SetLayoutVertical();
 	}
+	
+	public void OnTabOpened()
+	{
+		tabButton_.gameObject.SetActive(treeNote_.IsActive);
+		LoadUntil(today_.AddDays(-LoadDateCount));
+		GameContext.Window.OnLogTabOpened();
+	}
+
+	public void OnTabClosed()
+	{
+		GameContext.Window.OnLogTabClosed(this);
+		tabButton_.gameObject.SetActive(false);
+		foreach( LogTree logTree in logTrees_ )
+		{
+			if( logTree != todayTree_ )
+			{
+				Destroy(logTree.gameObject);
+			}
+		}
+		logTrees_.RemoveAll((LogTree logTree) => logTree != todayTree_);
+		endDate_ = today_;
+	}
+
+	#endregion
+
 
 	#region file
 
-	public void LoadToday(TreeNote treeNote)
+	public void LoadToday(TreeNote treeNote, LogTabButton tabButton)
 	{
 		treeNote_ = treeNote;
-		actionManager_ = treeNote_.ActionManager;
+		tabButton_ = tabButton;
 
 		today_ = DateTime.Now.Date;
 		endDate_ = today_;
@@ -86,19 +205,7 @@ public class LogNote : MonoBehaviour
 		todayTree_.Initialize(actionManager_, heapParent_);
 		if( treeNote_.File != null )
 		{
-			string filename = ToFileName(treeNote_.File, today_);
-			if( File.Exists(filename) == false )
-			{
-				string folderName = treeNote_.File.FullName.Replace(".dtml", ".dones");
-				if( Directory.Exists(folderName) == false )
-				{
-					Directory.CreateDirectory(folderName);
-				}
-				StreamWriter writer = File.CreateText(filename);
-				writer.Flush();
-				writer.Close();
-			}
-			todayTree_.Load(filename, today_);
+			todayTree_.Load(ToFileName(treeNote_.File, today_), today_);
 		}
 		else
 		{
@@ -106,8 +213,9 @@ public class LogNote : MonoBehaviour
 		}
 		logTrees_.Add(todayTree_);
 
-		// test
-		LoadUntil(today_.AddDays(-LoadDateCount));
+		tabButton_.BindedLogNote = this;
+		tabButton_.Text = TitleText;
+		tabButton_.gameObject.SetActive(treeNote_.IsActive);
 	}
 
 	public void LoadUntil(DateTime endDate)
@@ -124,6 +232,7 @@ public class LogNote : MonoBehaviour
 				dateUI.Set(date);
 				logTree.Initialize(actionManager_, heapParent_);
 				logTree.Load(filename, date);
+				logTree.SubscribeKeyInput();
 				logTrees_.Add(logTree);
 			}
 		}
@@ -138,12 +247,6 @@ public class LogNote : MonoBehaviour
 			return;
 		}
 
-		string folderName = treeNote_.File.FullName.Replace(".dtml", ".dones");
-		if( Directory.Exists(folderName) == false )
-		{
-			Directory.CreateDirectory(folderName);
-		}
-
 		foreach( LogTree logTree in logTrees_ )
 		{
 			if( logTree.IsEdited )
@@ -151,6 +254,8 @@ public class LogNote : MonoBehaviour
 				logTree.Save();
 			}
 		}
+
+		tabButton_.Text = TitleText;
 	}
 
 	public static string ToFileName(FileInfo treeFile, DateTime date)

@@ -150,6 +150,10 @@ public class Tree : MonoBehaviour {
 			{
 				OnCtrlDInput();
 			}
+			else if( Input.GetKeyDown(KeyCode.L) && wasCtrlMInput_ == false )
+			{
+				OnCtrlLInput();
+			}
 			else if( Input.GetKeyDown(KeyCode.Home) )
 			{
 				rootLine_[0].Field.IsFocused = true;
@@ -317,6 +321,8 @@ public class Tree : MonoBehaviour {
 
 	protected void SelectAll()
 	{
+		if( focusedLine_ == null ) return;
+
 		ClearSelection();
 
 		selectionStartLine_ = rootLine_[0];
@@ -498,7 +504,7 @@ public class Tree : MonoBehaviour {
 
 	#region Input
 
-	protected void SubscribeKeyInput()
+	public void SubscribeKeyInput()
 	{
 		KeyCode[] throttleKeys = new KeyCode[]
 		{
@@ -580,10 +586,6 @@ public class Tree : MonoBehaviour {
 					}
 					));
 			}
-			//else
-			//{
-			//	break;
-			//}
 		}
 		actionManager_.EndChain();
 	}
@@ -973,6 +975,10 @@ public class Tree : MonoBehaviour {
 					focusedLine_.Field.IsFocused = false;
 					line.Field.IsFocused = true;
 				}
+				else
+				{
+					OnOverflowArrowInput(key);
+				}
 			}
 			break;
 		case KeyCode.RightArrow:
@@ -985,6 +991,10 @@ public class Tree : MonoBehaviour {
 					focusedLine_.Field.IsFocused = false;
 					next.Field.CaretPosision = 0;
 					next.Field.IsFocused = true;
+				}
+				else
+				{
+					OnOverflowArrowInput(key);
 				}
 			}
 			break;
@@ -999,9 +1009,18 @@ public class Tree : MonoBehaviour {
 					prev.Field.CaretPosision = prev.TextLength;
 					prev.Field.IsFocused = true;
 				}
+				else
+				{
+					OnOverflowArrowInput(key);
+				}
 			}
 			break;
 		}
+	}
+
+	protected virtual void OnOverflowArrowInput(KeyCode key)
+	{
+
 	}
 
 	protected void OnShiftArrowInput(KeyCode key)
@@ -1052,6 +1071,8 @@ public class Tree : MonoBehaviour {
 	
 	protected void OnCtrlMLInput()
 	{
+		if( focusedLine_ == null ) return;
+
 		ClearSelection();
 
 		actionManager_.StartChain();
@@ -1162,8 +1183,15 @@ public class Tree : MonoBehaviour {
 		actionManager_.EndChain();
 	}
 
-	protected void OnCtrlDInput()
+	protected virtual void OnCtrlLInput()
 	{
+
+	}
+
+	protected virtual void OnCtrlDInput()
+	{
+		if( focusedLine_ == null ) return;
+
 		actionManager_.StartChain();
 		foreach( Line line in GetSelectedOrFocusedLines() )
 		{
@@ -1524,7 +1552,7 @@ public class Tree : MonoBehaviour {
 
 	#region layout
 
-	protected virtual void UpdateLayoutElement()
+	public virtual void UpdateLayoutElement()
 	{
 		if( suspendLayoutCount_ <= 0 && layout_ != null && rootLine_ != null && gameObject.activeInHierarchy )
 		{

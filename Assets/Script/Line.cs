@@ -817,6 +817,19 @@ public class Line : IEnumerable<Line>
 		}
 	}
 
+	public Line NextSiblingOrUnkleLine
+	{
+		get
+		{
+			Line sibling = NextSiblingLine;
+			if( sibling != null ) return sibling;
+			else
+			{
+				return parent_.NextSiblingOrUnkleLine;
+			}
+		}
+	}
+
 	public Line PrevSiblingLine
 	{
 		get

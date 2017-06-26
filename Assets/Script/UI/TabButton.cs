@@ -29,6 +29,9 @@ public class TabButton : UnityEngine.UI.Button, IDragHandler, IBeginDragHandler,
 				BindedNote.OnTabDeselected();
 			}
 			BindedNote.gameObject.SetActive(isOn_);
+			BindedNote.LogNote.gameObject.SetActive(isOn_);
+			if( BindedNote.LogNote.Tab != null )
+				BindedNote.LogNote.Tab.gameObject.SetActive(isOn_ && BindedNote.LogNote.IsOpended);
 			if( isOn_ )
 			{
 				BindedNote.OnTabSelected();
@@ -160,7 +163,7 @@ public class TabButton : UnityEngine.UI.Button, IDragHandler, IBeginDragHandler,
 
 	void UpdateColor()
 	{
-		Background = isOn_ ? ColorManager.Theme.Bright : ColorManager.Base.Middle;
+		Background = isOn_ ? ColorManager.Theme.Bright : ColorManager.Base.Front;
 		textComponent_.color = isOn_ ? ColorManager.Base.Front : GameContext.Config.TextColor;
 	}
 
@@ -190,17 +193,17 @@ public class TabButton : UnityEngine.UI.Button, IDragHandler, IBeginDragHandler,
 
 	public void OnBeginDrag(PointerEventData eventData)
 	{
-		GameContext.Window.OnBeginDrag(this);
+		GameContext.Window.OnBeginTabDrag(this);
 	}
 
 	public void OnDrag(PointerEventData eventData)
 	{
-		GameContext.Window.OnDragging(this, eventData);
+		GameContext.Window.OnTabDragging(this, eventData);
 	}
 
 	public void OnEndDrag(PointerEventData eventData)
 	{
-		GameContext.Window.OnEndDrag(this);
+		GameContext.Window.OnEndTabDrag(this);
 	}
 
 	#endregion

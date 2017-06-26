@@ -84,8 +84,12 @@ public class TreeNote : Tree
 	#endregion
 
 
+	#region input
+
 	protected override void OnCtrlSpaceInput()
 	{
+		if( focusedLine_ == null ) return;
+
 		actionManager_.StartChain();
 		foreach( Line line in GetSelectedOrFocusedLines() )
 		{
@@ -103,6 +107,13 @@ public class TreeNote : Tree
 		}
 		actionManager_.EndChain();
 	}
+
+	protected override void OnCtrlLInput()
+	{
+		LogNote.IsOpended = !LogNote.IsOpended;
+	}
+
+	#endregion
 
 
 	#region tab, scroll
@@ -136,7 +147,16 @@ public class TreeNote : Tree
 			return;
 		}
 	}
-	
+
+	public override void UpdateLayoutElement()
+	{
+		base.UpdateLayoutElement();
+		if( logNote_ != null )
+		{
+			logNote_.UpdateLayoutElement();
+		}
+	}
+
 	public void OnTabSelected()
 	{
 		GameContext.CurrentActionManager = actionManager_;
@@ -151,6 +171,7 @@ public class TreeNote : Tree
 		focusedLine_.Field.IsFocused = true;
 
 		SubscribeKeyInput();
+		logNote_.SubscribeKeyInput();
 
 #if UNITY_STANDALONE_WIN
 		GameContext.Window.SetTitle(TitleText + " - Dones");
@@ -180,11 +201,6 @@ public class TreeNote : Tree
 
 		tabButton_.BindedNote = this;
 		tabButton_.Text = TitleText;
-
-		if( LogNote != null )
-		{
-			LogNote.LoadToday(this);
-		}
 	}
 
 	public void Load(string path, TabButton tab, LogNote logNote, bool isActive)
@@ -200,18 +216,13 @@ public class TreeNote : Tree
 		logNote_ = logNote;
 
 		gameObject.SetActive(isActive);
+		logNote_.gameObject.SetActive(isActive);
 
 		LoadInternal();
 
 		tabButton_.BindedNote = this;
-		IsActive = isActive;
 		tabButton_.Text = TitleText;
 		targetScrollValue_ = 1.0f;
-
-		if( LogNote != null )
-		{
-			LogNote.LoadToday(this);
-		}
 	}
 
 	public override void Save()
@@ -223,10 +234,7 @@ public class TreeNote : Tree
 		else
 		{
 			SaveInternal();
-			if( LogNote != null )
-			{
-				LogNote.Save();
-			}
+			logNote_.Save();
 		}
 	}
 
@@ -250,10 +258,7 @@ public class TreeNote : Tree
 		}
 
 		SaveInternal();
-		if( LogNote != null )
-		{
-			LogNote.Save();
-		}
+		logNote_.Save();
 	}
 
 	public void Reload()

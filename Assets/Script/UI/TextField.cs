@@ -464,6 +464,23 @@ public class TextField : InputField, IColoredObject
 				case KeyCode.T:
 					if( ctrlOnly && BindedLine.Tree.HasSelection == false )
 					{
+						DateTime now = DateTime.Now;
+						string oldText = text;
+						BindedLine.Tree.ActionManager.Execute(new Action(
+							execute: () =>
+							{
+								Paste(now.ToString("hh:mm"));
+							},
+							undo: () =>
+							{
+								text = oldText;
+							}
+							));
+					}
+					break;
+				case KeyCode.H:
+					if( ctrlOnly && BindedLine.Tree.HasSelection == false )
+					{
 						DateTime date = DateTime.Now;
 						string oldText = text;
 						BindedLine.Tree.ActionManager.Execute(new Action(
