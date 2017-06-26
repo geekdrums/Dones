@@ -372,13 +372,20 @@ public class Tree : MonoBehaviour {
 					}
 					if( prev == null ) prev = rootLine_;
 					Line lostParent = line;
+					bool wasFolded = prev.IsFolded;
 					reparentActions.Add(new Action(
 						execute: () =>
 						{
-							for( int i = 0; i < lostChildren.Count; ++i )
+							int startIndex = prev.Count;
+							if( wasFolded )
 							{
-								prev.Insert(i, lostChildren[i]);
+								prev.IsFolded = false;
 							}
+							for( int i = startIndex; i < startIndex + lostChildren.Count; ++i )
+							{
+								prev.Insert(i, lostChildren[i - startIndex]);
+							}
+							RequestLayout(prev[0]);
 						},
 						undo: () =>
 						{
@@ -386,6 +393,11 @@ public class Tree : MonoBehaviour {
 							{
 								lostParent.Add(lostChildren[i]);
 							}
+							if( wasFolded )
+							{
+								prev.IsFolded = true;
+							}
+							RequestLayout(prev[0]);
 							RequestLayout(lostParent);
 							RequestLayout(prev.NextVisibleLine);
 						}
@@ -395,10 +407,11 @@ public class Tree : MonoBehaviour {
 
 			Line parent = line.Parent;
 			int index = line.Index;
-			Line layoutStart = line.NextVisibleLine;
+			Line layoutStart = null;
 			deleteActions.Add(new Action(
 				execute: () =>
 				{
+					layoutStart = line.NextVisibleLine;
 					line.Parent.Remove(line);
 					if( layoutStart != null && layoutStart.Field.IsSelected == false )
 					{
