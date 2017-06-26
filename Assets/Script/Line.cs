@@ -823,10 +823,11 @@ public class Line : IEnumerable<Line>
 		{
 			Line sibling = NextSiblingLine;
 			if( sibling != null ) return sibling;
-			else
+			else if( parent_ != null && parent_.Parent != null )
 			{
 				return parent_.NextSiblingOrUnkleLine;
 			}
+			else return null;
 		}
 	}
 

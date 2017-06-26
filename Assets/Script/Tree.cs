@@ -407,11 +407,7 @@ public class Tree : MonoBehaviour {
 
 			Line parent = line.Parent;
 			int index = line.Index;
-<<<<<<< HEAD
-			Line layoutStart = line.NextSiblingLine;
-=======
 			Line layoutStart = null;
->>>>>>> refs/remotes/origin/LogTree
 			deleteActions.Add(new Action(
 				execute: () =>
 				{
