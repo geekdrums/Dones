@@ -399,18 +399,19 @@ public class TextField : InputField, IColoredObject
 		}
 	}
 
-	protected Event processingEvent_ = new Event();
+	protected static string compositionString = "";
+	protected static Event processingEvent_ = new Event();
 	public override void OnUpdateSelected(BaseEventData eventData)
 	{
 		if( !isFocused || BindedLine == null || BindedLine.Tree == null )
 			return;
 
-		//bool consumedEvent = false;
+		bool consumedEvent = false;
 		while( Event.PopEvent(processingEvent_) )
 		{
 			if( processingEvent_.rawType == EventType.KeyDown )
 			{
-				//consumedEvent = true;
+				consumedEvent = true;
 
 				var currentEventModifiers = processingEvent_.modifiers;
 				bool ctrl = SystemInfo.operatingSystemFamily == OperatingSystemFamily.MacOSX ? (currentEventModifiers & EventModifiers.Command) != 0 : (currentEventModifiers & EventModifiers.Control) != 0;
@@ -575,9 +576,12 @@ public class TextField : InputField, IColoredObject
 			}
 		}
 
-		// ひらがな入力で、変換の最後の1文字だけ、BackspaceのKeyDownが来ない問題で、仕方なく毎回Update
-		//if( consumedEvent )
-		UpdateLabel();
+		// ひらがな入力で、変換の最後の1文字だけ、BackspaceのKeyDownが来ない問題
+		bool compositionStringDeleted = (compositionString.Length > 0 && Input.compositionString.Length == 0);
+		if( consumedEvent || compositionStringDeleted )
+			UpdateLabel();
+
+		compositionString = Input.compositionString;
 
 		eventData.Use();
 	}
