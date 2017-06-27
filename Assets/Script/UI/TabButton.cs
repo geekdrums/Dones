@@ -132,6 +132,12 @@ public class TabButton : UnityEngine.UI.Button, IDragHandler, IBeginDragHandler,
 			return;
 		}
 
+		if( BindedNote.LogNote.IsEdited )
+		{
+			GameContext.Window.ModalDialog.Show(BindedNote.LogNote.TitleText + "ログファイルへの変更を保存しますか？", this.CloseConfirmCallback);
+			return;
+		}
+
 		DoClose();
 	}
 

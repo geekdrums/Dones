@@ -29,8 +29,17 @@ public class LogTree : Tree
 		protected set
 		{
 			isEdited_ = value;
-			if( isEdited_ && ownerLogNote_ != null && ownerLogNote_.Tab != null )
-				ownerLogNote_.Tab.Text = ownerLogNote_.TitleText + "*";
+			if( ownerLogNote_ != null && ownerLogNote_.Tab != null )
+			{
+				if( isEdited_ )
+				{
+					ownerLogNote_.Tab.Text = ownerLogNote_.TitleText + "*";
+				}
+				else if( ownerLogNote_.IsEdited == false )
+				{
+					ownerLogNote_.Tab.Text = ownerLogNote_.TitleText;
+				}
+			}
 		}
 	}
 

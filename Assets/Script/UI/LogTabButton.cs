@@ -50,8 +50,38 @@ public class LogTabButton : MonoBehaviour, IDragHandler, IBeginDragHandler, IEnd
 
 	public void Close()
 	{
+		if( BindedLogNote.IsEdited )
+		{
+			GameContext.Window.ModalDialog.Show(BindedLogNote.TitleText + "ログファイルへの変更を保存しますか？", this.CloseConfirmCallback);
+			return;
+		}
+
+		DoClose();
+	}
+
+	void DoClose()
+	{
 		BindedLogNote.IsOpended = false;
 	}
+
+	void CloseConfirmCallback(ModalDialog.DialogResult result)
+	{
+		switch( result )
+		{
+		case ModalDialog.DialogResult.Yes:
+			BindedLogNote.Save();
+			DoClose();
+			break;
+		case ModalDialog.DialogResult.No:
+			BindedLogNote.Reload();
+			DoClose();
+			break;
+		case ModalDialog.DialogResult.Cancel:
+			// do nothing
+			break;
+		}
+	}
+
 
 	#endregion
 

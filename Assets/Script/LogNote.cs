@@ -56,6 +56,19 @@ public class LogNote : MonoBehaviour
 
 	public string TitleText { get { return treeNote_ != null ? treeNote_.TitleText.Replace(".dtml", ".dones") : ""; } }
 
+	public bool IsEdited
+	{
+		get
+		{
+			foreach( LogTree logTree in logTrees_ )
+			{
+				if( logTree.IsEdited )
+					return true;
+			}
+			return false;
+		}
+	}
+
 	List<LogTree> logTrees_ = new List<LogTree>();
 	DateTime today_;
 	DateTime endDate_;
@@ -268,6 +281,15 @@ public class LogNote : MonoBehaviour
 		}
 
 		tabButton_.Text = TitleText;
+	}
+	
+	public void Reload()
+	{
+		foreach( LogTree logTree in logTrees_ )
+		{
+			logTree.Reload();
+		}
+		UpdateLayoutElement();
 	}
 
 	public static string ToFileName(FileInfo treeFile, DateTime date)

@@ -143,6 +143,7 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 		if( Input.GetKeyDown(KeyCode.F5) && activeNote_.File != null )
 		{
 			activeNote_.Reload();
+			activeNote_.LogNote.Reload();
 		}
 
 		if(	currentScreenWidth_ != UnityEngine.Screen.width )
@@ -159,13 +160,12 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 
 	void OnApplicationQuit()
 	{
-#if !UNITY_EDITOR
 		if( saveConfirmed_ == false )
 		{
 			saveConfirmed_ = true;
-			foreach( Tree tree in trees_ )
+			foreach( TreeNote tree in trees_ )
 			{
-				if( tree.IsEdited )
+				if( tree.IsEdited || tree.LogNote.IsEdited )
 				{
 					GameContext.Window.ModalDialog.Show("ファイルへの変更を保存しますか？", this.CloseConfirmCallback);
 					UnityEngine.Application.CancelQuit();
@@ -173,7 +173,6 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 				}
 			}
 		}
-#endif
 
 		SaveSettings();
 		SaveLineList();

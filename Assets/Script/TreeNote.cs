@@ -261,33 +261,5 @@ public class TreeNote : Tree
 		logNote_.Save();
 	}
 
-	public void Reload()
-	{
-		if( file_ == null )
-		{
-			return;
-		}
-
-		if( rootLine_ != null )
-		{
-			targetScrollValue_ = scrollRect_.verticalScrollbar.value = 1.0f;
-			ClearSelection();
-			rootLine_ = null;
-			focusedLine_ = null;
-			foreach( TextField field in usingFields_ )
-			{
-				field.BindedLine.UnBind();
-				field.transform.SetParent(heapParent_.transform);
-				field.gameObject.SetActive(false);
-			}
-			usingFields_.Clear();
-			GC.Collect();
-		}
-
-		LoadInternal();
-		
-		tabButton_.Text = TitleText;
-	}
-
 	#endregion
 }

@@ -1739,5 +1739,30 @@ public class Tree : MonoBehaviour {
 		IsEdited = false;
 	}
 
+	public void Reload()
+	{
+		if( file_ == null )
+		{
+			return;
+		}
+
+		if( rootLine_ != null )
+		{
+			ClearSelection();
+			rootLine_ = null;
+			focusedLine_ = null;
+			foreach( TextField field in usingFields_ )
+			{
+				field.BindedLine.UnBind();
+				field.transform.SetParent(heapParent_.transform);
+				field.gameObject.SetActive(false);
+			}
+			usingFields_.Clear();
+			GC.Collect();
+		}
+
+		LoadInternal();
+	}
+
 	#endregion
 }

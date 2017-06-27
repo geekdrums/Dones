@@ -556,6 +556,13 @@ public class TextField : InputField, IColoredObject
 						BindedLine.FixTextInputAction();
 					}
 					break;
+				case KeyCode.Home:
+				case KeyCode.End:
+					{
+						KeyPressed(processingEvent_);
+						desiredCaretPos_ = m_CaretSelectPosition;
+					}
+					break;
 				default:
 					if( ctrlOnly && processingEvent_.keyCode == KeyCode.None && processingEvent_.character.ToString() == " " )
 					{
