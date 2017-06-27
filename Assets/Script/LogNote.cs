@@ -64,6 +64,7 @@ public class LogNote : MonoBehaviour
 	GameObject heapParent_;
 	LayoutElement layout_;
 	ContentSizeFitter contentSizeFitter_;
+	ScrollRect scrollRect_;
 
 	void Awake()
 	{
@@ -75,6 +76,7 @@ public class LogNote : MonoBehaviour
 
 		layout_ = GetComponentInParent<LayoutElement>();
 		contentSizeFitter_ = GetComponentInParent<ContentSizeFitter>();
+		scrollRect_ = GetComponentInParent<ScrollRect>();
 	}
 
 	#region input
@@ -163,7 +165,15 @@ public class LogNote : MonoBehaviour
 		layout_.preferredHeight = preferredHeight;
 		contentSizeFitter_.SetLayoutVertical();
 	}
-	
+
+	public void CheckScrollbarEnabled()
+	{
+		if( scrollRect_.verticalScrollbar.isActiveAndEnabled == false )
+		{
+			scrollRect_.verticalScrollbar.value = 1.0f;
+		}
+	}
+
 	public void OnTabOpened()
 	{
 		tabButton_.gameObject.SetActive(treeNote_.IsActive);
@@ -220,6 +230,8 @@ public class LogNote : MonoBehaviour
 
 	public void LoadUntil(DateTime endDate)
 	{
+		if( treeNote_.File == null ) return;
+
 		DateTime date = endDate_;
 		while( date > endDate )
 		{

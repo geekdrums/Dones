@@ -36,6 +36,7 @@ public class Tree : MonoBehaviour {
 	// input states
 	protected bool wasDeleteKeyConsumed_ = false;
 	protected bool wasCtrlMInput_ = false;
+	protected List<IDisposable> throttleInputSubscriptions_ = new List<IDisposable>();
 
 	// layout
 	protected bool isAllFolded_ = false;
@@ -276,8 +277,24 @@ public class Tree : MonoBehaviour {
 		}
 	}
 
+	protected virtual void OnDisable()
+	{
+		foreach( IDisposable subscription in throttleInputSubscriptions_ )
+		{
+			subscription.Dispose();
+		}
+		throttleInputSubscriptions_.Clear();
+	}
+
+	protected virtual void OnDestroy()
+	{
+		actionManager_.ChainStarted -= this.actionManager__ChainStarted;
+		actionManager_.ChainEnded -= this.actionManager__ChainEnded;
+		actionManager_.Executed -= this.actionManager__Executed;
+	}
+
 	#endregion
-	
+
 
 	#region selections
 
@@ -506,6 +523,7 @@ public class Tree : MonoBehaviour {
 		if( suspendLayoutCount_ <= 0 )
 		{
 			AdjustRequestedLayouts();
+			UpdateLayoutElement();
 		}
 
 		if( IsEdited == false )
@@ -521,6 +539,11 @@ public class Tree : MonoBehaviour {
 
 	public void SubscribeKeyInput()
 	{
+		if( throttleInputSubscriptions_.Count > 0 )
+		{
+			return;
+		}
+
 		KeyCode[] throttleKeys = new KeyCode[]
 		{
 			KeyCode.UpArrow,
@@ -536,6 +559,7 @@ public class Tree : MonoBehaviour {
 
 		foreach( KeyCode key in throttleKeys )
 		{
+			throttleInputSubscriptions_.Add(
 			// 最初の入力
 			updateStream.Where(x => Input.GetKeyDown(key))
 				.Merge(
@@ -545,8 +569,9 @@ public class Tree : MonoBehaviour {
 				.ThrottleFirst(TimeSpan.FromSeconds(GameContext.Config.ArrowStreamIntervalTime))
 				)
 				.TakeUntil(this.UpdateAsObservable().Where(x => Input.GetKeyUp(key)))
-				.RepeatUntilDisable(this)
-				.Subscribe(_ => OnThrottleInput(key));
+				.RepeatUntilDestroy(this)
+				.Subscribe(_ => OnThrottleInput(key))
+			);
 		}
 	}
 
@@ -1592,6 +1617,7 @@ public class Tree : MonoBehaviour {
 		{
 			suspendLayoutCount_ = 0;
 			AdjustRequestedLayouts();
+			UpdateLayoutElement();
 		}
 	}
 
@@ -1625,7 +1651,6 @@ public class Tree : MonoBehaviour {
 			}
 			requestLayoutLines_.Clear();
 		}
-		UpdateLayoutElement();
 	}
 
 	#endregion

@@ -147,13 +147,12 @@ public class TreeNote : Tree
 			return;
 		}
 	}
-
-	public override void UpdateLayoutElement()
+	
+	public void CheckScrollbarEnabled()
 	{
-		base.UpdateLayoutElement();
-		if( logNote_ != null )
+		if( scrollRect_.verticalScrollbar.isActiveAndEnabled == false )
 		{
-			logNote_.UpdateLayoutElement();
+			scrollRect_.verticalScrollbar.value = 1.0f;
 		}
 	}
 
@@ -162,6 +161,7 @@ public class TreeNote : Tree
 		GameContext.CurrentActionManager = actionManager_;
 
 		UpdateLayoutElement();
+		logNote_.UpdateLayoutElement();
 		scrollRect_.verticalScrollbar.value = targetScrollValue_;
 
 		if( focusedLine_ == null )

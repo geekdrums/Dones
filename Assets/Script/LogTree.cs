@@ -41,7 +41,6 @@ public class LogTree : Tree
 
 	protected override void Awake()
 	{
-		base.Awake();
 		ownerLogNote_ = GetComponentInParent<LogNote>();
 	}
 
@@ -375,14 +374,23 @@ public class LogTree : Tree
 
 	public override void UpdateLayoutElement()
 	{
-		if( suspendLayoutCount_ <= 0 && layout_ != null && rootLine_ != null && gameObject.activeInHierarchy )
+		if( layout_ == null )
+		{
+			layout_ = GetComponent<LayoutElement>();
+			contentSizeFitter_ = GetComponent<ContentSizeFitter>();
+		}
+
+		if( suspendLayoutCount_ <= 0 && rootLine_ != null )
 		{
 			Line lastLine = rootLine_.LastVisibleLine;
 			if( lastLine != null && lastLine.Field != null )
 			{
 				layout_.preferredHeight = Math.Max(GameContext.Config.MinLogTreeHeight, -(lastLine.TargetAbsolutePosition.y - this.transform.position.y) + GameContext.Config.HeightPerLine * 1.0f);
 				contentSizeFitter_.SetLayoutVertical();
-				ownerLogNote_.UpdateLayoutElement();
+				if( ownerLogNote_ != null )
+				{
+					ownerLogNote_.UpdateLayoutElement();
+				}
 			}
 		}
 	}
@@ -396,9 +404,8 @@ public class LogTree : Tree
 	{
 		date_ = date;
 		rootLine_ = new Line("new.dones");
-		rootLine_.Add(new Line(""));
 		rootLine_.Bind(this.gameObject);
-		IsEdited = true;
+		rootLine_.Add(new Line(""));
 	}
 
 	public void Load(string filepath, DateTime date)

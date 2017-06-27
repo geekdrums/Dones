@@ -248,8 +248,8 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 		LogTabButton logtab = Instantiate(LogTabButtonPrefab.gameObject, LogTabParent.transform).GetComponent<LogTabButton>();
 		treeNote.NewFile(tab, logNote);
 		logNote.LoadToday(treeNote, logtab);
-		OnTreeCreated(treeNote);
 		treeNote.IsActive = true;
+		OnTreeCreated(treeNote);
 
 		FileMenu.Close();
 	}
@@ -309,7 +309,7 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 	void AddRecentOpenedFiles(string path)
 	{
 		path = path.Replace('\\', '/');
-		if( recentOpenedFiles_.Count < numRecentFilesMenu && recentOpenedFiles_.Contains(path) == false )
+		if( recentOpenedFiles_.Count < numRecentFilesMenu && recentOpenedFiles_.Contains(path) == false && File.Exists(path) )
 		{
 			recentOpenedFiles_.Add(path);
 		}
@@ -454,7 +454,8 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 		LogNoteTransform.sizeDelta = new Vector2(LogNoteTransform.sizeDelta.x, height * logNoteRatio);
 		LogNoteTransform.anchoredPosition = new Vector2(LogNoteTransform.anchoredPosition.x, -height + LogNoteTransform.sizeDelta.y);
 
-		activeNote_.UpdateLayoutElement();
+		activeNote_.CheckScrollbarEnabled();
+		activeNote_.LogNote.CheckScrollbarEnabled();
 	}
 
 	public void OnBeginTabDrag(TabButton tab)
@@ -513,6 +514,9 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 		LogNoteTransform.sizeDelta = new Vector2(LogNoteTransform.sizeDelta.x, LogNoteTransform.anchoredPosition.y + height);
 		activeNote_.LogNote.OpenRatio = LogNoteTransform.sizeDelta.y / height;
 		TreeNoteTransform.sizeDelta = new Vector2(TreeNoteTransform.sizeDelta.x, height * (1.0f - activeNote_.LogNote.OpenRatio) - 40.0f);
+
+		activeNote_.CheckScrollbarEnabled();
+		activeNote_.LogNote.CheckScrollbarEnabled();
 	}
 
 	#endregion
