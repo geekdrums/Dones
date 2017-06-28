@@ -18,15 +18,18 @@ public class Config : MonoBehaviour
 	public Color StrikeColor;
 
 	public Color SelectionColor;
+	public Color AccentColor;
 	public Color TextColor;
 	public Color DoneTextColor;
+	public Color TodayColor;
+
 	public Color CloneTextColor;
+	public Color CommentTextColor;
 
 	public Color ShortLineColor;
 	public Color ShortLineSelectionColor;
 	public Color ShortLineBackColor;
 	public Color ShortLineBackSelectionColor;
-	public Color ShortLineAccentColor;
 
 	public Color ToggleColor;
 	public Color ToggleOpenedColor;

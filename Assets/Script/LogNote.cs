@@ -276,7 +276,7 @@ public class LogNote : MonoBehaviour
 
 		todayTree_ = Instantiate(LogTreePrefab.gameObject, this.transform).GetComponent<LogTree>();
 		DateUI dateUI = Instantiate(DateUIPrefab.gameObject, todayTree_.transform).GetComponent<DateUI>();
-		dateUI.Set(today_);
+		dateUI.Set(today_, ToColor(today_));
 		todayTree_.Initialize(actionManager_, heapParent_);
 		if( treeNote_.File != null )
 		{
@@ -306,7 +306,7 @@ public class LogNote : MonoBehaviour
 			{
 				LogTree logTree = Instantiate(LogTreePrefab.gameObject, this.transform).GetComponent<LogTree>();
 				DateUI dateUI = Instantiate(DateUIPrefab.gameObject, logTree.transform).GetComponent<DateUI>();
-				dateUI.Set(date);
+				dateUI.Set(date, ToColor(date));
 				logTree.Initialize(actionManager_, heapParent_);
 				logTree.Load(filename, date);
 				logTree.SubscribeKeyInput();
@@ -342,6 +342,14 @@ public class LogNote : MonoBehaviour
 			logTree.Reload();
 		}
 		UpdateLayoutElement();
+	}
+
+	public Color ToColor(DateTime date)
+	{
+		if( date.DayOfWeek == DayOfWeek.Sunday ) return GameContext.Config.AccentColor;
+		else if( date.DayOfWeek == DayOfWeek.Saturday ) return GameContext.Config.AccentColor;
+		else if( date == today_ ) return GameContext.Config.TodayColor;
+		else return GameContext.Config.TextColor;
 	}
 
 	public static string ToFileName(FileInfo treeFile, DateTime date)

@@ -241,7 +241,7 @@ public class ShortLineList : MonoBehaviour, IEnumerable<ShortLine>
 		}
 
 		float animTime = 0.2f;
-		AnimManager.AddAnim(shortLine, GameContext.Config.ShortLineAccentColor, ParamType.Color, AnimType.Time, 0.15f);
+		AnimManager.AddAnim(shortLine, GameContext.Config.AccentColor, ParamType.Color, AnimType.Time, 0.15f);
 		AnimManager.AddAnim(shortLine, GameContext.Config.ShortLineBackColor, ParamType.Color, AnimType.Time, 0.1f, 0.15f, AnimEndOption.Destroy);
 		AnimManager.AddAnim(shortLine.GetComponentInChildren<Text>(), GameContext.Config.ShortLineBackColor, ParamType.TextColor, AnimType.Time, animTime);
 		
@@ -352,7 +352,7 @@ public class ShortLineList : MonoBehaviour, IEnumerable<ShortLine>
 
 				AnimLinesToTargetPosition(index, lines_.Count - 1);
 				AnimManager.AddAnim(shortLine, GetTargetPosition(shortLine), ParamType.Position, AnimType.Time, GameContext.Config.AnimTime);
-				AnimManager.AddAnim(shortLine, GameContext.Config.ShortLineAccentColor, ParamType.Color, AnimType.Time, 0.15f);
+				AnimManager.AddAnim(shortLine, GameContext.Config.AccentColor, ParamType.Color, AnimType.Time, 0.15f);
 				AnimManager.AddAnim(shortLine, GameContext.Config.ShortLineBackColor, ParamType.Color, AnimType.Time, 0.1f, 0.15f);
 				shortLine.transform.SetAsLastSibling();
 			}
@@ -525,7 +525,7 @@ public class ShortLineList : MonoBehaviour, IEnumerable<ShortLine>
 		shortLine.Background = shortLine.TargetColor;
 		if( shortLine.IsDone == false )
 		{
-			AnimManager.AddAnim(shortLine, GameContext.Config.ShortLineAccentColor, ParamType.Color, AnimType.Time, 0.15f);
+			AnimManager.AddAnim(shortLine, GameContext.Config.AccentColor, ParamType.Color, AnimType.Time, 0.15f);
 			AnimManager.AddAnim(shortLine, shortLine.TargetColor, ParamType.Color, AnimType.Time, 0.1f, 0.15f);
 		}
 		UIMidairPrimitive primitive = shortLine.GetComponentInChildren<UIMidairPrimitive>(includeInactive: true);

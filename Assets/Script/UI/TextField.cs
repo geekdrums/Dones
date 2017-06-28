@@ -245,6 +245,10 @@ public class TextField : InputField, IColoredObject
 				{
 					return GameContext.Config.TextColor;
 				}
+				else if( BindedLine.Parent.IsDone )
+				{
+					return GameContext.Config.CommentTextColor;
+				}
 				else
 				{
 					return GameContext.Config.CloneTextColor;
