@@ -78,6 +78,11 @@ public class LogNote : MonoBehaviour
 	LayoutElement layout_;
 	ContentSizeFitter contentSizeFitter_;
 	ScrollRect scrollRect_;
+	float targetScrollValue_ = 1.0f;
+	bool isScrollAnimating_;
+
+
+	#region unity events
 
 	void Awake()
 	{
@@ -91,6 +96,23 @@ public class LogNote : MonoBehaviour
 		contentSizeFitter_ = GetComponentInParent<ContentSizeFitter>();
 		scrollRect_ = GetComponentInParent<ScrollRect>();
 	}
+
+	// Update is called once per frame
+	void Update()
+	{
+		if( isScrollAnimating_ )
+		{
+			scrollRect_.verticalScrollbar.value = Mathf.Lerp(scrollRect_.verticalScrollbar.value, targetScrollValue_, 0.2f);
+			if( Mathf.Abs(scrollRect_.verticalScrollbar.value - targetScrollValue_) < 0.01f )
+			{
+				scrollRect_.verticalScrollbar.value = targetScrollValue_;
+				isScrollAnimating_ = false;
+			}
+		}
+	}
+
+	#endregion
+
 
 	#region input
 
@@ -166,7 +188,32 @@ public class LogNote : MonoBehaviour
 	#endregion
 
 
-	#region events
+	#region layout
+
+	public void ScrollTo(Line targetLine)
+	{
+		float scrollHeight = scrollRect_.GetComponent<RectTransform>().rect.height;
+		float targetHeight = -(targetLine.Field.transform.position.y - this.transform.position.y);
+		float heightPerLine = GameContext.Config.HeightPerLine;
+
+		// focusLineが下側に出て見えなくなった場合
+		float targetUnderHeight = -(targetLine.Field.transform.position.y - scrollRect_.transform.position.y) + heightPerLine / 2 - scrollHeight;
+		if( targetUnderHeight > 0 )
+		{
+			targetScrollValue_ = Mathf.Clamp01(1.0f - (targetHeight + heightPerLine * 1.5f - scrollHeight) / (layout_.preferredHeight - scrollHeight));
+			isScrollAnimating_ = true;
+			return;
+		}
+
+		// focusLineが上側に出て見えなくなった場合
+		float targetOverHeight = (targetLine.Field.transform.position.y + heightPerLine - scrollRect_.transform.position.y);
+		if( targetOverHeight > 0 )
+		{
+			targetScrollValue_ = Mathf.Clamp01((layout_.preferredHeight - scrollHeight - targetHeight + heightPerLine) / (layout_.preferredHeight - scrollHeight));
+			isScrollAnimating_ = true;
+			return;
+		}
+	}
 
 	public void UpdateLayoutElement()
 	{
@@ -186,6 +233,11 @@ public class LogNote : MonoBehaviour
 			scrollRect_.verticalScrollbar.value = 1.0f;
 		}
 	}
+
+	#endregion
+
+
+	#region events
 
 	public void OnTabOpened()
 	{

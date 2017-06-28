@@ -66,7 +66,7 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 	#endregion
 
 
-	#region unity functions
+	#region unity events
 
 	void Awake()
 	{
@@ -96,6 +96,8 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 		LoadSettings();
 		LoadLineList();
 		UpdateLogTabLayout();
+		activeNote_.UpdateLayoutElement();
+		activeNote_.LogNote.UpdateLayoutElement();
 	}
 
 	// Update is called once per frame

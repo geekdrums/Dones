@@ -74,7 +74,7 @@ public class TextField : InputField, IColoredObject
 	#endregion
 
 
-	#region unity functions
+	#region unity events
 
 	// Use this for initialization
 	protected override void Awake()
@@ -470,7 +470,7 @@ public class TextField : InputField, IColoredObject
 						BindedLine.Tree.ActionManager.Execute(new Action(
 							execute: () =>
 							{
-								Paste(now.ToString("hh:mm"));
+								Paste(now.ToString("HH:mm"));
 							},
 							undo: () =>
 							{

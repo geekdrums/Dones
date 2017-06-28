@@ -43,7 +43,7 @@ public class TreeNote : Tree
 	#endregion
 
 
-	#region unity functions
+	#region unity events
 
 	protected override void Awake()
 	{

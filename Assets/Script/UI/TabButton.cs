@@ -97,7 +97,7 @@ public class TabButton : UnityEngine.UI.Button, IDragHandler, IBeginDragHandler,
 	#endregion
 
 
-	#region unity functions
+	#region unity events
 
 	protected override void Start()
 	{

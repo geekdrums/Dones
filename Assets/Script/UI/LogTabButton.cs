@@ -30,7 +30,7 @@ public class LogTabButton : MonoBehaviour, IDragHandler, IBeginDragHandler, IEnd
 	#endregion
 
 
-	#region unity functions
+	#region unity events
 
 	void Start()
 	{

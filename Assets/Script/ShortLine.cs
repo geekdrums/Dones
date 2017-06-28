@@ -104,7 +104,7 @@ public class ShortLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragHa
 	#endregion
 
 
-	#region unity functions
+	#region unity events
 
 	protected override void Awake()
 	{
@@ -267,12 +267,7 @@ public class ShortLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragHa
 			execute: () =>
 			{
 				line.IsOnList = false;
-				ShortLine shortline = ownerList_.FindBindedLine(line);
-				// 最初はthisだけどRedoしたら違うオブジェクトになっているため
-				if( shortline != null )
-				{
-					ownerList_.RemoveShortLine(shortline);
-				}
+				ownerList_.RemoveLine(line);
 			},
 			undo: () =>
 			{

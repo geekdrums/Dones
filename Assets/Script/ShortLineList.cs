@@ -42,7 +42,7 @@ public class ShortLineList : MonoBehaviour, IEnumerable<ShortLine>
 	#endregion
 
 
-	#region unity functions
+	#region unity events
 
 	void Awake ()
 	{
@@ -275,6 +275,15 @@ public class ShortLineList : MonoBehaviour, IEnumerable<ShortLine>
 		}
 	}
 
+	public void RemoveLine(Line line)
+	{
+		ShortLine shortLine = FindBindedLine(line);
+		if( shortLine != null )
+		{
+			RemoveShortLine(shortLine);
+		}
+	}
+
 	public void SetLineIndex(ShortLine shortLine, int index)
 	{
 		if( lines_.Contains(shortLine) && index < lines_.Count )
@@ -442,11 +451,7 @@ public class ShortLineList : MonoBehaviour, IEnumerable<ShortLine>
 				execute: () =>
 				{
 					line.IsOnList = false;
-					ShortLine shortline = FindBindedLine(line);
-					if( shortline != null )
-					{
-						RemoveShortLine(shortline);
-					}
+					RemoveLine(line);
 				},
 				undo: () =>
 				{

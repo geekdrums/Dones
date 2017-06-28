@@ -133,7 +133,7 @@ public class LogTree : Tree
 		}
 		// and its children
 		AddLogChildRecursive(line, addParent);
-		RequestLayout(addParent.NextSiblingLine);
+		RequestLayout(addParent.NextSiblingOrUnkleLine);
 		ResumeLayout();
 		IsEdited = true;
 	}
@@ -380,6 +380,11 @@ public class LogTree : Tree
 
 
 	#region layout
+
+	public override void ScrollTo(Line targetLine)
+	{
+		ownerLogNote_.ScrollTo(targetLine);
+	}
 
 	public override void UpdateLayoutElement()
 	{

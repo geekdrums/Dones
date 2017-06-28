@@ -93,7 +93,7 @@ public class Tree : MonoBehaviour {
 	#endregion
 
 
-	#region unity functions
+	#region unity events
 
 	protected virtual void Awake()
 	{
@@ -1247,11 +1247,7 @@ public class Tree : MonoBehaviour {
 					}
 					else
 					{
-						ShortLine removeLine = lineList.FindBindedLine(targetLine);
-						if( removeLine != null )
-						{
-							lineList.RemoveShortLine(removeLine);
-						}
+						lineList.RemoveLine(targetLine);
 					}
 				}));
 		}
@@ -1741,7 +1737,7 @@ public class Tree : MonoBehaviour {
 
 	public void Reload()
 	{
-		if( file_ == null )
+		if( file_ == null || file_.Exists == false )
 		{
 			return;
 		}
@@ -1753,6 +1749,10 @@ public class Tree : MonoBehaviour {
 			focusedLine_ = null;
 			foreach( TextField field in usingFields_ )
 			{
+				if( field.BindedLine.IsOnList )
+				{
+					GameContext.Window.LineList.RemoveLine(field.BindedLine);
+				}
 				field.BindedLine.UnBind();
 				field.transform.SetParent(heapParent_.transform);
 				field.gameObject.SetActive(false);
