@@ -72,7 +72,7 @@ public class Line : IEnumerable<Line>
 		get { return isDone_; }
 		set
 		{
-			if( isLinkText_ ) return;
+			if( isLinkText_ || isComment_ ) return;
 
 			if( isDone_ != value )
 			{
@@ -99,7 +99,7 @@ public class Line : IEnumerable<Line>
 		get { return isOnList_; }
 		set
 		{
-			if( isLinkText_ ) return;
+			if( isLinkText_ || isComment_ ) return;
 
 			if( isOnList_ != value )
 			{
@@ -118,7 +118,39 @@ public class Line : IEnumerable<Line>
 
 	public bool IsClone { get { return isClone_; } set { isClone_ = value; } }
 	protected bool isClone_ = false;
-	
+
+	public bool IsBold
+	{
+		get { return isBold_; }
+		set
+		{
+			if( isBold_ != value )
+			{
+				isBold_ = value;
+				if( Field != null )
+				{
+					Field.textComponent.fontStyle = isBold_ ? FontStyle.Bold : FontStyle.Normal;
+				}
+			}
+		}
+	}
+	protected bool isBold_ = false;
+
+	public bool IsComment
+	{
+		get { return isComment_; }
+		set
+		{
+			if( isComment_ != value )
+			{
+				isComment_ = value;
+				if( Field != null )
+					Field.SetIsComment(isComment_);
+			}
+		}
+	}
+	protected bool isComment_ = false;
+
 	public Vector3 TargetPosition { get; protected set; }
 
 	public GameObject Binding { get; protected set; }
@@ -144,6 +176,7 @@ public class Line : IEnumerable<Line>
 			GameContext.Window.LineList.InstantiateShortLine(this);
 		}
 		CheckIsLink();
+		CheckIsComment();
 	}
 
 
@@ -286,6 +319,7 @@ public class Line : IEnumerable<Line>
 				shortline.Text = text_;
 			}
 		}
+		CheckIsComment();
 	}
 
 	public void FixTextInputAction()
@@ -319,9 +353,12 @@ public class Line : IEnumerable<Line>
 			Field.SetIsClone(isClone_);
 			Field.SetIsDone(isDone_, withAnim: false);
 			Field.SetIsOnList(isOnList_, withAnim: false);
-
-			if( IsLinkText )
-				Field.SetIsLinkText(IsLinkText);
+			Field.textComponent.fontStyle = isBold_ ? FontStyle.Bold : FontStyle.Normal;
+			
+			if( isLinkText_ )
+				Field.SetIsLinkText(isLinkText_);
+			if( isComment_ )
+				Field.SetIsComment(isComment_);
 
 			Toggle = Field.GetComponentInChildren<TreeToggle>();
 			toggleSubscription_ = children_.ObserveCountChanged(true).DistinctUntilChanged().Subscribe(x =>
@@ -876,17 +913,22 @@ public class Line : IEnumerable<Line>
 	public static string DoneTag = "<d>";
 	public static string OnListTag = "<o>";
 	public static string CloneTag = "<c>";
+	public static string BoldTag = "<b>";
 
-	public void AppendStringTo(StringBuilder builder, bool appendTag = false)
+	public void AppendStringTo(StringBuilder builder, bool appendTag = false, int ignoreLevel = 0)
 	{
 		int level = Level;
-		for( int i = 0; i < level; ++i )
+		for( int i = 0; i < level - ignoreLevel; ++i )
 		{
 			builder.Append(TabString);
 		}
 		builder.Append(Text);
 		if( appendTag )
 		{
+			if( IsBold )
+			{
+				builder.Append(BoldTag);
+			}
 			if( IsClone )
 			{
 				builder.Append(CloneTag);
@@ -910,6 +952,14 @@ public class Line : IEnumerable<Line>
 	public string GetTagStrings()
 	{
 		StringBuilder builder = new StringBuilder();
+		if( IsBold )
+		{
+			builder.Append(BoldTag);
+		}
+		if( IsClone )
+		{
+			builder.Append(CloneTag);
+		}
 		if( IsFolded )
 		{
 			builder.Append(FoldTag);
@@ -966,6 +1016,16 @@ public class Line : IEnumerable<Line>
 		{
 			IsClone = false;
 		}
+
+		if( text.EndsWith(BoldTag) )
+		{
+			text = text.Remove(text.Length - BoldTag.Length);
+			IsBold = true;
+		}
+		else
+		{
+			IsBold = false;
+		}
 	}
 
 	public void CheckIsLink()
@@ -974,6 +1034,11 @@ public class Line : IEnumerable<Line>
 		if( Field != null )
 			Field.SetIsLinkText(isLinkText_);
 	}
+	
+	public void CheckIsComment()
+	{
+		IsComment = text_.StartsWith("> ");
+	}
 
 	public Line Clone()
 	{
@@ -981,6 +1046,7 @@ public class Line : IEnumerable<Line>
 		line.isDone_ = isDone_;
 		line.isFolded_ = isFolded_;
 		line.isLinkText_ = isLinkText_;
+		line.isComment_ = isComment_;
 		line.isOnList_ = false;
 		line.isClone_ = true;
 		return line;

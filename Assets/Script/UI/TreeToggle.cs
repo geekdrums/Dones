@@ -82,6 +82,7 @@ public class TreeToggle : Toggle {
 					lineHeight = textField_.BindedLine.VisibleChildCount * GameContext.Config.HeightPerLine;
 				}
 				AnimManager.AddAnim(verticalLine_, lineHeight, ParamType.GaugeLength, AnimType.Time, GameContext.Config.AnimTime);
+				verticalLine_.rectTransform.sizeDelta = new Vector2(1, lineHeight);
 			}
 		}
 		wasAnimRequested_ = false;

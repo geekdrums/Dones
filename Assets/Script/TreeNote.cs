@@ -176,11 +176,25 @@ public class TreeNote : Tree
 #if UNITY_STANDALONE_WIN
 		GameContext.Window.SetTitle(TitleText + " - Dones");
 #endif
+
+		if( LogNote != null )
+		{
+			LogNote.gameObject.SetActive(true);
+			if( LogNote.Tab != null )
+				LogNote.Tab.gameObject.SetActive(LogNote.IsOpended);
+		}
 	}
 
 	public void OnTabDeselected()
 	{
 		targetScrollValue_ = scrollRect_.verticalScrollbar.gameObject.activeInHierarchy ? scrollRect_.verticalScrollbar.value : 1.0f;
+
+		if( LogNote != null )
+		{
+			LogNote.gameObject.SetActive(false);
+			if( LogNote.Tab != null )
+				LogNote.Tab.gameObject.SetActive(false);
+		}
 	}
 
 	#endregion
@@ -259,6 +273,8 @@ public class TreeNote : Tree
 
 		SaveInternal();
 		logNote_.Save();
+
+		GameContext.Window.AddRecentOpenedFiles(file_.FullName);
 	}
 
 	#endregion

@@ -57,14 +57,28 @@ public class ControlManager : MonoBehaviour {
 			{
 #if UNITY_EDITOR
 			case KeyCode.Q:
-				GameContext.CurrentActionManager.Undo();
+				if( Input.GetKey(KeyCode.LeftShift) )
+				{
+					GameContext.CurrentActionManager.Redo();
+				}
+				else
+				{
+					GameContext.CurrentActionManager.Undo();
+				}
 				break;
 			case KeyCode.U:
 				GameContext.CurrentActionManager.Redo();
 				break;
 #else
 			case KeyCode.Z:
-				GameContext.CurrentActionManager.Undo();
+				if( Input.GetKey(KeyCode.LeftShift) )
+				{
+					GameContext.CurrentActionManager.Redo();
+				}
+				else
+				{
+					GameContext.CurrentActionManager.Undo();
+				}
 				break;
 			case KeyCode.Y:
 				GameContext.CurrentActionManager.Redo();

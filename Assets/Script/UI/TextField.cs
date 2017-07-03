@@ -52,7 +52,18 @@ public class TextField : InputField, IColoredObject
 	public int CaretPosision
 	{
 		get { return cachedCaretPos_; }
-		set { selectionAnchorPosition = selectionFocusPosition = cachedCaretPos_ = desiredCaretPos_ = value; }
+		set
+		{
+			if( BindedLine.IsComment && value < 2 )
+			{
+				selectionAnchorPosition = selectionFocusPosition = cachedCaretPos_ = 2;
+				desiredCaretPos_ = 0;
+			}
+			else
+			{
+				selectionAnchorPosition = selectionFocusPosition = cachedCaretPos_ = desiredCaretPos_ = value;
+			}
+		}
 	}
 	protected int cachedCaretPos_;
 	protected static int desiredCaretPos_;
@@ -147,6 +158,7 @@ public class TextField : InputField, IColoredObject
 		// Lineクラスからシステム的に設定される場合（Undoや改行など）は、
 		// この関数でイベント呼び出しを避ける。
 		m_Text = text;
+		BindedLine.CheckIsComment();
 		UpdateLabel();
 		if( BindedLine.IsDone || BindedLine.IsOnList || BindedLine.IsLinkText ) OnTextLengthChanged();
 	}
@@ -221,7 +233,7 @@ public class TextField : InputField, IColoredObject
 			strikeLine_.SetColor(GameContext.Config.LinkColor);
 			OnTextLengthChanged();
 		}
-		else if( BindedLine.IsDone == false )
+		else if( BindedLine.IsDone == false && BindedLine.IsComment == false )
 		{
 			strikeLine_.gameObject.SetActive(isLink);
 			Foreground = GetDesiredTextColor();
@@ -233,6 +245,38 @@ public class TextField : InputField, IColoredObject
 	public void SetIsClone(bool isClone)
 	{
 		Foreground = GetDesiredTextColor();
+	}
+
+	public void SetIsComment(bool isComment)
+	{
+		if( isComment )
+		{
+			strikeLine_.gameObject.SetActive(isComment);
+			Foreground = GetDesiredTextColor();
+			Background = Color.white;
+			strikeLine_.Direction = Vector3.up;
+			strikeLine_.Length = 28;
+			strikeLine_.Width = 10;
+			strikeLine_.Rate = 1.0f;
+			strikeLine_.rectTransform.anchoredPosition = new Vector2(4, -13);
+			strikeLine_.SetColor(GameContext.Config.CommentLineColor);
+			transition = Transition.None;
+		}
+		else
+		{
+			strikeLine_.gameObject.SetActive(false);
+			Foreground = GetDesiredTextColor();
+			strikeLine_.Direction = Vector3.right;
+			strikeLine_.Length = 0;
+			strikeLine_.Width = 1;
+			strikeLine_.rectTransform.anchoredPosition = new Vector2(-5, 0);
+			strikeLine_.SetColor(GameContext.Config.StrikeColor);
+			transition = Transition.ColorTint;
+			if( BindedLine.IsDone )
+			{
+				SetIsDone(BindedLine.IsDone);
+			}
+		}
 	}
 
 	Color GetDesiredTextColor()
@@ -265,6 +309,10 @@ public class TextField : InputField, IColoredObject
 			else if( BindedLine.IsLinkText )
 			{
 				return GameContext.Config.LinkColor;
+			}
+			else if( BindedLine.IsComment )
+			{
+				return GameContext.Config.CommentTextColor;
 			}
 			else
 			{
@@ -327,6 +375,10 @@ public class TextField : InputField, IColoredObject
 		if( oldIsFocused != isFocused && BindedLine != null && BindedLine.Tree != null )
 		{
 			cachedCaretPos_ = desiredCaretPos_;
+			if( BindedLine.IsComment && cachedCaretPos_ <= 2 )
+			{
+				CaretPosision = 0;
+			}
 			if( cachedCaretPos_ > text.Length )
 			{
 				cachedCaretPos_ = text.Length;
@@ -557,6 +609,10 @@ public class TextField : InputField, IColoredObject
 					{
 						KeyPressed(processingEvent_);
 						desiredCaretPos_ = m_CaretSelectPosition;
+						if( BindedLine.IsComment && m_CaretSelectPosition < 2 )
+						{
+							CaretPosision = 0;
+						}
 						BindedLine.FixTextInputAction();
 					}
 					break;

@@ -24,6 +24,7 @@ public class Config : MonoBehaviour
 	public Color TodayColor;
 
 	public Color CloneTextColor;
+	public Color CommentLineColor;
 	public Color CommentTextColor;
 
 	public Color ShortLineColor;

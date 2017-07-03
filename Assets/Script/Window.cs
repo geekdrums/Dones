@@ -307,7 +307,7 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 	
 	#region load utils
 
-	void AddRecentOpenedFiles(string path)
+	public void AddRecentOpenedFiles(string path)
 	{
 		path = path.Replace('\\', '/');
 		if( recentOpenedFiles_.Count < numRecentFilesMenu && recentOpenedFiles_.Contains(path) == false && File.Exists(path) )

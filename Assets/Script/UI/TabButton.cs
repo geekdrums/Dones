@@ -29,9 +29,6 @@ public class TabButton : UnityEngine.UI.Button, IDragHandler, IBeginDragHandler,
 				BindedNote.OnTabDeselected();
 			}
 			BindedNote.gameObject.SetActive(isOn_);
-			BindedNote.LogNote.gameObject.SetActive(isOn_);
-			if( BindedNote.LogNote.Tab != null )
-				BindedNote.LogNote.Tab.gameObject.SetActive(isOn_ && BindedNote.LogNote.IsOpended);
 			if( isOn_ )
 			{
 				BindedNote.OnTabSelected();

@@ -151,6 +151,15 @@ public class Tree : MonoBehaviour {
 			{
 				OnCtrlDInput();
 			}
+			//ArialのBoldが残念すぎるので、フォント改善するまで封印
+//#if UNITY_EDITOR
+//			else if( Input.GetKeyDown(KeyCode.G) )
+//#else
+//			else if( Input.GetKeyDown(KeyCode.B) )
+//#endif
+//			{
+//				OnCtrlBInput();
+//			}
 			else if( Input.GetKeyDown(KeyCode.L) && wasCtrlMInput_ == false )
 			{
 				OnCtrlLInput();
@@ -606,7 +615,7 @@ public class Tree : MonoBehaviour {
 		foreach( Line line in GetSelectedOrFocusedLines() )
 		{
 			int index = line.Index;
-			if( index > 0 && (line.Parent == rootLine_ || line.Parent.Field.IsSelected == false) )
+			if( index > 0 && (line.Parent == rootLine_ || line.Parent.Field.IsSelected == false) && line.IsComment == false )
 			{
 				Line oldParent = line.Parent;
 				Line newParent = line.Parent[index - 1];
@@ -636,7 +645,7 @@ public class Tree : MonoBehaviour {
 		// 逆順で下から処理
 		foreach( Line line in GetSelectedOrFocusedLines(ascending: false) )
 		{
-			if( line.Parent.Parent != null && ( line.Parent.Field.IsSelected == false || line.Parent.Level <= 0 ) )
+			if( line.Parent.Parent != null && ( line.Parent.Field.IsSelected == false || line.Parent.Level <= 0 ) && line.IsComment == false )
 			{
 				int index = line.Index;
 				Line oldParent = line.Parent;
@@ -672,7 +681,7 @@ public class Tree : MonoBehaviour {
 		Line target = focusedLine_;
 		Line parent = focusedLine_.Parent;
 		int index = focusedLine_.Index;
-		Line line = new Line();
+		Line line = new Line(focusedLine_.IsComment ? "> " : "");
 
 		if( caretPos == 0 && target.TextLength > 0 )
 		{
@@ -682,6 +691,7 @@ public class Tree : MonoBehaviour {
 				{
 					parent.Insert(index, line);
 					parent.AdjustLayoutRecursive(index + 1);
+					line.Field.CaretPosision = (line.IsComment ? 2 : 0);
 					ScrollTo(target);
 				},
 				undo: () =>
@@ -714,12 +724,12 @@ public class Tree : MonoBehaviour {
 				execute: () =>
 				{
 					target.Text = subString;
-					line.Text = newString;
+					line.Text += newString;
 					insertParent.Insert(insertIndex, line);
 					insertParent.AdjustLayoutRecursive(insertIndex + 1);
 					target.CheckIsLink();
 					line.CheckIsLink();
-					line.Field.CaretPosision = 0;
+					line.Field.CaretPosision = (line.IsComment ? 2 : 0);
 					line.Field.IsFocused = true;
 				},
 				undo: () =>
@@ -1040,7 +1050,7 @@ public class Tree : MonoBehaviour {
 			break;
 		case KeyCode.LeftArrow:
 			// カーソル位置が最初ならフォーカス移動
-			if( focusedLine_.Field.CaretPosision <= 0 )
+			if( focusedLine_.Field.CaretPosision <= 0 || (focusedLine_.IsComment && focusedLine_.Field.CaretPosision <= 2) )
 			{
 				Line prev = focusedLine_.PrevVisibleLine;
 				if( prev != null )
@@ -1254,6 +1264,23 @@ public class Tree : MonoBehaviour {
 		actionManager_.EndChain();
 	}
 
+	protected void OnCtrlBInput()
+	{
+		if( focusedLine_ == null ) return;
+
+		actionManager_.StartChain();
+		foreach( Line line in GetSelectedOrFocusedLines() )
+		{
+			Line targetLine = line;
+			actionManager_.Execute(new Action(
+				execute: () =>
+				{
+					targetLine.IsBold = !targetLine.IsBold;
+				}));
+		}
+		actionManager_.EndChain();
+	}
+
 	#endregion
 
 
@@ -1277,15 +1304,16 @@ public class Tree : MonoBehaviour {
 		if( HasSelection )
 		{
 			bool appendTag = Input.GetKey(KeyCode.LeftShift) == false;
+			int ignoreLevel = selectedLines_.Values[0].Level;
 			StringBuilder clipboardLines = new StringBuilder();
 			foreach( Line line in selectedLines_.Values )
 			{
-				line.AppendStringTo(clipboardLines, appendTag);
+				line.AppendStringTo(clipboardLines, appendTag, ignoreLevel);
 				if( line.IsFolded && appendTag )
 				{
 					foreach( Line child in line.GetAllChildren() )
 					{
-						child.AppendStringTo(clipboardLines, appendTag);
+						child.AppendStringTo(clipboardLines, appendTag, ignoreLevel);
 					}
 				}
 			}
