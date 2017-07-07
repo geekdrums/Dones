@@ -10,7 +10,7 @@ public class LogTabButton : MonoBehaviour, IDragHandler, IBeginDragHandler, IEnd
 {
 	#region params
 
-	public LogNote BindedLogNote;
+	public TabGroup OwnerTabGroup;
 	
 	public string Text
 	{
@@ -50,9 +50,9 @@ public class LogTabButton : MonoBehaviour, IDragHandler, IBeginDragHandler, IEnd
 
 	public void Close()
 	{
-		if( BindedLogNote.IsEdited )
+		if( OwnerTabGroup.ActiveNote.LogNote.IsEdited )
 		{
-			GameContext.Window.ModalDialog.Show(BindedLogNote.TitleText + "ログファイルへの変更を保存しますか？", this.CloseConfirmCallback);
+			GameContext.Window.ModalDialog.Show(OwnerTabGroup.ActiveNote.LogNote.TitleText + "ログファイルへの変更を保存しますか？", this.CloseConfirmCallback);
 			return;
 		}
 
@@ -61,7 +61,7 @@ public class LogTabButton : MonoBehaviour, IDragHandler, IBeginDragHandler, IEnd
 
 	void DoClose()
 	{
-		BindedLogNote.IsOpended = false;
+		OwnerTabGroup.ActiveNote.LogNote.IsOpended = false;
 	}
 
 	void CloseConfirmCallback(ModalDialog.DialogResult result)
@@ -69,11 +69,11 @@ public class LogTabButton : MonoBehaviour, IDragHandler, IBeginDragHandler, IEnd
 		switch( result )
 		{
 		case ModalDialog.DialogResult.Yes:
-			BindedLogNote.Save();
+			OwnerTabGroup.ActiveNote.LogNote.Save();
 			DoClose();
 			break;
 		case ModalDialog.DialogResult.No:
-			BindedLogNote.Reload();
+			OwnerTabGroup.ActiveNote.LogNote.Reload();
 			DoClose();
 			break;
 		case ModalDialog.DialogResult.Cancel:
@@ -94,11 +94,12 @@ public class LogTabButton : MonoBehaviour, IDragHandler, IBeginDragHandler, IEnd
 
 	public void OnDrag(PointerEventData eventData)
 	{
-		GameContext.Window.OnLogTabDragging(this, eventData);
+		OwnerTabGroup.OnLogSplitLineDragging(this, eventData);
 	}
 
 	public void OnEndDrag(PointerEventData eventData)
 	{
+		OwnerTabGroup.OnLogSplitLineEndDrag(this, eventData);
 	}
 
 	#endregion

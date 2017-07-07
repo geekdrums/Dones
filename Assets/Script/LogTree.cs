@@ -26,18 +26,32 @@ public class LogTree : Tree
 		{
 			return isEdited_;
 		}
-		protected set
+		set
 		{
 			isEdited_ = value;
-			if( ownerLogNote_ != null && ownerLogNote_.Tab != null )
+			if( ownerLogNote_ != null && ownerLogNote_.TreeNote != null )
 			{
-				if( isEdited_ )
+				if( ownerLogNote_.IsFullArea )
 				{
-					ownerLogNote_.Tab.Text = ownerLogNote_.TitleText + "*";
+					if( isEdited_ )
+					{
+						ownerLogNote_.TreeNote.Tab.Text = ownerLogNote_.TitleText + "*";
+					}
+					else if( ownerLogNote_.IsEdited == false )
+					{
+						ownerLogNote_.TreeNote.Tab.Text = ownerLogNote_.TitleText;
+					}
 				}
-				else if( ownerLogNote_.IsEdited == false )
+				else
 				{
-					ownerLogNote_.Tab.Text = ownerLogNote_.TitleText;
+					if( isEdited_ )
+					{
+						ownerLogNote_.LogTabButton.Text = ownerLogNote_.TitleText + "*";
+					}
+					else if( ownerLogNote_.IsEdited == false )
+					{
+						ownerLogNote_.LogTabButton.Text = ownerLogNote_.TitleText;
+					}
 				}
 			}
 		}

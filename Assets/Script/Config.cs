@@ -14,15 +14,14 @@ public class Config : MonoBehaviour
 	public float DoubleClickInterval = 0.25f;
 	public float MinLogTreeHeight = 100.0f;
 
-	public Color LinkColor;
-	public Color StrikeColor;
+	public Color ThemeColor;
+	public Color AccentColor;
+	public Color DoneColor;
 
 	public Color SelectionColor;
-	public Color AccentColor;
 	public Color TextColor;
+	public Color StrikeColor;
 	public Color DoneTextColor;
-	public Color TodayColor;
-
 	public Color CloneTextColor;
 	public Color CommentLineColor;
 	public Color CommentTextColor;

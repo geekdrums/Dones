@@ -61,7 +61,7 @@ public class Tree : MonoBehaviour {
 	public string TitleText { get { return rootLine_ != null ? rootLine_.Text : ""; } }
 	public override string ToString() { return TitleText; }
 
-	public virtual bool IsEdited { get { return isEdited_; } protected set { isEdited_ = value; } }
+	public virtual bool IsEdited { get { return isEdited_; } set { isEdited_ = value; } }
 
 	// utils
 	protected IEnumerable<Line> GetSelectedOrFocusedLines(bool ascending = true)

@@ -10,6 +10,7 @@ public class TabButton : UnityEngine.UI.Button, IDragHandler, IBeginDragHandler,
 {
 	#region params
 
+	public TabGroup OwnerTabGroup;
 	public TreeNote BindedNote;
 	
 	public bool IsOn
@@ -22,7 +23,7 @@ public class TabButton : UnityEngine.UI.Button, IDragHandler, IBeginDragHandler,
 
 			if( isOn_ )
 			{
-				GameContext.Window.OnTreeActivated(BindedNote);
+				OwnerTabGroup.OnTreeActivated(BindedNote);
 			}
 			else
 			{
@@ -96,11 +97,16 @@ public class TabButton : UnityEngine.UI.Button, IDragHandler, IBeginDragHandler,
 
 	#region unity events
 
+	protected override void Awake()
+	{
+		base.Awake();
+		image_ = GetComponent<Image>();
+		rect_ = GetComponent<RectTransform>();
+	}
+
 	protected override void Start()
 	{
 		base.Start();
-		image_ = GetComponent<Image>();
-		rect_ = GetComponent<RectTransform>();
 		textComponent_ = GetComponentInChildren<Text>();
 		UpdateColor();
 	}
@@ -143,7 +149,8 @@ public class TabButton : UnityEngine.UI.Button, IDragHandler, IBeginDragHandler,
 		if( IsOn )
 			IsOn = false;
 
-		GameContext.Window.OnTreeClosed(BindedNote);
+		BindedNote.OnTabClosed();
+		OwnerTabGroup.OnTreeClosed(BindedNote);
 		Destroy(this.gameObject);
 	}
 
@@ -164,10 +171,26 @@ public class TabButton : UnityEngine.UI.Button, IDragHandler, IBeginDragHandler,
 		}
 	}
 
-	void UpdateColor()
+	public void UpdateColor()
 	{
-		Background = isOn_ ? ColorManager.Theme.Bright : ColorManager.Base.Front;
-		textComponent_.color = isOn_ ? ColorManager.Base.Front : GameContext.Config.TextColor;
+		Background = isOn_ ? ( BindedNote.LogNote.IsFullArea ? GameContext.Config.DoneColor : GameContext.Config.ThemeColor ) : Color.white;
+		if( isOn_ )
+		{
+			OwnerTabGroup.UnderBar.color = BindedNote.LogNote.IsFullArea ? GameContext.Config.DoneColor : GameContext.Config.ThemeColor;
+		}
+		textComponent_.color = isOn_ ? Color.white : GameContext.Config.TextColor;
+	}
+
+	public void UpdateTitleText()
+	{
+		if( BindedNote.LogNote.IsFullArea )
+		{
+			Text = BindedNote.LogNote.TitleText + (BindedNote.LogNote.IsEdited ? "*" : "");
+		}
+		else
+		{
+			Text = BindedNote.TitleText + (BindedNote.IsEdited ? "*" : "");
+		}
 	}
 
 	IEnumerator UpdateTransformCoroutine()
@@ -196,17 +219,17 @@ public class TabButton : UnityEngine.UI.Button, IDragHandler, IBeginDragHandler,
 
 	public void OnBeginDrag(PointerEventData eventData)
 	{
-		GameContext.Window.OnBeginTabDrag(this);
+		OwnerTabGroup.OnBeginTabDrag(this);
 	}
 
 	public void OnDrag(PointerEventData eventData)
 	{
-		GameContext.Window.OnTabDragging(this, eventData);
+		OwnerTabGroup.OnTabDragging(this, eventData);
 	}
 
 	public void OnEndDrag(PointerEventData eventData)
 	{
-		GameContext.Window.OnEndTabDrag(this);
+		OwnerTabGroup.OnEndTabDrag(this);
 	}
 
 	#endregion

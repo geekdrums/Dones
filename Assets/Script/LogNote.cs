@@ -24,10 +24,8 @@ public class LogNote : MonoBehaviour
 
 	public TreeNote TreeNote { get { return treeNote_; } }
 	TreeNote treeNote_;
-	
-	public LogTabButton Tab { get { return tabButton_; } }
-	protected LogTabButton tabButton_;
 
+	public LogTabButton LogTabButton { get { return TreeNote.Tab.OwnerTabGroup.LogTabButton; } }
 
 	public float OpenRatio
 	{
@@ -35,6 +33,8 @@ public class LogNote : MonoBehaviour
 		set { openRatio_ = value; }
 	}
 	private float openRatio_ = 0.5f;
+
+	public bool IsFullArea { get { return isOpended_ && openRatio_ >= 1.0f; } }
 
 	public bool IsOpended
 	{
@@ -241,15 +241,13 @@ public class LogNote : MonoBehaviour
 
 	public void OnTabOpened()
 	{
-		tabButton_.gameObject.SetActive(treeNote_.IsActive);
 		LoadUntil(today_.AddDays(-LoadDateCount));
-		GameContext.Window.OnLogTabOpened();
+		TreeNote.Tab.OwnerTabGroup.OnLogNoteOpened();
 	}
 
 	public void OnTabClosed()
 	{
-		GameContext.Window.OnLogTabClosed(this);
-		tabButton_.gameObject.SetActive(false);
+		TreeNote.Tab.OwnerTabGroup.OnLogNoteClosed(this);
 		foreach( LogTree logTree in logTrees_ )
 		{
 			if( logTree != todayTree_ )
@@ -266,10 +264,9 @@ public class LogNote : MonoBehaviour
 
 	#region file
 
-	public void LoadToday(TreeNote treeNote, LogTabButton tabButton)
+	public void LoadToday(TreeNote treeNote)
 	{
 		treeNote_ = treeNote;
-		tabButton_ = tabButton;
 
 		today_ = DateTime.Now.Date;
 		endDate_ = today_;
@@ -288,9 +285,7 @@ public class LogNote : MonoBehaviour
 		}
 		logTrees_.Add(todayTree_);
 
-		tabButton_.BindedLogNote = this;
-		tabButton_.Text = TitleText;
-		tabButton_.gameObject.SetActive(treeNote_.IsActive);
+		LogTabButton.Text = TitleText;
 	}
 
 	public void LoadUntil(DateTime endDate)
@@ -332,7 +327,7 @@ public class LogNote : MonoBehaviour
 			}
 		}
 
-		tabButton_.Text = TitleText;
+		LogTabButton.Text = TitleText;
 	}
 	
 	public void Reload()
@@ -348,7 +343,7 @@ public class LogNote : MonoBehaviour
 	{
 		if( date.DayOfWeek == DayOfWeek.Sunday ) return GameContext.Config.AccentColor;
 		else if( date.DayOfWeek == DayOfWeek.Saturday ) return GameContext.Config.AccentColor;
-		else if( date == today_ ) return GameContext.Config.TodayColor;
+		else if( date == today_ ) return GameContext.Config.DoneColor;
 		else return GameContext.Config.TextColor;
 	}
 

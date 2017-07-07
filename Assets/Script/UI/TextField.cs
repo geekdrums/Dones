@@ -230,7 +230,7 @@ public class TextField : InputField, IColoredObject
 			strikeLine_.gameObject.SetActive(isLink);
 			Foreground = GetDesiredTextColor();
 			strikeLine_.transform.localPosition = new Vector3(strikeLine_.transform.localPosition.x, -5, strikeLine_.transform.localPosition.z);
-			strikeLine_.SetColor(GameContext.Config.LinkColor);
+			strikeLine_.SetColor(GameContext.Config.ThemeColor);
 			OnTextLengthChanged();
 		}
 		else if( BindedLine.IsDone == false && BindedLine.IsComment == false )
@@ -308,7 +308,7 @@ public class TextField : InputField, IColoredObject
 			}
 			else if( BindedLine.IsLinkText )
 			{
-				return GameContext.Config.LinkColor;
+				return GameContext.Config.ThemeColor;
 			}
 			else if( BindedLine.IsComment )
 			{

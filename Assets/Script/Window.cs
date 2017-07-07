@@ -16,48 +16,36 @@ using UnityEditor;
 #endif
 
 // [ Window ] - Tree - Line
-public class Window : MonoBehaviour, IEnumerable<Tree>
+public class Window : MonoBehaviour
 {
 	#region editor params
 
-	public TreeNote TreeNotePrefab;
-	public TabButton TabButtonPrefab;
-	public LogNote LogNotePrefab;
-	public LogTabButton LogTabButtonPrefab;
+	public TabGroup MainTabGroup;
 
-	public GameObject TreeParent;
-	public GameObject LogTreeParent;
-	public GameObject TabParent;
-	public GameObject LogTabParent;
-	public RectTransform NoteAreaTransform;
-	public RectTransform TreeNoteTransform;
-	public RectTransform LogNoteTransform;
+	public TabButton TabButtonPrefab;
+	public TreeNote TreeNotePrefab;
+	public LogNote LogNotePrefab;
+
 	public MenuButton FileMenu;
 	public GameObject RecentFilesSubMenu;
 	public ShortLineList LineList;
 	public ModalDialog ModalDialog;
-
-	public float DesiredTabWidth = 200.0f;
 
 	#endregion
 
 
 	#region params
 
-	TreeNote activeNote_;
-	List<TreeNote> trees_ = new List<TreeNote>();
 	FileInfo settingFile_;
 	FileInfo lineListFile_;
+	TabGroup activeTabGroup_;
 
 	string initialDirectory_;
 
 	float currentScreenWidth_;
 	float currentScreenHeight_;
-	float currentTabWidth_;
-
-	Vector2 initialLogTabOffsetMax_;
+	
 	List<string> recentOpenedFiles_ = new List<string>();
-	Stack<string> recentClosedFiles_ = new Stack<string>();
 	int numRecentFilesMenu = 0;
 	bool saveConfirmed_ = false;
 
@@ -73,7 +61,6 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 		GameContext.Window = this;
 		currentScreenWidth_ = UnityEngine.Screen.width;
 		currentScreenHeight_ = UnityEngine.Screen.height;
-		currentTabWidth_ = DesiredTabWidth;
 
 #if HOOK_WNDPROC
 		InitWndProc();
@@ -95,9 +82,7 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 		yield return new WaitForEndOfFrame();
 		LoadSettings();
 		LoadLineList();
-		UpdateLogTabLayout();
-		activeNote_.UpdateLayoutElement();
-		activeNote_.LogNote.UpdateLayoutElement();
+		MainTabGroup.UpdateLayoutAll();
 	}
 
 	// Update is called once per frame
@@ -118,44 +103,16 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 			{
 				NewFile();
 			}
-			else if( Input.GetKeyDown(KeyCode.LeftArrow) && Input.GetKey(KeyCode.LeftCommand) )
-			{
-				int index = trees_.IndexOf(activeNote_);
-				if( index > 0 )
-				{
-					trees_[index - 1].IsActive = true;
-				}
-			}
-			else if( Input.GetKeyDown(KeyCode.RightArrow) && Input.GetKey(KeyCode.LeftCommand) )
-			{
-				int index = trees_.IndexOf(activeNote_);
-				if( index < trees_.Count - 1 )
-				{
-					trees_[index + 1].IsActive = true;
-				}
-			}
-		}
-		if( ctrl && shift )
-		{
-			if( Input.GetKeyDown(KeyCode.T) && recentClosedFiles_.Count > 0 )
-			{
-				LoadTree(recentClosedFiles_.Pop(), true);
-			}
-		}
-		if( Input.GetKeyDown(KeyCode.F5) && activeNote_.File != null )
-		{
-			activeNote_.Reload();
-			activeNote_.LogNote.Reload();
 		}
 
 		if(	currentScreenWidth_ != UnityEngine.Screen.width )
 		{
-			UpdateTabLayout();
+			MainTabGroup.UpdateHorizontalLayout();
 			currentScreenWidth_ = UnityEngine.Screen.width;
 		}
 		if( currentScreenHeight_ != UnityEngine.Screen.height )
 		{
-			UpdateLogTabLayout();
+			MainTabGroup.UpdateVerticalLayout();
 			currentScreenHeight_ = UnityEngine.Screen.height;
 		}
 	}
@@ -165,7 +122,7 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 		if( saveConfirmed_ == false )
 		{
 			saveConfirmed_ = true;
-			foreach( TreeNote tree in trees_ )
+			foreach( TreeNote tree in MainTabGroup )
 			{
 				if( tree.IsEdited || tree.LogNote.IsEdited )
 				{
@@ -189,7 +146,7 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 		switch( result )
 		{
 		case ModalDialog.DialogResult.Yes:
-			foreach( Tree tree in trees_ )
+			foreach( Tree tree in MainTabGroup )
 			{
 				if( tree.IsEdited )
 				{
@@ -232,9 +189,9 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 				}
 			}
 
-			if( activeNote_ != null )
+			if( activeTabGroup_.ActiveNote != null )
 			{
-				initialDirectory_ = activeNote_.File.Directory.FullName;
+				initialDirectory_ = activeTabGroup_.ActiveNote.File.Directory.FullName;
 			}
 		}
 
@@ -243,34 +200,21 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 
 	public void NewFile()
 	{
-		TreeNote treeNote = Instantiate(TreeNotePrefab.gameObject, TreeParent.transform).GetComponent<TreeNote>();
-		TabButton tab = Instantiate(TabButtonPrefab.gameObject, TabParent.transform).GetComponent<TabButton>();
-		LogNote logNote = Instantiate(LogNotePrefab.gameObject, LogTreeParent.transform).GetComponent<LogNote>();
-		LogTabButton logtab = Instantiate(LogTabButtonPrefab.gameObject, LogTabParent.transform).GetComponent<LogTabButton>();
-		treeNote.NewFile(tab, logNote);
-		logNote.LoadToday(treeNote, logtab);
-		treeNote.IsActive = true;
-		OnTreeCreated(treeNote);
+		MainTabGroup.NewFile();
 
 		FileMenu.Close();
 	}
 
 	public void Save()
 	{
-		if( activeNote_ != null )
-		{
-			activeNote_.Save();
-		}
+		MainTabGroup.Save();
 
 		FileMenu.Close();
 	}
 
 	public void SaveAs()
 	{
-		if( activeNote_ != null )
-		{
-			activeNote_.SaveAs();
-		}
+		MainTabGroup.SaveAs();
 
 		FileMenu.Close();
 	}
@@ -319,225 +263,21 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 	void LoadTree(string path, bool isActive)
 	{
 		AddRecentOpenedFiles(path);
-		foreach( TreeNote existTree in trees_ )
-		{
-			if( existTree.File != null && existTree.File.FullName.Replace('\\', '/') == path.Replace('\\', '/') )
-			{
-				if( existTree != activeNote_ )
-				{
-					existTree.IsActive = true;
-				}
-				return;
-			}
-		}
-		TreeNote treeNote = Instantiate(TreeNotePrefab.gameObject, TreeParent.transform).GetComponent<TreeNote>();
-		TabButton tab = Instantiate(TabButtonPrefab.gameObject, TabParent.transform).GetComponent<TabButton>();
-		LogNote logNote = Instantiate(LogNotePrefab.gameObject, LogTreeParent.transform).GetComponent<LogNote>();
-		LogTabButton logtab = Instantiate(LogTabButtonPrefab.gameObject, LogTabParent.transform).GetComponent<LogTabButton>();
-		treeNote.Load(path, tab, logNote, isActive);
-		logNote.LoadToday(treeNote, logtab);
-		treeNote.IsActive = isActive;
-		OnTreeCreated(treeNote);
+		MainTabGroup.LoadTree(path, isActive);
 	}
 
 	#endregion
 
 
 	#region events
-
-	public void OnTreeCreated(TreeNote newTree)
-	{
-		trees_.Add(newTree);
-
-		UpdateTabLayout();
-	}
-
-	public void OnTreeActivated(TreeNote treeNote)
-	{
-		if( activeNote_ != null && treeNote != activeNote_ )
-		{
-			activeNote_.IsActive = false;
-		}
-		activeNote_ = treeNote;
-		UpdateLogTabLayout();
-	}
-
-	public void OnTreeClosed(TreeNote closedTree)
-	{
-		if( closedTree.File != null )
-		{
-			recentClosedFiles_.Push(closedTree.File.FullName);
-		}
-		List<ShortLine> removeList = new List<ShortLine>();
-		foreach( ShortLine shortLine in LineList )
-		{
-			if( shortLine.BindedLine.Tree == closedTree )
-			{
-				removeList.Add(shortLine);
-			}
-		}
-		foreach( ShortLine shortLine in removeList )
-		{
-			LineList.RemoveShortLine(shortLine);
-		}
-
-		int index = trees_.IndexOf(closedTree);
-		trees_.Remove(closedTree);
-		if( trees_.Count == 0 )
-		{
-			NewFile();
-		}
-		else if( closedTree == activeNote_ )
-		{
-			if( index >= trees_.Count ) index = trees_.Count - 1;
-			trees_[index].IsActive = true;
-		}
-
-		UpdateTabLayout();
-	}
-
+	
 	public void OnHeaderWidthChanged()
 	{
-		NoteAreaTransform.offsetMin = new Vector3(HeaderWidth, NoteAreaTransform.offsetMin.y);
-		UpdateTabLayout();
-	}
-
-	public void OnLogTabClosed(LogNote logNote)
-	{
-		if( activeNote_ != null && logNote == activeNote_.LogNote )
-		{
-			UpdateLogTabLayout();
-		}
-	}
-
-	public void OnLogTabOpened()
-	{
-		if( activeNote_.LogNote.IsOpended == false )
-			activeNote_.LogNote.IsOpended = true;
-
-		UpdateLogTabLayout();
+		MainTabGroup.UpdateHorizontalLayout();
 	}
 
 	#endregion
-
-
-	#region tab
-
-	void UpdateTabLayout()
-	{
-		currentTabWidth_ = DesiredTabWidth;
-		if( DesiredTabWidth * trees_.Count > UnityEngine.Screen.width - HeaderWidth )
-		{
-			currentTabWidth_ = (UnityEngine.Screen.width - HeaderWidth) / trees_.Count;
-		}
-		foreach( TreeNote tree in trees_ )
-		{
-			tree.Tab.Width = currentTabWidth_;
-			tree.Tab.TargetPosition = GetTabPosition(tree.Tab);
-		}
-	}
-
-	Vector3 GetTabPosition(TabButton tab)
-	{
-		return Vector3.right * currentTabWidth_ * (trees_.IndexOf(tab.BindedNote));
-	}
-
-	void UpdateLogTabLayout()
-	{
-		if( activeNote_ == null || activeNote_.LogNote == null ) return;
-
-		LogTabParent.transform.parent.gameObject.SetActive(activeNote_.LogNote.IsOpended);
-
-		float logNoteRatio = activeNote_.LogNote.IsOpended ? activeNote_.LogNote.OpenRatio : 0.0f;
-		float height = NoteAreaTransform.rect.height;
-
-		TreeNoteTransform.sizeDelta = new Vector2(TreeNoteTransform.sizeDelta.x, height * (1.0f - logNoteRatio) - (logNoteRatio > 0.0f ? 40.0f : 0.0f));
-		LogNoteTransform.sizeDelta = new Vector2(LogNoteTransform.sizeDelta.x, height * logNoteRatio);
-		LogNoteTransform.anchoredPosition = new Vector2(LogNoteTransform.anchoredPosition.x, -height + LogNoteTransform.sizeDelta.y);
-
-		activeNote_.CheckScrollbarEnabled();
-		activeNote_.LogNote.CheckScrollbarEnabled();
-	}
-
-	public void OnBeginTabDrag(TabButton tab)
-	{
-		tab.IsOn = true;
-		if( tab.BindedNote.FocusedLine != null )
-		{
-			tab.BindedNote.FocusedLine.Field.IsFocused = false;
-		}
-		tab.transform.SetAsLastSibling();
-	}
-
-	public void OnTabDragging(TabButton tab, PointerEventData eventData)
-	{
-		int index = trees_.IndexOf(tab.BindedNote);
-		tab.transform.localPosition += new Vector3(eventData.delta.x, 0);
-		if( tab.transform.localPosition.x < 0 )
-		{
-			tab.transform.localPosition = new Vector3(0, tab.transform.localPosition.y);
-		}
-		float tabmax = (UnityEngine.Screen.width - HeaderWidth) - currentTabWidth_;
-		if( tab.transform.localPosition.x > tabmax )
-		{
-			tab.transform.localPosition = new Vector3(tabmax, tab.transform.localPosition.y);
-		}
-		int desiredIndex = Mathf.Clamp((int)(tab.transform.localPosition.x / currentTabWidth_), 0, trees_.Count - 1);
-		if( index != desiredIndex )
-		{
-			trees_.Remove(tab.BindedNote);
-			trees_.Insert(desiredIndex, tab.BindedNote);
-			int sign = (int)Mathf.Sign(desiredIndex - index);
-			for( int i = index; i != desiredIndex; i += sign )
-			{
-				AnimManager.AddAnim(trees_[i].Tab, GetTabPosition(trees_[i].Tab), ParamType.Position, AnimType.Time, GameContext.Config.AnimTime);
-			}
-		}
-	}
-
-	public void OnEndTabDrag(TabButton tab)
-	{
-		AnimManager.AddAnim(tab, GetTabPosition(tab), ParamType.Position, AnimType.Time, GameContext.Config.AnimTime);
-	}
-
-	public void OnLogTabDragging(LogTabButton tab, PointerEventData eventData)
-	{
-		LogNoteTransform.anchoredPosition += new Vector2(0, eventData.delta.y);
-		float height = NoteAreaTransform.rect.height;
-		if( LogNoteTransform.anchoredPosition.y < -height )
-		{
-			LogNoteTransform.anchoredPosition = new Vector2(LogNoteTransform.anchoredPosition.x, -height);
-		}
-		else if( LogNoteTransform.anchoredPosition.y > 0 )
-		{
-			LogNoteTransform.anchoredPosition = new Vector2(LogNoteTransform.anchoredPosition.x, 0);
-		}
-		LogNoteTransform.sizeDelta = new Vector2(LogNoteTransform.sizeDelta.x, LogNoteTransform.anchoredPosition.y + height);
-		activeNote_.LogNote.OpenRatio = LogNoteTransform.sizeDelta.y / height;
-		TreeNoteTransform.sizeDelta = new Vector2(TreeNoteTransform.sizeDelta.x, height * (1.0f - activeNote_.LogNote.OpenRatio) - 40.0f);
-
-		activeNote_.CheckScrollbarEnabled();
-		activeNote_.LogNote.CheckScrollbarEnabled();
-	}
-
-	#endregion
-
-
-	#region IEnumerable<Tree>
-
-	public IEnumerator<Tree> GetEnumerator()
-	{
-		foreach( Tree tree in trees_ )
-		{
-			yield return tree;
-		}
-	}
-	IEnumerator IEnumerable.GetEnumerator()
-	{
-		return this.GetEnumerator();
-	}
-
-	#endregion
+	
 
 
 	#region settings save / load
@@ -590,21 +330,23 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 			case Settings.InitialFiles:
 				if( text.EndsWith(".dtml") && File.Exists(text) )
 				{
-					LoadTree(text, isActive: activeNote_ == null);
+					LoadTree(text, isActive: MainTabGroup.ActiveNote == null);
 				}
 				break;
 			case Settings.LogTab:
 				string[] tabparams = text.Split(',');
-				for( int i = 0; i < trees_.Count; ++i )
+				for( int i = 0; i < MainTabGroup.Count; ++i )
 				{
-					if( trees_[i].TitleText == tabparams[0] )
+					if( MainTabGroup[i].TitleText == tabparams[0] )
 					{
-						trees_[i].LogNote.IsOpended = tabparams[1].EndsWith("open");
-						trees_[i].LogNote.OpenRatio = float.Parse(tabparams[2].Remove(0, " ratio=".Length));
+						MainTabGroup[i].LogNote.IsOpended = tabparams[1].EndsWith("open");
+						MainTabGroup[i].LogNote.OpenRatio = float.Parse(tabparams[2].Remove(0, " ratio=".Length));
+						MainTabGroup[i].Tab.UpdateTitleText();
+						MainTabGroup[i].Tab.UpdateColor();
 						break;
 					}
 				}
-				UpdateLogTabLayout();
+				MainTabGroup.UpdateVerticalLayout();
 				break;
 			case Settings.RecentFiles:
 				if( text.EndsWith(".dtml") && File.Exists(text) )
@@ -633,7 +375,7 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 				break;
 			}
 		}
-		if( activeNote_ == null )
+		if( MainTabGroup.ActiveNote == null )
 		{
 			NewFile();
 		}
@@ -653,7 +395,7 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 		StreamWriter writer = new StreamWriter(settingFile_.FullName, append: false);
 
 		writer.WriteLine(SettingsTags[(int)Settings.InitialFiles]);
-		foreach( TreeNote tree in trees_ )
+		foreach( TreeNote tree in MainTabGroup )
 		{
 			if( tree.File != null )
 			{
@@ -661,7 +403,7 @@ public class Window : MonoBehaviour, IEnumerable<Tree>
 			}
 		}
 		writer.WriteLine(SettingsTags[(int)Settings.LogTab]);
-		foreach( TreeNote tree in trees_ )
+		foreach( TreeNote tree in MainTabGroup )
 		{
 			if( tree.File != null )
 			{

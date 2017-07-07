@@ -441,7 +441,7 @@ public class ShortLineList : MonoBehaviour, IEnumerable<ShortLine>
 
 		AnimManager.AddShakeAnim(scrollRect_, 15.0f, 0.15f, 0.025f, ParamType.PositionY);
 
-		foreach(Tree tree in GameContext.Window)
+		foreach( Tree tree in GameContext.Window.MainTabGroup )
 		{
 			tree.ActionManager.StartChain();
 		}
@@ -459,7 +459,7 @@ public class ShortLineList : MonoBehaviour, IEnumerable<ShortLine>
 					InstantiateShortLine(line);
 				}));
 		}
-		foreach( Tree tree in GameContext.Window )
+		foreach( Tree tree in GameContext.Window.MainTabGroup )
 		{
 			tree.ActionManager.EndChain();
 		}

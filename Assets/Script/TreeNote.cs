@@ -24,7 +24,7 @@ public class TreeNote : Tree
 		{
 			return isEdited_;
 		}
-		protected set
+		set
 		{
 			isEdited_ = value;
 			tabButton_.Text = TitleText + (isEdited_ ? "*" : "");
@@ -180,8 +180,6 @@ public class TreeNote : Tree
 		if( LogNote != null )
 		{
 			LogNote.gameObject.SetActive(true);
-			if( LogNote.Tab != null )
-				LogNote.Tab.gameObject.SetActive(LogNote.IsOpended);
 		}
 	}
 
@@ -192,8 +190,22 @@ public class TreeNote : Tree
 		if( LogNote != null )
 		{
 			LogNote.gameObject.SetActive(false);
-			if( LogNote.Tab != null )
-				LogNote.Tab.gameObject.SetActive(false);
+		}
+	}
+
+	public void OnTabClosed()
+	{
+		List<ShortLine> removeList = new List<ShortLine>();
+		foreach( ShortLine shortLine in GameContext.Window.LineList )
+		{
+			if( shortLine.BindedLine.Tree == this )
+			{
+				removeList.Add(shortLine);
+			}
+		}
+		foreach( ShortLine shortLine in removeList )
+		{
+			GameContext.Window.LineList.RemoveShortLine(shortLine);
 		}
 	}
 
