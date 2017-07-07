@@ -44,11 +44,11 @@ public class LogNote : MonoBehaviour
 			isOpended_ = value;
 			if( value )
 			{
-				OnTabOpened();
+				TreeNote.Tab.OwnerTabGroup.OnLogNoteOpened(this);
 			}
 			else
 			{
-				OnTabClosed();
+				TreeNote.Tab.OwnerTabGroup.OnLogNoteClosed(this);
 			}
 		}
 	}
@@ -242,12 +242,12 @@ public class LogNote : MonoBehaviour
 	public void OnTabOpened()
 	{
 		LoadUntil(today_.AddDays(-LoadDateCount));
-		TreeNote.Tab.OwnerTabGroup.OnLogNoteOpened();
+		TreeNote.Tab.UpdateTitleText();
+		TreeNote.Tab.UpdateColor();
 	}
 
 	public void OnTabClosed()
 	{
-		TreeNote.Tab.OwnerTabGroup.OnLogNoteClosed(this);
 		foreach( LogTree logTree in logTrees_ )
 		{
 			if( logTree != todayTree_ )
@@ -257,6 +257,8 @@ public class LogNote : MonoBehaviour
 		}
 		logTrees_.RemoveAll((LogTree logTree) => logTree != todayTree_);
 		endDate_ = today_;
+		TreeNote.Tab.UpdateTitleText();
+		TreeNote.Tab.UpdateColor();
 	}
 
 	#endregion

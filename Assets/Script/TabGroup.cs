@@ -175,7 +175,7 @@ public class TabGroup : MonoBehaviour, IEnumerable<Tree>
 		}
 		activeNote_ = treeNote;
 
-		UpdateIsLogNoteFull();
+		UpdateLogTabButtons();
 		UpdateVerticalLayout();
 	}
 
@@ -203,28 +203,24 @@ public class TabGroup : MonoBehaviour, IEnumerable<Tree>
 	
 	public void OnLogNoteClosed(LogNote logNote)
 	{
-		if( logNote.IsOpended )
-			logNote.IsOpended = false;
-
+		if( logNote.OpenRatio >= 1.0f )
+		{
+			logNote.OpenRatio = 0.5f;
+		}
+		logNote.OnTabClosed();
 		OpenButton.SetActive(true);
 		CloseButton.SetActive(false);
 
-		if( activeNote_ != null && logNote == activeNote_.LogNote )
-		{
-			UpdateVerticalLayout();
-		}
+		UpdateVerticalLayout();
 	}
 
-	public void OnLogNoteOpened()
+	public void OnLogNoteOpened(LogNote logNote)
 	{
-		if( activeNote_.LogNote.IsOpended == false )
+		if( logNote.OpenRatio <= 0.0f )
 		{
-			activeNote_.LogNote.IsOpended = true;
-			if( activeNote_.LogNote.OpenRatio <= 0.0f )
-			{
-				activeNote_.LogNote.OpenRatio = 0.5f;
-			}
+			logNote.OpenRatio = 0.5f;
 		}
+		logNote.OnTabOpened();
 
 		OpenButton.SetActive(false);
 		CloseButton.SetActive(activeNote_.LogNote.IsFullArea);
@@ -232,7 +228,15 @@ public class TabGroup : MonoBehaviour, IEnumerable<Tree>
 		UpdateVerticalLayout();
 	}
 
-	public void OnLogNoteMinimized()
+	public void OpenLogNote()
+	{
+		if( activeNote_.LogNote.IsOpended == false )
+		{
+			activeNote_.LogNote.IsOpended = true;
+		}
+	}
+
+	public void CloseLogNote()
 	{
 		if( activeNote_.LogNote.IsOpended )
 		{
@@ -240,24 +244,7 @@ public class TabGroup : MonoBehaviour, IEnumerable<Tree>
 			activeNote_.LogNote.IsOpended = false;
 		}
 
-		UpdateIsLogNoteFull();
-		UpdateVerticalLayout();
-	}
-
-	public void UpdateIsLogNoteFull()
-	{
-		if( activeNote_.LogNote.IsFullArea )
-		{
-			OpenButton.SetActive(false);
-			CloseButton.SetActive(true);
-		}
-		else if( activeNote_.LogNote.IsOpended == false )
-		{
-			OpenButton.SetActive(true);
-			CloseButton.SetActive(false);
-		}
-		activeNote_.Tab.UpdateTitleText();
-		activeNote_.Tab.UpdateColor();
+		UpdateLogTabButtons();
 	}
 
 	#endregion
@@ -308,6 +295,22 @@ public class TabGroup : MonoBehaviour, IEnumerable<Tree>
 
 		activeNote_.CheckScrollbarEnabled();
 		activeNote_.LogNote.CheckScrollbarEnabled();
+	}
+	
+	public void UpdateLogTabButtons()
+	{
+		if( activeNote_.LogNote.IsFullArea )
+		{
+			OpenButton.SetActive(false);
+			CloseButton.SetActive(true);
+		}
+		else if( activeNote_.LogNote.IsOpended == false )
+		{
+			OpenButton.SetActive(true);
+			CloseButton.SetActive(false);
+		}
+		activeNote_.Tab.UpdateTitleText();
+		activeNote_.Tab.UpdateColor();
 	}
 
 	Vector3 GetTabPosition(TabButton tab)
@@ -386,11 +389,11 @@ public class TabGroup : MonoBehaviour, IEnumerable<Tree>
 	{
 		if( activeNote_.LogNote.OpenRatio <= 0 )
 		{
-			OnLogNoteClosed(activeNote_.LogNote);
+			activeNote_.LogNote.IsOpended = false;
 		}
 		else if( activeNote_.LogNote.OpenRatio >= 1 )
 		{
-			UpdateIsLogNoteFull();
+			UpdateLogTabButtons();
 			UpdateVerticalLayout();
 		}
 	}

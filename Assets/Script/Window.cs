@@ -339,8 +339,8 @@ public class Window : MonoBehaviour
 				{
 					if( MainTabGroup[i].TitleText == tabparams[0] )
 					{
-						MainTabGroup[i].LogNote.IsOpended = tabparams[1].EndsWith("open");
 						MainTabGroup[i].LogNote.OpenRatio = float.Parse(tabparams[2].Remove(0, " ratio=".Length));
+						MainTabGroup[i].LogNote.IsOpended = tabparams[1].EndsWith("open");
 						MainTabGroup[i].Tab.UpdateTitleText();
 						MainTabGroup[i].Tab.UpdateColor();
 						break;
