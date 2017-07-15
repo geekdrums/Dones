@@ -51,12 +51,7 @@ public class TreeToggle : Toggle {
 		AnimToTargetVisual();
 	}
 
-	public void OnVisibleChildCountChanged()
-	{
-		AnimToTargetVisual();
-	}
-
-	void AnimToTargetVisual()
+	public void AnimToTargetVisual()
 	{
 		if( wasAnimRequested_ == false && gameObject.activeInHierarchy )
 		{

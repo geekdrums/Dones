@@ -214,6 +214,7 @@ public class TreeNote : Tree
 	public void OnFontSizeChanged()
 	{
 		rootLine_.AdjustFontSizeRecursive(GameContext.Config.FontSize, GameContext.Config.HeightPerLine);
+		UpdateLayoutElement();
 		LogNote.OnFontSizeChanged(GameContext.Config.FontSize, GameContext.Config.HeightPerLine);
 	}
 

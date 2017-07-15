@@ -1630,7 +1630,7 @@ public class Tree : MonoBehaviour {
 			Line lastLine = rootLine_.LastVisibleLine;
 			if( lastLine != null && lastLine.Field != null )
 			{
-				layout_.preferredHeight = -(lastLine.TargetAbsolutePosition.y - this.transform.position.y) + GameContext.Config.HeightPerLine * 1.0f;
+				layout_.preferredHeight = -(lastLine.TargetAbsolutePosition.y - this.transform.position.y) + GameContext.Config.HeightPerLine * 1.5f;
 				contentSizeFitter_.SetLayoutVertical();
 			}
 		}

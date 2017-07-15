@@ -58,7 +58,7 @@ public class Line : IEnumerable<Line>
 					Line parent = Parent;
 					while( parent != null && parent.Toggle != null )
 					{
-						parent.Toggle.OnVisibleChildCountChanged();
+						parent.Toggle.AnimToTargetVisual();
 						parent = parent.Parent;
 					}
 				}
@@ -363,11 +363,11 @@ public class Line : IEnumerable<Line>
 			Toggle = Field.GetComponentInChildren<TreeToggle>();
 			toggleSubscription_ = children_.ObserveCountChanged(true).DistinctUntilChanged().Subscribe(x =>
 			{
-				Toggle.OnVisibleChildCountChanged();
+				Toggle.AnimToTargetVisual();
 				Line parent = Parent;
 				while( parent != null && parent.Toggle != null)
 				{
-					parent.Toggle.OnVisibleChildCountChanged();
+					parent.Toggle.AnimToTargetVisual();
 					parent = parent.Parent;
 				}
 			});
@@ -663,6 +663,7 @@ public class Line : IEnumerable<Line>
 				children_[i].Field.textComponent.fontSize = fontSize;
 				children_[i].Field.RectHeight = heightPerLine;
 				children_[i].Field.OnTextLengthChanged();
+				children_[i].Toggle.AnimToTargetVisual();
 				children_[i].AdjustFontSizeRecursive(fontSize, heightPerLine);
 			}
 		}

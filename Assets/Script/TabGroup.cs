@@ -289,7 +289,7 @@ public class TabGroup : MonoBehaviour, IEnumerable<Tree>
 		float logNoteRatio = activeNote_.LogNote.IsOpended ? activeNote_.LogNote.OpenRatio : 0.0f;
 		float height = NoteAreaTransform.rect.height;
 
-		TreeNoteTransform.sizeDelta = new Vector2(TreeNoteTransform.sizeDelta.x, height * (1.0f - logNoteRatio) - (logNoteRatio > 0.0f ? 10.0f : 0.0f));
+		TreeNoteTransform.sizeDelta = new Vector2(TreeNoteTransform.sizeDelta.x, height * (1.0f - logNoteRatio) - (logNoteRatio > 0.0f ? 40.0f : 0.0f));
 		LogNoteTransform.sizeDelta = new Vector2(LogNoteTransform.sizeDelta.x, height * logNoteRatio);
 		LogNoteTransform.anchoredPosition = new Vector2(LogNoteTransform.anchoredPosition.x, -height + LogNoteTransform.sizeDelta.y);
 

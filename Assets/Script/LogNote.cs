@@ -220,14 +220,17 @@ public class LogNote : MonoBehaviour
 
 	public void UpdateLayoutElement()
 	{
-		float preferredHeight = 0.0f;
-		foreach( LogTree logTree in logTrees_ )
+		if( gameObject.activeInHierarchy )
 		{
-			preferredHeight += logTree.GetComponent<LayoutElement>().preferredHeight + 5;
+			float preferredHeight = 0.0f;
+			foreach( LogTree logTree in logTrees_ )
+			{
+				preferredHeight += logTree.GetComponent<LayoutElement>().preferredHeight + 5;
+			}
+			preferredHeight += 100;
+			layout_.preferredHeight = preferredHeight;
+			contentSizeFitter_.SetLayoutVertical();
 		}
-		preferredHeight += 100;
-		layout_.preferredHeight = preferredHeight;
-		contentSizeFitter_.SetLayoutVertical();
 	}
 
 	public void CheckScrollbarEnabled()
@@ -271,6 +274,7 @@ public class LogNote : MonoBehaviour
 		foreach( LogTree logTree in logTrees_ )
 		{
 			logTree.RootLine.AdjustFontSizeRecursive(fontSize, heightPerLine);
+			logTree.UpdateLayoutElement();
 		}
 		UpdateLayoutElement();
 	}
