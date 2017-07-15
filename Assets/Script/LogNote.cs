@@ -220,17 +220,14 @@ public class LogNote : MonoBehaviour
 
 	public void UpdateLayoutElement()
 	{
-		if( gameObject.activeInHierarchy )
+		float preferredHeight = 0.0f;
+		foreach( LogTree logTree in logTrees_ )
 		{
-			float preferredHeight = 0.0f;
-			foreach( LogTree logTree in logTrees_ )
-			{
-				preferredHeight += logTree.GetComponent<LayoutElement>().preferredHeight + 5;
-			}
-			preferredHeight += 100;
-			layout_.preferredHeight = preferredHeight;
-			contentSizeFitter_.SetLayoutVertical();
+			preferredHeight += logTree.GetComponent<LayoutElement>().preferredHeight + 5;
 		}
+		preferredHeight += 100;
+		layout_.preferredHeight = preferredHeight;
+		contentSizeFitter_.SetLayoutVertical();
 	}
 
 	public void CheckScrollbarEnabled()
@@ -245,6 +242,16 @@ public class LogNote : MonoBehaviour
 
 
 	#region events
+
+	public void OnTreeNoteSelected()
+	{
+		scrollRect_.verticalScrollbar.value = targetScrollValue_;
+	}
+
+	public void OnTreeNoteDeselected()
+	{
+		targetScrollValue_ = scrollRect_.verticalScrollbar.gameObject.activeInHierarchy ? scrollRect_.verticalScrollbar.value : 1.0f;
+	}
 
 	public void OnTabOpened()
 	{
@@ -276,7 +283,10 @@ public class LogNote : MonoBehaviour
 			logTree.RootLine.AdjustFontSizeRecursive(fontSize, heightPerLine);
 			logTree.UpdateLayoutElement();
 		}
-		UpdateLayoutElement();
+		if( gameObject.activeInHierarchy )
+		{
+			UpdateLayoutElement();
+		}
 	}
 
 	#endregion

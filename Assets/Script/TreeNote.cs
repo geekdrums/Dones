@@ -182,6 +182,7 @@ public class TreeNote : Tree
 		if( LogNote != null )
 		{
 			LogNote.gameObject.SetActive(true);
+			LogNote.OnTreeNoteSelected();
 		}
 	}
 
@@ -191,6 +192,7 @@ public class TreeNote : Tree
 
 		if( LogNote != null )
 		{
+			LogNote.OnTreeNoteDeselected();
 			LogNote.gameObject.SetActive(false);
 		}
 	}

@@ -338,7 +338,38 @@ public class TextField : InputField, IColoredObject
 	IEnumerator UpdateTextLengthCoroutine()
 	{
 		yield return new WaitWhile(() => m_TextComponent.cachedTextGenerator.characterCount == 0);
-		
+
+		bool isRendered = true;
+		ScrollRect scrollRect = GetComponentInParent<ScrollRect>();
+		yield return new WaitWhile(() =>
+		{
+			float scrollHeight = scrollRect.GetComponent<RectTransform>().rect.height;
+			float heightPerLine = GameContext.Config.HeightPerLine;
+
+			// Lineが下側に出て見えなくなった場合
+			float targetUnderHeight = -(transform.position.y - scrollRect.transform.position.y) + heightPerLine / 2 - scrollHeight;
+			if( targetUnderHeight > 0 )
+			{
+				isRendered = false;
+				return true;
+			}
+
+			// Lineが上側に出て見えなくなった場合
+			float targetOverHeight = (transform.position.y + heightPerLine - scrollRect.transform.position.y);
+			if( targetOverHeight > 0 )
+			{
+				isRendered = false;
+				return true;
+			}
+
+			return false;
+		});
+
+		if( isRendered == false )
+		{
+			yield return new WaitForEndOfFrame();
+		}
+
 		float charLength = GetTextRectLength();
 
 		strikeLine_.SetLength(charLength + 10);

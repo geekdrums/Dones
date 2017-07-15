@@ -228,8 +228,15 @@ public class Tree : MonoBehaviour {
 			{
 				// ctrl選択で、新たにクリックしたところだけを追加する
 				Line line = null;
-				TextField field = EventSystem.current.currentSelectedGameObject.GetComponent<TextField>();
-				if( field != null ) line = field.BindedLine;
+				TextField field = null;
+				if( EventSystem.current != null && EventSystem.current.currentSelectedGameObject != null )
+				{
+					field = EventSystem.current.currentSelectedGameObject.GetComponent<TextField>();
+				}
+				if( field != null )
+				{
+					line = field.BindedLine;
+				}
 				if( line != null )
 				{
 					UpdateSelection(line, true);
