@@ -17,7 +17,8 @@ public class LogNote : MonoBehaviour
 {
 	public int LoadDateCount = 7;
 	public GameObject LogTreePrefab;
-	public GameObject DateUIPrefab; 
+	public GameObject DateUIPrefab;
+	public DateUI EndDateUI;
 
 	public LogTree TodayTree { get { return todayTree_; } }
 	private LogTree todayTree_;
@@ -224,6 +225,7 @@ public class LogNote : MonoBehaviour
 		{
 			preferredHeight += logTree.GetComponent<LayoutElement>().preferredHeight + 5;
 		}
+		preferredHeight += 100;
 		layout_.preferredHeight = preferredHeight;
 		contentSizeFitter_.SetLayoutVertical();
 	}
@@ -246,6 +248,7 @@ public class LogNote : MonoBehaviour
 		LoadUntil(today_.AddDays(-LoadDateCount));
 		TreeNote.Tab.UpdateTitleText();
 		TreeNote.Tab.UpdateColor();
+		UpdateLayoutElement();
 	}
 
 	public void OnTabClosed()
@@ -322,6 +325,9 @@ public class LogNote : MonoBehaviour
 			}
 		}
 		endDate_ = endDate;
+		EndDateUI.Set(endDate.AddDays(-1), GameContext.Config.CommentTextColor);
+		EndDateUI.transform.parent.SetAsLastSibling();
+		UpdateLayoutElement();
 	}
 
 	public void Save()
@@ -350,6 +356,21 @@ public class LogNote : MonoBehaviour
 			logTree.Reload();
 		}
 		UpdateLayoutElement();
+	}
+
+	public void LoadMoreDay()
+	{
+		LoadUntil(endDate_.AddDays(-1));
+	}
+
+	public void LoadMoreWeek()
+	{
+		LoadUntil(endDate_.AddDays(-7));
+	}
+
+	public void LoadMoreMonth()
+	{
+		LoadUntil(endDate_.AddMonths(-1));
 	}
 
 	public Color ToColor(DateTime date)

@@ -385,6 +385,7 @@ public class Window : MonoBehaviour
 					}
 				}
 				MainTabGroup.UpdateVerticalLayout();
+				MainTabGroup.UpdateLogTabButtons();
 				break;
 			case Settings.RecentFiles:
 				if( text.EndsWith(".dtml") && File.Exists(text) )
