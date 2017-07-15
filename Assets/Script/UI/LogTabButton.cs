@@ -50,11 +50,11 @@ public class LogTabButton : MonoBehaviour, IDragHandler, IBeginDragHandler, IEnd
 
 	public void Close()
 	{
-		if( OwnerTabGroup.ActiveNote.LogNote.IsEdited )
-		{
-			GameContext.Window.ModalDialog.Show(OwnerTabGroup.ActiveNote.LogNote.TitleText + "ログファイルへの変更を保存しますか？", this.CloseConfirmCallback);
-			return;
-		}
+		//if( OwnerTabGroup.ActiveNote.LogNote.IsEdited )
+		//{
+		//	GameContext.Window.ModalDialog.Show(OwnerTabGroup.ActiveNote.LogNote.TitleText + "ログファイルへの変更を保存しますか？", this.CloseConfirmCallback);
+		//	return;
+		//}
 
 		DoClose();
 	}

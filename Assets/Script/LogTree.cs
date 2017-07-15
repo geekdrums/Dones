@@ -463,6 +463,7 @@ public class LogTree : Tree
 			if( rootLine_.Count == 0 || ( rootLine_.Count == 1 && rootLine_[0].Count == 0 && rootLine_[0].Text == "" ) )
 			{
 				// 何も書くことがなければファイル生成しない
+				IsEdited = false;
 				return;
 			}
 		}

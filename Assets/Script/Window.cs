@@ -177,13 +177,7 @@ public class Window : MonoBehaviour
 		switch( result )
 		{
 		case ModalDialog.DialogResult.Yes:
-			foreach( Tree tree in MainTabGroup )
-			{
-				if( tree.IsEdited )
-				{
-					tree.Save();
-				}
-			}
+			SaveAll();
 			UnityEngine.Application.Quit();
 			break;
 		case ModalDialog.DialogResult.No:
@@ -248,6 +242,17 @@ public class Window : MonoBehaviour
 		MainTabGroup.SaveAs();
 
 		FileMenu.Close();
+	}
+
+	public void SaveAll()
+	{
+		foreach( TreeNote tree in MainTabGroup )
+		{
+			if( tree.IsEdited )
+			{
+				tree.Save();
+			}
+		}
 	}
 
 	public void RecentFiles()

@@ -785,7 +785,7 @@ public class Line : IEnumerable<Line>
 				if( parent_.IsFolded == false )
 				{
 					int indexInParent = Index;
-					index += indexInParent + 1;
+					index += indexInParent + (parent_.parent_ == null ? 0 : 1);
 					for( int i = 0; i < indexInParent; ++i )
 					{
 						index += parent_[i].VisibleChildCount;

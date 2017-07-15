@@ -141,7 +141,14 @@ public class Tree : MonoBehaviour {
 			else if( Input.GetKeyDown(KeyCode.S) )
 #endif
 			{
-				Save();
+				if( shift )
+				{
+					GameContext.Window.SaveAll();
+				}
+				else
+				{
+					Save();
+				}
 			}
 			else if( Input.GetKeyDown(KeyCode.Space) )
 			{
