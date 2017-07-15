@@ -543,7 +543,7 @@ public class Line : IEnumerable<Line>
 		}
 		else
 		{
-			int sign = Field.Rect.y < other.Field.Rect.y ? 1 : -1;
+			int sign = Field.RectY < other.Field.RectY ? 1 : -1;
 			for( Line line = this; line != other && line != null; line = (sign > 0 ? line.PrevVisibleLine : line.NextVisibleLine) )
 			{
 				yield return line;
@@ -625,15 +625,16 @@ public class Line : IEnumerable<Line>
 		if( startIndex < Count )
 		{
 			Vector3 target = children_[startIndex].CalcTargetPosition();
+			float heightPerLine = GameContext.Config.HeightPerLine;
 			for( int i = startIndex; i < Count; ++i )
 			{
 				if( predToBreak != null && predToBreak(children_[i]) )
 				{
 					return;
 				}
-				if( children_[i].Binding != null )
+				if( children_[i].Field != null )
 				{
-					if( target == children_[i].Binding.transform.localPosition && AnimManager.IsAnimating(children_[i].Binding) == false )
+					if( target == children_[i].Field.transform.localPosition && AnimManager.IsAnimating(children_[i].Binding) == false )
 					{
 						// これ以下は高さが変わっていないので、再計算は不要
 						return;
@@ -641,17 +642,29 @@ public class Line : IEnumerable<Line>
 
 					children_[i].TargetPosition = target;
 					AnimManager.AddAnim(children_[i].Binding, target, ParamType.Position, AnimType.Time, GameContext.Config.AnimTime);
-					//debug
-					//children_[i].Field.Foreground = ColorManager.MakeAlpha(children_[i].Field.Foreground, 0);
-					//AnimManager.AddAnim(children_[i].Field.textComponent, 1, ParamType.TextAlphaColor, AnimType.Time, 0.5f);
 				}
-				target.y -= (1 + children_[i].VisibleChildCount) * GameContext.Config.HeightPerLine;
+				target.y -= (1 + children_[i].VisibleChildCount) * heightPerLine;
 			}
 		}
 
 		if( parent_ != null )
 		{
 			parent_.AdjustLayoutRecursive(Index + 1, predToBreak);
+		}
+	}
+
+	public void AdjustFontSizeRecursive(int fontSize, float heightPerLine)
+	{
+		AdjustLayoutInChildren();
+		for( int i = 0; i < Count; ++i )
+		{
+			if( children_[i].Field != null )
+			{
+				children_[i].Field.textComponent.fontSize = fontSize;
+				children_[i].Field.RectHeight = heightPerLine;
+				children_[i].Field.OnTextLengthChanged();
+				children_[i].AdjustFontSizeRecursive(fontSize, heightPerLine);
+			}
 		}
 	}
 

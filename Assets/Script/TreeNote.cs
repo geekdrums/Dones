@@ -78,6 +78,8 @@ public class TreeNote : Tree
 			}
 		}
 
+		scrollRect_.enabled = Input.GetKey(KeyCode.LeftControl) == false;
+
 		base.Update();
 	}
 
@@ -207,6 +209,12 @@ public class TreeNote : Tree
 		{
 			GameContext.Window.LineList.RemoveShortLine(shortLine);
 		}
+	}
+
+	public void OnFontSizeChanged()
+	{
+		rootLine_.AdjustFontSizeRecursive(GameContext.Config.FontSize, GameContext.Config.HeightPerLine);
+		LogNote.OnFontSizeChanged(GameContext.Config.FontSize, GameContext.Config.HeightPerLine);
 	}
 
 	#endregion

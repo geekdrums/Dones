@@ -109,6 +109,8 @@ public class LogNote : MonoBehaviour
 				isScrollAnimating_ = false;
 			}
 		}
+
+		scrollRect_.enabled = Input.GetKey(KeyCode.LeftControl) == false;
 	}
 
 	#endregion
@@ -259,6 +261,15 @@ public class LogNote : MonoBehaviour
 		endDate_ = today_;
 		TreeNote.Tab.UpdateTitleText();
 		TreeNote.Tab.UpdateColor();
+	}
+
+	public void OnFontSizeChanged(int fontSize, float heightPerLine)
+	{
+		foreach( LogTree logTree in logTrees_ )
+		{
+			logTree.RootLine.AdjustFontSizeRecursive(fontSize, heightPerLine);
+		}
+		UpdateLayoutElement();
 	}
 
 	#endregion

@@ -176,13 +176,16 @@ public abstract class AnimInfoBase
 	{
 		if( Object == null ) return;
 
-		if( EndOption == AnimEndOption.Destroy )
+		if( AnimManager.IsAnimating(Object) == false )
 		{
-			GameObject.Destroy(Object);
-		}
-		else if( EndOption == AnimEndOption.Deactivate )
-		{
-			Object.SetActive(false);
+			if( EndOption == AnimEndOption.Destroy )
+			{
+				GameObject.Destroy(Object.gameObject);
+			}
+			else if( EndOption == AnimEndOption.Deactivate )
+			{
+				Object.gameObject.SetActive(false);
+			}
 		}
 	}
 
@@ -753,7 +756,7 @@ public class AnimManager : MonoBehaviour
 	public static bool IsAnimating(Object obj)
 	{
 		GameObject gameObject = ToGameObject(obj);
-		return Instance.Animations.Find((AnimInfoBase anim) => anim.Object == gameObject) != null;
+		return Instance.Animations.Find((AnimInfoBase anim) => anim.Object == gameObject && anim.IsEnd == false) != null;
 	}
 
 	public static void RemoveOtherAnim(AnimInfoBase animInfo, bool includeDaly = false)

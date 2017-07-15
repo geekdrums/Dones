@@ -1760,6 +1760,7 @@ public class Tree : MonoBehaviour {
 		}
 		reader.Close();
 		ResumeLayout();
+		rootLine_.AdjustFontSizeRecursive(GameContext.Config.FontSize, GameContext.Config.HeightPerLine);
 		IsEdited = false;
 	}
 

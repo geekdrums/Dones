@@ -74,8 +74,9 @@ public class TextField : InputField, IColoredObject
 	public void SetColor(Color color) { Background = color; }
 	public Color GetColor() { return Background;  }
 
-	public Rect Rect { get { return new Rect(targetGraphic.rectTransform.position, targetGraphic.rectTransform.sizeDelta); } }
+	public Rect Rect { get { return new Rect((Vector2)targetGraphic.rectTransform.position + targetGraphic.rectTransform.rect.position, targetGraphic.rectTransform.rect.size); } }
 	public float RectY { get { return targetGraphic.rectTransform.position.y; } }
+	public float RectHeight {get{ return targetGraphic.rectTransform.sizeDelta.y; } set { targetGraphic.rectTransform.sizeDelta = new Vector2(targetGraphic.rectTransform.sizeDelta.x, value); } }
 
 	protected UIGaugeRenderer strikeLine_;
 	protected CheckMark checkMark_;

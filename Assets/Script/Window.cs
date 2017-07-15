@@ -30,6 +30,7 @@ public class Window : MonoBehaviour
 	public GameObject RecentFilesSubMenu;
 	public ShortLineList LineList;
 	public ModalDialog ModalDialog;
+	public Text FontSizeText;
 
 	#endregion
 
@@ -38,7 +39,6 @@ public class Window : MonoBehaviour
 
 	FileInfo settingFile_;
 	FileInfo lineListFile_;
-	TabGroup activeTabGroup_;
 
 	string initialDirectory_;
 
@@ -102,6 +102,37 @@ public class Window : MonoBehaviour
 			else if( Input.GetKeyDown(KeyCode.N) )
 			{
 				NewFile();
+			}
+
+			if( Input.mouseScrollDelta.y > 0 )
+			{
+				if( GameContext.Config.FontSize < 20 )
+				{
+					GameContext.Config.FontSize += 1;
+					foreach( TreeNote treeNote in MainTabGroup )
+					{
+						treeNote.OnFontSizeChanged();
+					}
+					FontSizeText.text = "FontSize:" + GameContext.Config.FontSize.ToString();
+					FontSizeText.color = GameContext.Config.TextColor;
+					FontSizeText.gameObject.SetActive(true);
+					AnimManager.AddAnim(FontSizeText.gameObject, 0.0f, ParamType.TextAlphaColor, AnimType.Time, 3.0f, endOption: AnimEndOption.Deactivate);
+				}
+			}
+			else if( Input.mouseScrollDelta.y < 0 )
+			{
+				if( GameContext.Config.FontSize > 12 )
+				{
+					GameContext.Config.FontSize -= 1;
+					foreach( TreeNote treeNote in MainTabGroup )
+					{
+						treeNote.OnFontSizeChanged();
+					}
+					FontSizeText.text = "FontSize:" + GameContext.Config.FontSize.ToString();
+					FontSizeText.color = GameContext.Config.TextColor;
+					FontSizeText.gameObject.SetActive(true);
+					AnimManager.AddAnim(FontSizeText.gameObject, 0.0f, ParamType.TextAlphaColor, AnimType.Time, 3.0f, endOption: AnimEndOption.Deactivate);
+				}
 			}
 		}
 
@@ -189,9 +220,9 @@ public class Window : MonoBehaviour
 				}
 			}
 
-			if( activeTabGroup_.ActiveNote != null )
+			if( MainTabGroup.ActiveNote != null )
 			{
-				initialDirectory_ = activeTabGroup_.ActiveNote.File.Directory.FullName;
+				initialDirectory_ = MainTabGroup.ActiveNote.File.Directory.FullName;
 			}
 		}
 
@@ -289,6 +320,7 @@ public class Window : MonoBehaviour
 		RecentFiles,
 		InitialDirectory,
 		ScreenSize,
+		FontSize,
 		IsToDoListOpened,
 		Count
 	}
@@ -299,8 +331,9 @@ public class Window : MonoBehaviour
 		"[recent files]",
 		"[initial files]",
 		"[screen]",
+		"[font size]",
 		"[todo list]"
-		};
+	};
 
 	void LoadSettings()
 	{
@@ -364,6 +397,13 @@ public class Window : MonoBehaviour
 				string[] size = text.Split(',');
 				UnityEngine.Screen.SetResolution(int.Parse(size[0]), int.Parse(size[1]), size[2] == "true");
 				break;
+			case Settings.FontSize:
+				GameContext.Config.FontSize = int.Parse(text);
+				foreach( TreeNote treeNote in MainTabGroup )
+				{
+					treeNote.OnFontSizeChanged();
+				}
+				break;
 			case Settings.IsToDoListOpened:
 				if( text == "open" )
 				{
@@ -422,6 +462,8 @@ public class Window : MonoBehaviour
 		}
 		writer.WriteLine(SettingsTags[(int)Settings.ScreenSize]);
 		writer.WriteLine(String.Format("{0},{1},{2}", UnityEngine.Screen.width, UnityEngine.Screen.height, UnityEngine.Screen.fullScreen ? "true" : "false"));
+		writer.WriteLine(SettingsTags[(int)Settings.FontSize]);
+		writer.WriteLine(GameContext.Config.FontSize);
 		writer.WriteLine(SettingsTags[(int)Settings.IsToDoListOpened]);
 		writer.WriteLine(LineList.IsOpened ? "open" : "close");
 
