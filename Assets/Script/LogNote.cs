@@ -379,6 +379,7 @@ public class LogNote : MonoBehaviour
 		}
 		logTrees_.Insert(insertIndex, newDateTree);
 		newDateTree.transform.SetSiblingIndex(insertIndex + 1);//heapが最初にあるので。。
+		newDateTree.SubscribeKeyInput();
 		UpdateLayoutElement();
 	}
 
