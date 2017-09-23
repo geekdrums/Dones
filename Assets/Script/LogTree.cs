@@ -17,6 +17,7 @@ public class LogTree : Tree
 {
 	#region params
 
+	public DateTime Date { get { return date_; } }
 	DateTime date_;
 	LogNote ownerLogNote_;
 

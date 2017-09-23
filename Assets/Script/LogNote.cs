@@ -303,7 +303,7 @@ public class LogNote : MonoBehaviour
 
 		todayTree_ = Instantiate(LogTreePrefab.gameObject, this.transform).GetComponent<LogTree>();
 		DateUI dateUI = Instantiate(DateUIPrefab.gameObject, todayTree_.transform).GetComponent<DateUI>();
-		dateUI.Set(today_, ToColor(today_));
+		dateUI.Set(this, today_, ToColor(today_));
 		todayTree_.Initialize(actionManager_, heapParent_);
 		if( treeNote_.File != null )
 		{
@@ -323,24 +323,62 @@ public class LogNote : MonoBehaviour
 		if( treeNote_.File == null ) return;
 
 		DateTime date = endDate_;
+		DateUI lastDateUI = logTrees_.Count == 0 ? null : logTrees_[logTrees_.Count - 1].GetComponentInChildren<DateUI>();
 		while( date > endDate )
 		{
 			date = date.AddDays(-1.0);
 			string filename = ToFileName(treeNote_.File, date);
-			if( File.Exists(filename) )
+			bool exist = File.Exists(filename);
+			if( lastDateUI != null )
+			{
+				lastDateUI.SetEnableAddDateButtton(exist == false);
+			}
+			if( exist )
 			{
 				LogTree logTree = Instantiate(LogTreePrefab.gameObject, this.transform).GetComponent<LogTree>();
 				DateUI dateUI = Instantiate(DateUIPrefab.gameObject, logTree.transform).GetComponent<DateUI>();
-				dateUI.Set(date, ToColor(date));
+				dateUI.Set(this, date, ToColor(date));
 				logTree.Initialize(actionManager_, heapParent_);
 				logTree.Load(filename, date);
 				logTree.SubscribeKeyInput();
 				logTrees_.Add(logTree);
+
+				lastDateUI = dateUI;
+			}
+			else
+			{
+				lastDateUI = null;
 			}
 		}
+		if( lastDateUI != null )
+		{
+			lastDateUI.SetEnableAddDateButtton(false);
+		}
 		endDate_ = endDate;
-		EndDateUI.Set(endDate.AddDays(-1), GameContext.Config.CommentTextColor);
+		EndDateUI.Set(this, endDate.AddDays(-1), GameContext.Config.CommentTextColor);
 		EndDateUI.transform.parent.SetAsLastSibling();
+		UpdateLayoutElement();
+	}
+
+	public void AddDate(DateTime date)
+	{
+		LogTree newDateTree = Instantiate(LogTreePrefab.gameObject, this.transform).GetComponent<LogTree>();
+		DateUI dateUI = Instantiate(DateUIPrefab.gameObject, newDateTree.transform).GetComponent<DateUI>();
+		dateUI.Set(this, date, ToColor(date));
+		dateUI.SetEnableAddDateButtton(treeNote_.File == null || File.Exists(ToFileName(treeNote_.File, date.AddDays(-1.0))) == false);
+		newDateTree.Initialize(actionManager_, heapParent_);
+		newDateTree.NewTree(date);
+		int insertIndex = logTrees_.Count;
+		for( int i = 0; i < logTrees_.Count; ++i )
+		{
+			if( logTrees_[i].Date < date )
+			{
+				insertIndex = i;
+				break;
+			}
+		}
+		logTrees_.Insert(insertIndex, newDateTree);
+		newDateTree.transform.SetSiblingIndex(insertIndex + 1);//heapが最初にあるので。。
 		UpdateLayoutElement();
 	}
 
