@@ -355,7 +355,7 @@ public class TextField : InputField, IColoredObject
 			}
 
 			// Lineが上側に出て見えなくなった場合
-			float targetOverHeight = (transform.position.y + heightPerLine - scrollRect.transform.position.y);
+			float targetOverHeight = (transform.position.y - scrollRect.transform.position.y);
 			if( targetOverHeight > 0 )
 			{
 				isRendered = false;
@@ -372,7 +372,8 @@ public class TextField : InputField, IColoredObject
 
 		float charLength = GetTextRectLength();
 
-		strikeLine_.SetLength(charLength + 10);
+		if( BindedLine.IsComment == false )
+			strikeLine_.SetLength(charLength + 10);
 
 		checkMark_.gameObject.SetActive(BindedLine.IsDone);
 		checkMark_.SetPositionX(charLength + 5);
@@ -453,6 +454,7 @@ public class TextField : InputField, IColoredObject
 		desiredCaretPos_ = cachedCaretPos_ = caretSelectPositionInternal = caretPositionInternal = GetCharacterIndexFromPosition(localMousePos) + m_DrawStart;
 		//}
 
+		BindedLine.FixTextInputAction();
 		UpdateLabel();
 		eventData.Use();
 	}
@@ -488,27 +490,45 @@ public class TextField : InputField, IColoredObject
 	}
 
 	protected static string compositionString = "";
-	protected static Event processingEvent_ = new Event();
 	public override void OnUpdateSelected(BaseEventData eventData)
 	{
 		if( !isFocused || BindedLine == null || BindedLine.Tree == null )
 			return;
 
 		bool consumedEvent = false;
-		while( Event.PopEvent(processingEvent_) )
+
+		int compositionBugCount = -1;
+		Event popEvent = new Event();
+		List<Event> currentEvents = new List<Event>();
+		while( Event.PopEvent(popEvent) )
 		{
-			if( processingEvent_.rawType == EventType.KeyDown )
+			currentEvents.Add(new Event(popEvent));
+		}
+		if( currentEvents.Find((Event e) => e.rawType == EventType.MouseDown) != null )
+		{
+			compositionBugCount = 0;
+			foreach( Event maybeDuplicatedEvent in currentEvents )
+			{
+				if( maybeDuplicatedEvent.rawType == EventType.keyDown )
+				{
+					++compositionBugCount;
+				}
+			}
+		}
+		foreach( Event processingEvent in currentEvents )
+		{
+			if( processingEvent.rawType == EventType.KeyDown )
 			{
 				consumedEvent = true;
 
-				var currentEventModifiers = processingEvent_.modifiers;
+				var currentEventModifiers = processingEvent.modifiers;
 				bool ctrl = SystemInfo.operatingSystemFamily == OperatingSystemFamily.MacOSX ? (currentEventModifiers & EventModifiers.Command) != 0 : (currentEventModifiers & EventModifiers.Control) != 0;
 				bool shift = (currentEventModifiers & EventModifiers.Shift) != 0;
 				bool alt = (currentEventModifiers & EventModifiers.Alt) != 0;
 				bool ctrlOnly = ctrl && !alt && !shift;
 
 				cachedCaretPos_ = m_CaretSelectPosition;
-				switch( processingEvent_.keyCode )
+				switch( processingEvent.keyCode )
 				{
 				case KeyCode.V:
 					if( ctrlOnly )
@@ -523,7 +543,7 @@ public class TextField : InputField, IColoredObject
 					}
 					else
 					{
-						KeyPressed(processingEvent_);
+						KeyPressed(processingEvent);
 					}
 					break;
 				case KeyCode.C:
@@ -534,7 +554,7 @@ public class TextField : InputField, IColoredObject
 					}
 					else
 					{
-						KeyPressed(processingEvent_);
+						KeyPressed(processingEvent);
 					}
 					break;
 				case KeyCode.M:
@@ -593,7 +613,7 @@ public class TextField : InputField, IColoredObject
 						else
 						{
 							bool use = cachedCaretPos_ < text.Length;
-							KeyPressed(processingEvent_);
+							KeyPressed(processingEvent);
 							if( use ) BindedLine.Tree.OnDeleteKeyConsumed();
 						}
 					}
@@ -606,7 +626,7 @@ public class TextField : InputField, IColoredObject
 						}
 						else
 						{
-							KeyPressed(processingEvent_);
+							KeyPressed(processingEvent);
 						}
 					}
 					break;
@@ -618,7 +638,7 @@ public class TextField : InputField, IColoredObject
 						}
 						else
 						{
-							KeyPressed(processingEvent_);
+							KeyPressed(processingEvent);
 							BindedLine.FixTextInputAction();
 						}
 					}
@@ -631,7 +651,7 @@ public class TextField : InputField, IColoredObject
 						}
 						else
 						{
-							KeyPressed(processingEvent_);
+							KeyPressed(processingEvent);
 							BindedLine.FixTextInputAction();
 						}
 					}
@@ -639,7 +659,7 @@ public class TextField : InputField, IColoredObject
 				case KeyCode.RightArrow:
 				case KeyCode.LeftArrow:
 					{
-						KeyPressed(processingEvent_);
+						KeyPressed(processingEvent);
 						desiredCaretPos_ = m_CaretSelectPosition;
 						if( BindedLine.IsComment && m_CaretSelectPosition < 2 )
 						{
@@ -651,24 +671,30 @@ public class TextField : InputField, IColoredObject
 				case KeyCode.Home:
 				case KeyCode.End:
 					{
-						KeyPressed(processingEvent_);
+						KeyPressed(processingEvent);
 						desiredCaretPos_ = m_CaretSelectPosition;
+						BindedLine.FixTextInputAction();
 					}
 					break;
 				default:
-					if( ctrlOnly && processingEvent_.keyCode == KeyCode.None && processingEvent_.character.ToString() == " " )
+					if( ctrlOnly && processingEvent.keyCode == KeyCode.None && processingEvent.character.ToString() == " " )
 					{
 						// process in ownerTree
 					}
-					else if( processingEvent_.keyCode == KeyCode.None && BindedLine.Tree.HasSelection && processingEvent_.character.ToString() != Line.TabString )
+					else if( processingEvent.keyCode == KeyCode.None && BindedLine.Tree.HasSelection && processingEvent.character.ToString() != Line.TabString )
 					{
 						TextField newField = BindedLine.Tree.DeleteSelection().Field;
-						newField.KeyPressed(processingEvent_);
+						newField.KeyPressed(processingEvent);
 						newField.CaretPosision = newField.text.Length;
 					}
 					else
 					{
-						KeyPressed(processingEvent_);
+						if( compositionBugCount >= 0 && compositionBugCount % 2 == 0 )
+						{
+							if( compositionBugCount == 0 ) continue;
+							compositionBugCount -= 2;
+						}
+						KeyPressed(processingEvent);
 					}
 					break;
 				}

@@ -141,10 +141,10 @@ public class TreeNote : Tree
 		}
 
 		// focusLineが上側に出て見えなくなった場合
-		float targetOverHeight = (targetLine.Field.transform.position.y + heightPerLine - scrollRect_.transform.position.y);
+		float targetOverHeight = (targetLine.Field.transform.position.y - scrollRect_.transform.position.y);
 		if( targetOverHeight > 0 )
 		{
-			targetScrollValue_ = Mathf.Clamp01((layout_.preferredHeight - scrollHeight - targetHeight + heightPerLine) / (layout_.preferredHeight - scrollHeight));
+			targetScrollValue_ = Mathf.Clamp01((layout_.preferredHeight - scrollHeight - targetHeight) / (layout_.preferredHeight - scrollHeight));
 			isScrollAnimating_ = true;
 			return;
 		}
@@ -216,6 +216,12 @@ public class TreeNote : Tree
 	public void OnFontSizeChanged()
 	{
 		rootLine_.AdjustFontSizeRecursive(GameContext.Config.FontSize, GameContext.Config.HeightPerLine);
+		foreach(TextField field in heapParent_.GetComponentsInChildren<TextField>())
+		{
+			field.textComponent.fontSize = GameContext.Config.FontSize;
+			field.RectHeight = GameContext.Config.HeightPerLine;
+			field.OnTextLengthChanged();
+		}
 		UpdateLayoutElement();
 		LogNote.OnFontSizeChanged(GameContext.Config.FontSize, GameContext.Config.HeightPerLine);
 	}

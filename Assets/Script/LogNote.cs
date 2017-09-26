@@ -209,10 +209,10 @@ public class LogNote : MonoBehaviour
 		}
 
 		// focusLineが上側に出て見えなくなった場合
-		float targetOverHeight = (targetLine.Field.transform.position.y + heightPerLine - scrollRect_.transform.position.y);
+		float targetOverHeight = (targetLine.Field.transform.position.y - scrollRect_.transform.position.y);
 		if( targetOverHeight > 0 )
 		{
-			targetScrollValue_ = Mathf.Clamp01((layout_.preferredHeight - scrollHeight - targetHeight + heightPerLine) / (layout_.preferredHeight - scrollHeight));
+			targetScrollValue_ = Mathf.Clamp01((layout_.preferredHeight - scrollHeight - targetHeight) / (layout_.preferredHeight - scrollHeight));
 			isScrollAnimating_ = true;
 			return;
 		}
