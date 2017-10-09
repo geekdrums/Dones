@@ -193,8 +193,13 @@ public class TextField : InputField, IColoredObject
 	public void SetIsOnList(bool isOnList, bool withAnim = true)
 	{
 		Foreground = GetDesiredTextColor();
-		if( isOnList && BindedLine.IsDone == false )
+		if( isOnList )
 		{
+			if( BindedLine.IsDone )
+			{
+				return;
+			}
+
 			if( listMark_.gameObject.activeInHierarchy )
 			{
 				AnimManager.RemoveOtherAnim(listMark_.gameObject);

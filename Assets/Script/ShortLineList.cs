@@ -425,6 +425,8 @@ public class ShortLineList : MonoBehaviour, IEnumerable<ShortLine>
 		OpenButton.gameObject.SetActive(false);
 		scrollRect_.GetComponent<RectTransform>().anchoredPosition = new Vector3(0, scrollRect_.GetComponent<RectTransform>().anchoredPosition.y);
 		GameContext.Window.OnHeaderWidthChanged();
+
+		RemoveAllDones();
 	}
 
 	public void Close()
@@ -433,13 +435,20 @@ public class ShortLineList : MonoBehaviour, IEnumerable<ShortLine>
 		OpenButton.gameObject.SetActive(true);
 		scrollRect_.GetComponent<RectTransform>().anchoredPosition = new Vector3(-LineWidth + ClosedLineWidth, scrollRect_.GetComponent<RectTransform>().anchoredPosition.y);
 		GameContext.Window.OnHeaderWidthChanged();
+
+		RemoveAllDones();
 	}
 
-	public void DoneAll()
+	public void RemoveAllDones()
 	{
 		List<Line> doneLines = new List<Line>(from shortline in doneLines_ select shortline.BindedLine);
 
-		AnimManager.AddShakeAnim(scrollRect_, 15.0f, 0.15f, 0.025f, ParamType.PositionY);
+		if( doneLines.Count == 0 )
+		{
+			return;
+		}
+
+		//AnimManager.AddShakeAnim(scrollRect_, 15.0f, 0.15f, 0.025f, ParamType.PositionY);
 
 		foreach( Tree tree in GameContext.Window.MainTabGroup )
 		{

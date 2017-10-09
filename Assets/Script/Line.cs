@@ -80,6 +80,7 @@ public class Line : IEnumerable<Line>
 				if( Field != null )
 				{
 					Field.SetIsDone(isDone_);
+					Field.SetIsOnList(isOnList_);
 				}
 				if( IsOnList )
 				{
