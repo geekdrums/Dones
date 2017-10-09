@@ -150,25 +150,31 @@ public class Window : MonoBehaviour
 
 	void OnApplicationQuit()
 	{
-		if( saveConfirmed_ == false )
+		if( GameContext.Config.IsAutoSave )
 		{
-			saveConfirmed_ = true;
 			foreach( TreeNote tree in MainTabGroup )
 			{
-				if( tree.IsEdited || tree.LogNote.IsEdited )
+				tree.Save();
+				if( GameContext.Config.DoBackUp )
 				{
-					GameContext.Window.ModalDialog.Show("ファイルへの変更を保存しますか？", this.CloseConfirmCallback);
-					UnityEngine.Application.CancelQuit();
-					return;
+					tree.DeleteBackup();
 				}
 			}
 		}
-
-		if( GameContext.Config.IsAutoSave && GameContext.Config.DoBackUp )
+		else
 		{
-			foreach( TreeNote tree in MainTabGroup )
+			if( saveConfirmed_ == false )
 			{
-				tree.DeleteBackup();
+				saveConfirmed_ = true;
+				foreach( TreeNote tree in MainTabGroup )
+				{
+					if( tree.IsEdited || tree.LogNote.IsEdited )
+					{
+						GameContext.Window.ModalDialog.Show("ファイルへの変更を保存しますか？", this.CloseConfirmCallback);
+						UnityEngine.Application.CancelQuit();
+						return;
+					}
+				}
 			}
 		}
 

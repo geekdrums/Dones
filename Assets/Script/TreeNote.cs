@@ -213,9 +213,13 @@ public class TreeNote : Tree
 			GameContext.Window.LineList.RemoveShortLine(shortLine);
 		}
 
-		if( GameContext.Config.IsAutoSave && GameContext.Config.DoBackUp )
+		if( GameContext.Config.IsAutoSave )
 		{
-			DeleteBackup();
+			Save();
+			if( GameContext.Config.DoBackUp )
+			{
+				DeleteBackup();
+			}
 		}
 	}
 
