@@ -196,11 +196,12 @@ public class LogNote : MonoBehaviour
 	public void ScrollTo(Line targetLine)
 	{
 		float scrollHeight = scrollRect_.GetComponent<RectTransform>().rect.height;
-		float targetHeight = -(targetLine.Field.transform.position.y - this.transform.position.y);
+		float targetAbsolutePositionY = targetLine.TargetAbsolutePosition.y;
+		float targetHeight = -(targetAbsolutePositionY - this.transform.position.y);
 		float heightPerLine = GameContext.Config.HeightPerLine;
 
 		// focusLineが下側に出て見えなくなった場合
-		float targetUnderHeight = -(targetLine.Field.transform.position.y - scrollRect_.transform.position.y) + heightPerLine / 2 - scrollHeight;
+		float targetUnderHeight = -(targetAbsolutePositionY - scrollRect_.transform.position.y) + heightPerLine / 2 - scrollHeight;
 		if( targetUnderHeight > 0 )
 		{
 			targetScrollValue_ = Mathf.Clamp01(1.0f - (targetHeight + heightPerLine * 1.5f - scrollHeight) / (layout_.preferredHeight - scrollHeight));
@@ -209,7 +210,7 @@ public class LogNote : MonoBehaviour
 		}
 
 		// focusLineが上側に出て見えなくなった場合
-		float targetOverHeight = (targetLine.Field.transform.position.y - scrollRect_.transform.position.y);
+		float targetOverHeight = (targetAbsolutePositionY - scrollRect_.transform.position.y);
 		if( targetOverHeight > 0 )
 		{
 			targetScrollValue_ = Mathf.Clamp01((layout_.preferredHeight - scrollHeight - targetHeight) / (layout_.preferredHeight - scrollHeight));

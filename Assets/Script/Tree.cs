@@ -1025,10 +1025,14 @@ public class Tree : MonoBehaviour {
 						{
 							src.Parent.Insert(dest.Index, src);
 							dest.AdjustLayout();
-							src.Field.IsFocused = true;
+							ScrollTo(src);
 						}
 						));
 				}
+			}
+			else if( Input.GetKey(KeyCode.LeftControl) )
+			{
+				OnFoldUpdated(focusedLine_, key == KeyCode.UpArrow);
 			}
 			else
 			{
@@ -1259,6 +1263,8 @@ public class Tree : MonoBehaviour {
 		actionManager_.StartChain();
 		foreach( Line line in GetSelectedOrFocusedLines() )
 		{
+			if( line.IsDone ) continue;
+
 			Line targetLine = line;
 			actionManager_.Execute(new Action(
 				execute: ()=>

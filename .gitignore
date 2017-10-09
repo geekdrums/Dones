@@ -12,4 +12,5 @@ UnityVS.*
 *.dll
 *.bundle/
 *.prx
+*.bak.meta
 Assets/StreamingAssets/settings.txt
