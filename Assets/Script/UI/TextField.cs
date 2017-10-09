@@ -424,6 +424,11 @@ public class TextField : InputField, IColoredObject
 			selectionAnchorPosition = selectionFocusPosition = cachedCaretPos_;
 			BindedLine.Tree.OnFocused(BindedLine);
 		}
+
+		if( isFocused && BindedLine != null && BindedLine.NeedFixInput() )
+		{
+			BindedLine.FixTextInputAction();
+		} 
 	}
 
 	public override void OnDeselect(BaseEventData eventData)

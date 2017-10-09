@@ -26,7 +26,7 @@ public class TreeNote : Tree
 		}
 		set
 		{
-			isEdited_ = value;
+			base.IsEdited = value;
 			tabButton_.Text = TitleText + (isEdited_ ? "*" : "");
 		}
 	}
@@ -212,6 +212,11 @@ public class TreeNote : Tree
 		{
 			GameContext.Window.LineList.RemoveShortLine(shortLine);
 		}
+
+		if( GameContext.Config.IsAutoSave && GameContext.Config.DoBackUp )
+		{
+			DeleteBackup();
+		}
 	}
 
 	public void OnFontSizeChanged()
@@ -255,6 +260,11 @@ public class TreeNote : Tree
 		}
 
 		file_ = new FileInfo(path);
+		
+		if( GameContext.Config.IsAutoSave && GameContext.Config.DoBackUp && file_.Exists )
+		{
+			File.CopyTo(file_.FullName + ".bak", overwrite: true);
+		}
 
 		tabButton_ = tab;
 		logNote_ = logNote;
@@ -290,8 +300,18 @@ public class TreeNote : Tree
 		DialogResult dialogResult = saveFileDialog.ShowDialog();
 		if( dialogResult == DialogResult.OK )
 		{
+			if( GameContext.Config.IsAutoSave && GameContext.Config.DoBackUp )
+			{
+				DeleteBackup();
+			}
+
 			file_ = new FileInfo(saveFileDialog.FileName);
 			rootLine_.Text = file_.Name;
+			if( logNote_ != null )
+			{
+				logNote_.LoadToday(this);
+			}
+
 #if UNITY_STANDALONE_WIN
 			GameContext.Window.SetTitle(TitleText + " - Dones");
 #endif
@@ -305,6 +325,18 @@ public class TreeNote : Tree
 		logNote_.Save();
 
 		GameContext.Window.AddRecentOpenedFiles(file_.FullName);
+	}
+
+	public void DeleteBackup()
+	{
+		if( file_ != null )
+		{
+			FileInfo backupFile = new FileInfo(file_.FullName + ".bak");
+			if( backupFile.Exists )
+			{
+				backupFile.Delete();
+			}
+		}
 	}
 
 	#endregion

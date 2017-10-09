@@ -164,6 +164,14 @@ public class Window : MonoBehaviour
 			}
 		}
 
+		if( GameContext.Config.IsAutoSave && GameContext.Config.DoBackUp )
+		{
+			foreach( TreeNote tree in MainTabGroup )
+			{
+				tree.DeleteBackup();
+			}
+		}
+
 		SaveSettings();
 		SaveLineList();
 

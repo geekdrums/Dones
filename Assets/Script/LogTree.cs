@@ -29,7 +29,7 @@ public class LogTree : Tree
 		}
 		set
 		{
-			isEdited_ = value;
+			base.IsEdited = value;
 			if( ownerLogNote_ != null && ownerLogNote_.TreeNote != null )
 			{
 				if( ownerLogNote_.IsFullArea )

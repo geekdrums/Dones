@@ -273,6 +273,7 @@ public class Line : IEnumerable<Line>
 		{
 			if( textAction_ == null || textAction_ is TextInputAction == false || Time.time - lastTextActionTime_ > GameContext.Config.TextInputFixIntervalTime )
 			{
+				FixTextInputAction();
 				textAction_ = new TextInputAction(this);
 				Tree.ActionManager.Execute(textAction_);
 			}
@@ -287,6 +288,7 @@ public class Line : IEnumerable<Line>
 		{
 			if( textAction_ == null || textAction_ is TextDeleteAction == false || Time.time - lastTextActionTime_ > GameContext.Config.TextInputFixIntervalTime )
 			{
+				FixTextInputAction();
 				textAction_ = new TextDeleteAction(this);
 				Tree.ActionManager.Execute(textAction_);
 			}
@@ -325,6 +327,11 @@ public class Line : IEnumerable<Line>
 
 	public void FixTextInputAction()
 	{
+		if( GameContext.Config.IsAutoSave && textAction_ != null )
+		{
+			Tree.Save();
+		}
+
 		textAction_ = null;
 	}
 
@@ -1053,6 +1060,11 @@ public class Line : IEnumerable<Line>
 	public void CheckIsComment()
 	{
 		IsComment = text_.StartsWith("> ");
+	}
+
+	public bool NeedFixInput()
+	{
+		return textAction_ != null && Time.time - lastTextActionTime_ > GameContext.Config.TextInputFixIntervalTime;
 	}
 
 	public Line Clone()
