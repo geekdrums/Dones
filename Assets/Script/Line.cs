@@ -117,7 +117,21 @@ public class Line : IEnumerable<Line>
 	public bool IsLinkText { get { return isLinkText_; } }
 	protected bool isLinkText_ = false;
 
-	public bool IsClone { get { return isClone_; } set { isClone_ = value; } }
+	public bool IsClone
+	{
+		get { return isClone_; }
+		set
+		{
+			if( isClone_ != value )
+			{
+				isClone_ = value;
+				if( Field != null )
+				{
+					Field.SetIsClone(isClone_);
+				}
+			}
+		}
+	}
 	protected bool isClone_ = false;
 
 	public bool IsBold
@@ -358,15 +372,8 @@ public class Line : IEnumerable<Line>
 			{
 				OnTextChanged(text);
 			});
-			Field.SetIsClone(isClone_);
-			Field.SetIsDone(isDone_, withAnim: false);
-			Field.SetIsOnList(isOnList_, withAnim: false);
-			Field.textComponent.fontStyle = isBold_ ? FontStyle.Bold : FontStyle.Normal;
-			
-			if( isLinkText_ )
-				Field.SetIsLinkText(isLinkText_);
-			if( isComment_ )
-				Field.SetIsComment(isComment_);
+
+			UpdateBindingField();
 
 			Toggle = Field.GetComponentInChildren<TreeToggle>();
 			toggleSubscription_ = children_.ObserveCountChanged(true).DistinctUntilChanged().Subscribe(x =>
@@ -407,6 +414,21 @@ public class Line : IEnumerable<Line>
 		}
 		Binding = null;
 		Field = null;
+	}
+
+	public void UpdateBindingField()
+	{
+		if( Field != null )
+		{
+			Field.SetIsClone(isClone_);
+			Field.SetIsDone(isDone_, withAnim: false);
+			Field.SetIsOnList(isOnList_, withAnim: false);
+			Field.textComponent.fontStyle = isBold_ ? FontStyle.Bold : FontStyle.Normal;
+			if( isLinkText_ )
+				Field.SetIsLinkText(isLinkText_);
+			if( isComment_ )
+				Field.SetIsComment(isComment_);
+		}
 	}
 
 	#endregion

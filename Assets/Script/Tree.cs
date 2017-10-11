@@ -1396,6 +1396,7 @@ public class Tree : MonoBehaviour {
 						string beforeRefText = pasteText;
 						pasteStart.LoadTag(ref pasteText);
 						pasteStart.Field.Paste(pasteText);
+						pasteStart.UpdateBindingField();
 						pasteText = beforeRefText;
 					}
 					else
@@ -1446,6 +1447,7 @@ public class Tree : MonoBehaviour {
 					string beforeRefText = pasteText;
 					pasteStart.LoadTag(ref pasteText);
 					pasteStart.Field.Paste(pasteText);
+					pasteStart.UpdateBindingField();
 					pasteText = beforeRefText;
 					RequestLayout(layoutStart);
 				},
@@ -1455,6 +1457,7 @@ public class Tree : MonoBehaviour {
 					pasteStart.Text = "";
 					string noTag = "";
 					pasteStart.LoadTag(ref noTag);
+					pasteStart.UpdateBindingField();
 					RequestLayout(layoutStart);
 				}
 				));
