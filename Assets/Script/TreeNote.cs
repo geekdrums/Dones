@@ -54,15 +54,13 @@ public class TreeNote : Tree
 		actionManager_.ChainStarted += this.actionManager__ChainStarted;
 		actionManager_.ChainEnded += this.actionManager__ChainEnded;
 		actionManager_.Executed += this.actionManager__Executed;
-
-		heapParent_ = new GameObject("heap");
-		heapParent_.transform.parent = this.transform;
+		
 		for( int i = 0; i < FieldCount; ++i )
 		{
-			TextField field = Instantiate(FieldPrefab.gameObject).GetComponent<TextField>();
-			field.transform.SetParent(heapParent_.transform);
+			TextField field = Instantiate(FieldPrefab.gameObject, this.transform).GetComponent<TextField>();
+			field.gameObject.SetActive(false);
+			heapFields_.Add(field);
 		}
-		heapParent_.SetActive(false);
 	}
 
 	// Update is called once per frame
@@ -226,7 +224,7 @@ public class TreeNote : Tree
 	public void OnFontSizeChanged()
 	{
 		rootLine_.AdjustFontSizeRecursive(GameContext.Config.FontSize, GameContext.Config.HeightPerLine);
-		foreach(TextField field in heapParent_.GetComponentsInChildren<TextField>())
+		foreach( TextField field in heapFields_ )
 		{
 			field.textComponent.fontSize = GameContext.Config.FontSize;
 			field.RectHeight = GameContext.Config.HeightPerLine;

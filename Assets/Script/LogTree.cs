@@ -68,10 +68,10 @@ public class LogTree : Tree
 		ownerLogNote_ = GetComponentInParent<LogNote>();
 	}
 
-	public void Initialize(ActionManager actionManager, GameObject heapParent)
+	public void Initialize(ActionManager actionManager, List<TextField> heapFields)
 	{
 		actionManager_ = actionManager;
-		heapParent_ = heapParent;
+		heapFields_ = heapFields;
 		
 		actionManager_.ChainStarted += this.actionManager__ChainStarted;
 		actionManager_.ChainEnded += this.actionManager__ChainEnded;

@@ -75,7 +75,7 @@ public class LogNote : MonoBehaviour
 	DateTime endDate_;
 
 	ActionManager actionManager_;
-	GameObject heapParent_;
+	List<TextField> heapFields_ = new List<TextField>();
 	LayoutElement layout_;
 	ContentSizeFitter contentSizeFitter_;
 	ScrollRect scrollRect_;
@@ -88,10 +88,6 @@ public class LogNote : MonoBehaviour
 	void Awake()
 	{
 		actionManager_ = new ActionManager();
-
-		heapParent_ = new GameObject("heap");
-		heapParent_.transform.parent = this.transform;
-		heapParent_.SetActive(false);
 
 		layout_ = GetComponentInParent<LayoutElement>();
 		contentSizeFitter_ = GetComponentInParent<ContentSizeFitter>();
@@ -305,7 +301,7 @@ public class LogNote : MonoBehaviour
 		todayTree_ = Instantiate(LogTreePrefab.gameObject, this.transform).GetComponent<LogTree>();
 		DateUI dateUI = Instantiate(DateUIPrefab.gameObject, todayTree_.transform).GetComponent<DateUI>();
 		dateUI.Set(this, today_, ToColor(today_));
-		todayTree_.Initialize(actionManager_, heapParent_);
+		todayTree_.Initialize(actionManager_, heapFields_);
 		if( treeNote_.File != null )
 		{
 			todayTree_.Load(ToFileName(treeNote_.File, today_), today_);
@@ -339,7 +335,7 @@ public class LogNote : MonoBehaviour
 				LogTree logTree = Instantiate(LogTreePrefab.gameObject, this.transform).GetComponent<LogTree>();
 				DateUI dateUI = Instantiate(DateUIPrefab.gameObject, logTree.transform).GetComponent<DateUI>();
 				dateUI.Set(this, date, ToColor(date));
-				logTree.Initialize(actionManager_, heapParent_);
+				logTree.Initialize(actionManager_, heapFields_);
 				logTree.Load(filename, date);
 				logTree.SubscribeKeyInput();
 				logTrees_.Add(logTree);
@@ -367,7 +363,7 @@ public class LogNote : MonoBehaviour
 		DateUI dateUI = Instantiate(DateUIPrefab.gameObject, newDateTree.transform).GetComponent<DateUI>();
 		dateUI.Set(this, date, ToColor(date));
 		dateUI.SetEnableAddDateButtton(treeNote_.File == null || File.Exists(ToFileName(treeNote_.File, date.AddDays(-1.0))) == false);
-		newDateTree.Initialize(actionManager_, heapParent_);
+		newDateTree.Initialize(actionManager_, heapFields_);
 		newDateTree.NewTree(date);
 		int insertIndex = logTrees_.Count;
 		for( int i = 0; i < logTrees_.Count; ++i )

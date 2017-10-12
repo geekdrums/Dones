@@ -24,9 +24,8 @@ public class Tree : MonoBehaviour {
 
 
 	#region params
-
-	protected List<TextField> usingFields_ = new List<TextField>();
-	protected GameObject heapParent_;
+	
+	protected List<TextField> heapFields_ = new List<TextField>();
 	protected Line rootLine_;
 	protected Line focusedLine_;
 	protected Line selectionStartLine_, selectionEndLine_;
@@ -1160,26 +1159,22 @@ public class Tree : MonoBehaviour {
 		{
 			// unfold all
 			Line line = rootLine_[0];
-			Line layoutStart = null;
 			while( line != null )
 			{
 				if( line.Count > 0 && line.IsFolded )
 				{
-					if( layoutStart == null )
-						layoutStart = line.NextVisibleLine;
-
 					Line unfoldLine = line;
+					Line layoutStart = line.NextVisibleLine;
 					actionManager_.Execute(new Action(
 						execute: () =>
 						{
 							unfoldLine.IsFolded = false;
-							unfoldLine.AdjustLayout();
-							unfoldLine.AdjustLayoutRecursive(0, (Line l) => l.Count > 0 && l.IsFolded);
+							RequestLayout(layoutStart);
 						},
 						undo: () =>
 						{
 							unfoldLine.IsFolded = true;
-							unfoldLine.AdjustLayoutInChildren();
+							RequestLayout(layoutStart);
 						}
 						));
 				}
@@ -1194,10 +1189,6 @@ public class Tree : MonoBehaviour {
 				undo: () =>
 				{
 					isAllFolded_ = true;
-					if( layoutStart != null )
-					{
-						RequestLayout(layoutStart);
-					}
 				}
 				));
 		}
@@ -1218,30 +1209,25 @@ public class Tree : MonoBehaviour {
 			foreach(Line line in foldLines)
 			{
 				Line foldLine = line;
+				Line layoutStart = line.NextSiblingOrUnkleLine;
 				actionManager_.Execute(new Action(
 					execute: () =>
 					{
 						foldLine.IsFolded = true;
-						foldLine.AdjustLayoutInChildren();
+						RequestLayout(layoutStart);
 					},
 					undo: () =>
 					{
 						foldLine.IsFolded = false;
-						foldLine.AdjustLayout();
-						foldLine.AdjustLayoutRecursive(0, (Line l) => l.Count > 0 && foldLines.Contains(l));
+						RequestLayout(layoutStart);
 					}
 					));
 			}
-
-			Line foldStart = (foldLines.Count > 0 ? foldLines[foldLines.Count - 1] : null);
+			
 			actionManager_.Execute(new Action(
 				execute: () =>
 				{
 					isAllFolded_ = true;
-					if( foldStart != null )
-					{
-						RequestLayout(foldStart.NextVisibleLine);
-					}
 				},
 				undo: () =>
 				{
@@ -1541,40 +1527,41 @@ public class Tree : MonoBehaviour {
 	
 	public void Bind(Line line)
 	{
-		TextField field = heapParent_.GetComponentInChildren<TextField>();
+		TextField field = heapFields_.Count > 0 ? heapFields_[0] : null;
 		if( field == null )
 		{
 			for( int i = 0; i < FieldCount; ++i )
 			{
 				field = Instantiate(FieldPrefab.gameObject).GetComponent<TextField>();
-				field.transform.SetParent(heapParent_.transform);
+				field.transform.SetParent(this.transform);
+				field.gameObject.SetActive(false);
+				heapFields_.Add(field);
 			}
 		}
-		if( field.BindedLine != null && field.BindedLine != line )
+		if( field.BindedLine != null )
 		{
 			field.BindedLine.UnBind();
 		}
 		field.gameObject.SetActive(true);
 		line.Bind(field.gameObject);
-		usingFields_.Add(field);
+		heapFields_.Remove(field);
 	}
 
 	public void OnReBind(Line line)
 	{
-		TextField field = line.Field;
-		if( field != null && field.gameObject.activeInHierarchy )
+		if( line.Field != null )
 		{
-			usingFields_.Add(field);
+			line.Field.gameObject.SetActive(true);
+			heapFields_.Remove(line.Field);
 		}
 	}
 
-	public void OnLostParent(Line line)
+	public void BackToHeap(Line line)
 	{
 		if( line.Field != null )
 		{
-			usingFields_.Remove(line.Field);
-			line.Field.transform.SetParent(heapParent_.transform);
 			line.Field.gameObject.SetActive(false);
+			heapFields_.Add(line.Field);
 		}
 	}
 
@@ -1614,18 +1601,19 @@ public class Tree : MonoBehaviour {
 	{
 		if( line.IsFolded != isFolded )
 		{
+			Line layoutStart = line.NextSiblingOrUnkleLine;
 			actionManager_.Execute(new Action(
 				execute: () =>
 				{
 					line.IsFolded = isFolded;
-					line.AdjustLayoutRecursive();
 					line.Field.IsFocused = true;
+					RequestLayout(layoutStart);
 				},
 				undo: () =>
 				{
 					line.IsFolded = !isFolded;
-					line.AdjustLayoutRecursive();
 					line.Field.IsFocused = true;
+					RequestLayout(layoutStart);
 				}
 				));
 		}
@@ -1638,7 +1626,6 @@ public class Tree : MonoBehaviour {
 
 	public void OnTextFieldDestroy(TextField field)
 	{
-		usingFields_.Remove(field);
 	}
 	
 	public virtual void ScrollTo(Line targetLine)
@@ -1810,19 +1797,16 @@ public class Tree : MonoBehaviour {
 		if( rootLine_ != null )
 		{
 			ClearSelection();
+			foreach( Line line in rootLine_.GetAllChildren() )
+			{
+				if( line.IsOnList )
+				{
+					GameContext.Window.LineList.RemoveLine(line);
+				}
+				BackToHeap(line);
+			}
 			rootLine_ = null;
 			focusedLine_ = null;
-			foreach( TextField field in usingFields_ )
-			{
-				if( field.BindedLine.IsOnList )
-				{
-					GameContext.Window.LineList.RemoveLine(field.BindedLine);
-				}
-				field.BindedLine.UnBind();
-				field.transform.SetParent(heapParent_.transform);
-				field.gameObject.SetActive(false);
-			}
-			usingFields_.Clear();
 			GC.Collect();
 		}
 

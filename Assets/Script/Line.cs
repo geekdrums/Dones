@@ -45,11 +45,22 @@ public class Line : IEnumerable<Line>
 			{
 				isFolded_ = value;
 
-				foreach( Line line in children_ )
+				if( isFolded_ )
 				{
-					if( line.Binding != null )
+					foreach( Line line in children_ )
 					{
-						line.Binding.SetActive(isFolded_ == false);
+						line.BackToHeap();
+						foreach( Line child in line.GetVisibleChildren() )
+						{
+							child.BackToHeap();
+						}
+					}
+				}
+				else
+				{
+					foreach( Line line in children_ )
+					{
+						line.OnFoundParent();
 					}
 				}
 				if( Toggle != null )
@@ -168,6 +179,15 @@ public class Line : IEnumerable<Line>
 
 	public Vector3 TargetPosition { get; protected set; }
 
+	public enum EBindState
+	{
+		Unbind,		// まだBindされていない、あるいはWeakBind状態から他のLineにFieldを使われた
+		Bind,		// Bindされている
+		WeakBind,	// Field変数にBindを残しているがHeapに返している状態。他のに使われる可能性がある。
+	}
+
+	public EBindState BindState { get; protected set; }
+
 	public GameObject Binding { get; protected set; }
 	public Tree Tree { get; protected set; }
 	public TextField Field { get; protected set; }
@@ -181,6 +201,7 @@ public class Line : IEnumerable<Line>
 
 	public Line(string text = "", bool loadTag = false)
 	{
+		BindState = EBindState.Unbind;
 		if( loadTag )
 		{
 			LoadTag(ref text);
@@ -358,6 +379,7 @@ public class Line : IEnumerable<Line>
 	{
 		Binding = binding;
 		Field = Binding.GetComponent<TextField>();
+		BindState = EBindState.Bind;
 		if( Field != null )
 		{
 			if( parent_ != null && parent_.Binding != null )
@@ -401,9 +423,8 @@ public class Line : IEnumerable<Line>
 
 	public void ReBind()
 	{
-		Binding.SetActive(true);
-		Bind(Binding);
 		Tree.OnReBind(this);
+		Bind(Binding);
 	}
 
 	public void UnBind()
@@ -411,9 +432,22 @@ public class Line : IEnumerable<Line>
 		if( Field != null )
 		{
 			Field.BindedLine = null;
+			foreach( TextField childField in Field.GetComponentsInChildren<TextField>() )
+			{
+				childField.transform.SetParent(Tree.transform);
+			}
 		}
 		Binding = null;
 		Field = null;
+		BindState = EBindState.Unbind;
+	}
+
+	public void BackToHeap()
+	{
+		fieldSubscription_.Dispose();
+		toggleSubscription_.Dispose();
+		Tree.BackToHeap(this);
+		BindState = EBindState.WeakBind;
 	}
 
 	public void UpdateBindingField()
@@ -499,8 +533,17 @@ public class Line : IEnumerable<Line>
 
 	protected void OnFoundParent()
 	{
+		if( IsVisible == false )
+		{
+			return;
+		}
+
 		if( Field == null || Field.BindedLine != this )
 		{
+			if( BindState != EBindState.Unbind )
+			{
+				Debug.Log(String.Format("{0} | state is not Unbind, is {1}", Text, BindState.ToString()));
+			}
 			// Fieldがまだ無い、またはヒープに返して他のLineに使われた
 			Tree.Bind(this);
 			foreach( Line child in this.GetAllChildren() )
@@ -510,6 +553,10 @@ public class Line : IEnumerable<Line>
 		}
 		else if( Field.BindedLine == this && Field.gameObject.activeSelf == false )
 		{
+			if( BindState != EBindState.WeakBind )
+			{
+				Debug.Log(String.Format("{0} | state is not WeakBind, is {1}", Text, BindState.ToString()));
+			}
 			// ヒープに返したが、他のものには使われていなかった
 			ReBind();
 			foreach( Line child in this.GetAllChildren() )
@@ -519,6 +566,10 @@ public class Line : IEnumerable<Line>
 		}
 		else // Field != null && Field.BindedLine == this && && Field.gameObject.activeSelf
 		{
+			if( BindState != EBindState.Bind )
+			{
+				Debug.Log(String.Format("{0} | state is not Bind, is {1}", Text, BindState.ToString()));
+			}
 			// 適切なFieldをもう持っている
 			if( Binding.transform.parent != Parent.Binding.transform )
 			{
@@ -530,9 +581,7 @@ public class Line : IEnumerable<Line>
 
 	protected void OnLostParent()
 	{
-		fieldSubscription_.Dispose();
-		toggleSubscription_.Dispose();
-		Tree.OnLostParent(this);
+		BackToHeap();
 		if( IsOnList )
 		{
 			ShortLine shortline = GameContext.Window.LineList.FindBindedLine(this);
