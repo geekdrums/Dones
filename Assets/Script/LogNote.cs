@@ -260,15 +260,15 @@ public class LogNote : MonoBehaviour
 
 	public void OnTabClosed()
 	{
-		foreach( LogTree logTree in logTrees_ )
-		{
-			if( logTree != todayTree_ )
-			{
-				Destroy(logTree.gameObject);
-			}
-		}
-		logTrees_.RemoveAll((LogTree logTree) => logTree != todayTree_);
-		endDate_ = today_;
+		//foreach( LogTree logTree in logTrees_ )
+		//{
+		//	if( logTree != todayTree_ )
+		//	{
+		//		Destroy(logTree.gameObject);
+		//	}
+		//}
+		//logTrees_.RemoveAll((LogTree logTree) => logTree != todayTree_);
+		//endDate_ = today_;
 		TreeNote.Tab.UpdateTitleText();
 		TreeNote.Tab.UpdateColor();
 	}
