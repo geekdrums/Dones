@@ -7,30 +7,11 @@ using UniRx;
 using UniRx.Triggers;
 using UnityEngine.EventSystems;
 
-public class TextField : InputField, IColoredObject
+public class LineField : CustomInputField, IColoredObject
 {
 	#region properties
 
 	public Line BindedLine { get; set; }
-
-	public bool IsFocused
-	{
-		get { return isFocused; }
-		set
-		{
-			if( value != isFocused )
-			{
-				if( value )
-				{
-					ActivateInputField();
-				}
-				else
-				{
-					DeactivateInputField();
-				}
-			}
-		}
-	}
 
 	public bool IsSelected
 	{
@@ -48,26 +29,6 @@ public class TextField : InputField, IColoredObject
 	protected bool isSelected_;
 
 	protected bool isPointerEntered_ = false;
-
-	public int CaretPosision
-	{
-		get { return cachedCaretPos_; }
-		set
-		{
-			if( BindedLine.IsComment && value < 2 )
-			{
-				selectionAnchorPosition = selectionFocusPosition = cachedCaretPos_ = 2;
-				desiredCaretPos_ = 0;
-			}
-			else
-			{
-				selectionAnchorPosition = selectionFocusPosition = cachedCaretPos_ = desiredCaretPos_ = value;
-			}
-		}
-	}
-	protected int cachedCaretPos_;
-	protected static int desiredCaretPos_;
-	public int ActualCaretPosition { get { return m_CaretSelectPosition; } set { m_CaretSelectPosition = m_CaretPosition = value; } }
 
 	public Color Foreground { get { return textComponent.color; } set { textComponent.color = value; } }
 	public Color Background { get { return targetGraphic.canvasRenderer.GetColor(); } set { targetGraphic.CrossFadeColor(value, 0.0f, true, true); } }
@@ -129,23 +90,6 @@ public class TextField : InputField, IColoredObject
 		BindedLine.CheckIsLink();
 	}
 
-	public void DeleteSelection()
-	{
-		if( caretPositionInternal == caretSelectPositionInternal )
-			return;
-
-		if( caretPositionInternal < caretSelectPositionInternal )
-		{
-			m_Text = text.Substring(0, caretPositionInternal) + text.Substring(caretSelectPositionInternal, text.Length - caretSelectPositionInternal);
-			caretSelectPositionInternal = caretPositionInternal;
-		}
-		else
-		{
-			m_Text = text.Substring(0, caretSelectPositionInternal) + text.Substring(caretPositionInternal, text.Length - caretPositionInternal);
-			caretPositionInternal = caretSelectPositionInternal;
-		}
-	}
-
 	public void SetSelection(int start, int end)
 	{
 		CaretPosision = start;
@@ -159,7 +103,7 @@ public class TextField : InputField, IColoredObject
 		// Lineクラスからシステム的に設定される場合（Undoや改行など）は、
 		// この関数でイベント呼び出しを避ける。
 		m_Text = text;
-		BindedLine.CheckIsComment();
+		//BindedLine.CheckIsComment();
 		UpdateLabel();
 		if( BindedLine.IsDone || BindedLine.IsOnList || BindedLine.IsLinkText ) OnTextLengthChanged();
 	}
@@ -262,9 +206,9 @@ public class TextField : InputField, IColoredObject
 			Background = Color.white;
 			strikeLine_.Direction = Vector3.up;
 			strikeLine_.Length = 28;
-			strikeLine_.Width = 10;
+			strikeLine_.Width = 6;
 			strikeLine_.Rate = 1.0f;
-			strikeLine_.rectTransform.anchoredPosition = new Vector2(4, -13);
+			strikeLine_.rectTransform.anchoredPosition = new Vector2(-10, -13);
 			strikeLine_.SetColor(GameContext.Config.CommentLineColor);
 			transition = Transition.None;
 		}
@@ -413,10 +357,6 @@ public class TextField : InputField, IColoredObject
 		if( oldIsFocused != isFocused && BindedLine != null && BindedLine.Tree != null )
 		{
 			cachedCaretPos_ = desiredCaretPos_;
-			if( BindedLine.IsComment && cachedCaretPos_ <= 2 )
-			{
-				CaretPosision = 0;
-			}
 			if( cachedCaretPos_ > text.Length )
 			{
 				cachedCaretPos_ = text.Length;
@@ -498,8 +438,7 @@ public class TextField : InputField, IColoredObject
 			}
 		}
 	}
-
-	protected static string compositionString = "";
+	
 	public override void OnUpdateSelected(BaseEventData eventData)
 	{
 		if( !isFocused || BindedLine == null || BindedLine.Tree == null )
@@ -671,10 +610,6 @@ public class TextField : InputField, IColoredObject
 					{
 						KeyPressed(processingEvent);
 						desiredCaretPos_ = m_CaretSelectPosition;
-						if( BindedLine.IsComment && m_CaretSelectPosition < 2 )
-						{
-							CaretPosision = 0;
-						}
 						BindedLine.FixTextInputAction();
 					}
 					break;
@@ -693,7 +628,7 @@ public class TextField : InputField, IColoredObject
 					}
 					else if( processingEvent.keyCode == KeyCode.None && BindedLine.Tree.HasSelection && processingEvent.character.ToString() != Line.TabString )
 					{
-						TextField newField = BindedLine.Tree.DeleteSelection().Field;
+						LineField newField = BindedLine.Tree.DeleteSelection().Field;
 						newField.KeyPressed(processingEvent);
 						newField.CaretPosision = newField.text.Length;
 					}

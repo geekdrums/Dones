@@ -190,7 +190,7 @@ public class Line : IEnumerable<Line>
 
 	public GameObject Binding { get; protected set; }
 	public Tree Tree { get; protected set; }
-	public TextField Field { get; protected set; }
+	public LineField Field { get; protected set; }
 	public TreeToggle Toggle { get; protected set; }
 	
 	protected IDisposable fieldSubscription_;
@@ -212,7 +212,6 @@ public class Line : IEnumerable<Line>
 			GameContext.Window.LineList.InstantiateShortLine(this);
 		}
 		CheckIsLink();
-		CheckIsComment();
 	}
 
 
@@ -249,6 +248,8 @@ public class Line : IEnumerable<Line>
 
 		public override void Undo()
 		{
+			if( Text.Length == 0 ) return;
+
 			line_.Field.IsFocused = true;
 			line_.Field.CaretPosision = CaretPos;
 			line_.Text = line_.text_.Remove(CaretPos, Text.Length);
@@ -256,6 +257,8 @@ public class Line : IEnumerable<Line>
 
 		public override void Redo()
 		{
+			if( Text.Length == 0 ) return;
+
 			line_.Field.IsFocused = true;
 			line_.Text = line_.text_.Insert(CaretPos, Text.ToString());
 			line_.Field.CaretPosision = CaretPos + Text.Length;
@@ -314,7 +317,7 @@ public class Line : IEnumerable<Line>
 			}
 			string appendText = newText.Substring(oldCaretPos, currentCaretPos - oldCaretPos);
 			textAction_.Text.Append(appendText);
-			if( appendText == " " )
+			if( appendText == " " && (textAction_.CaretPos == 0 && textAction_.Text.ToString() == CommentTag) == false )
 			{
 				FixTextInputAction();
 			}
@@ -343,6 +346,7 @@ public class Line : IEnumerable<Line>
 		}
 
 		lastTextActionTime_ = Time.time;
+
 		text_ = newText;
 
 		if( IsDone || IsOnList || IsLinkText )
@@ -378,7 +382,7 @@ public class Line : IEnumerable<Line>
 	public void Bind(GameObject binding)
 	{
 		Binding = binding;
-		Field = Binding.GetComponent<TextField>();
+		Field = Binding.GetComponent<LineField>();
 		BindState = EBindState.Bind;
 		if( Field != null )
 		{
@@ -432,7 +436,7 @@ public class Line : IEnumerable<Line>
 		if( Field != null )
 		{
 			Field.BindedLine = null;
-			foreach( TextField childField in Field.GetComponentsInChildren<TextField>() )
+			foreach( LineField childField in Field.GetComponentsInChildren<LineField>() )
 			{
 				childField.transform.SetParent(Tree.transform);
 			}
@@ -1007,6 +1011,7 @@ public class Line : IEnumerable<Line>
 	public static string OnListTag = "<o>";
 	public static string CloneTag = "<c>";
 	public static string BoldTag = "<b>";
+	public static string CommentTag = "> ";
 
 	public void AppendStringTo(StringBuilder builder, bool appendTag = false, int ignoreLevel = 0)
 	{
@@ -1014,6 +1019,13 @@ public class Line : IEnumerable<Line>
 		for( int i = 0; i < level - ignoreLevel; ++i )
 		{
 			builder.Append(TabString);
+		}
+		if( appendTag )
+		{
+			if( IsComment )
+			{
+				builder.Append(CommentTag);
+			}
 		}
 		builder.Append(Text);
 		if( appendTag )
@@ -1119,6 +1131,16 @@ public class Line : IEnumerable<Line>
 		{
 			IsBold = false;
 		}
+
+		if( text.StartsWith(CommentTag) )
+		{
+			text = text.Remove(0, CommentTag.Length);
+			IsComment = true;
+		}
+		else
+		{
+			IsComment = false;
+		}
 	}
 
 	public void CheckIsLink()
@@ -1130,7 +1152,32 @@ public class Line : IEnumerable<Line>
 	
 	public void CheckIsComment()
 	{
-		IsComment = text_.StartsWith("> ");
+		if( text_.StartsWith(CommentTag) )
+		{
+			text_ = text_.Remove(0, CommentTag.Length);
+
+			if( Field != null )
+			{
+				Field.SetTextDirectly(text_);
+				Field.CaretPosision = 0;
+			}
+
+			if( textAction_ != null && textAction_ is TextInputAction )
+			{
+				textAction_.Text.Remove(0, CommentTag.Length);
+			}
+			FixTextInputAction();
+			Tree.ActionManager.Execute(new Action(
+				execute: () =>
+				{
+					IsComment = true;
+				},
+				undo: () =>
+				{
+					IsComment = false;
+				}
+				));
+		}
 	}
 
 	public bool NeedFixInput()

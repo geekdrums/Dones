@@ -17,7 +17,7 @@ public class Tree : MonoBehaviour {
 
 	#region editor params
 
-	public TextField FieldPrefab;
+	public LineField FieldPrefab;
 	public int FieldCount = 100;
 
 	#endregion
@@ -25,7 +25,7 @@ public class Tree : MonoBehaviour {
 
 	#region params
 	
-	protected List<TextField> heapFields_ = new List<TextField>();
+	protected List<LineField> heapFields_ = new List<LineField>();
 	protected Line rootLine_;
 	protected Line focusedLine_;
 	protected Line selectionStartLine_, selectionEndLine_;
@@ -239,10 +239,10 @@ public class Tree : MonoBehaviour {
 			{
 				// ctrl選択で、新たにクリックしたところだけを追加する
 				Line line = null;
-				TextField field = null;
+				LineField field = null;
 				if( EventSystem.current != null && EventSystem.current.currentSelectedGameObject != null )
 				{
-					field = EventSystem.current.currentSelectedGameObject.GetComponent<TextField>();
+					field = EventSystem.current.currentSelectedGameObject.GetComponent<LineField>();
 				}
 				if( field != null )
 				{
@@ -706,7 +706,11 @@ public class Tree : MonoBehaviour {
 		Line target = focusedLine_;
 		Line parent = focusedLine_.Parent;
 		int index = focusedLine_.Index;
-		Line line = new Line(focusedLine_.IsComment ? "> " : "");
+		Line line = new Line();
+		if( focusedLine_.IsComment )
+		{
+			line.IsComment = true;
+		}
 
 		if( caretPos == 0 && target.TextLength > 0 )
 		{
@@ -716,7 +720,7 @@ public class Tree : MonoBehaviour {
 				{
 					parent.Insert(index, line);
 					parent.AdjustLayoutRecursive(index + 1);
-					line.Field.CaretPosision = (line.IsComment ? 2 : 0);
+					line.Field.CaretPosision = 0;
 					ScrollTo(target);
 				},
 				undo: () =>
@@ -754,7 +758,7 @@ public class Tree : MonoBehaviour {
 					insertParent.AdjustLayoutRecursive(insertIndex + 1);
 					target.CheckIsLink();
 					line.CheckIsLink();
-					line.Field.CaretPosision = (line.IsComment ? 2 : 0);
+					line.Field.CaretPosision = 0;
 					line.Field.IsFocused = true;
 				},
 				undo: () =>
@@ -1079,7 +1083,7 @@ public class Tree : MonoBehaviour {
 			break;
 		case KeyCode.LeftArrow:
 			// カーソル位置が最初ならフォーカス移動
-			if( focusedLine_.Field.CaretPosision <= 0 || (focusedLine_.IsComment && focusedLine_.Field.CaretPosision <= 2) )
+			if( focusedLine_.Field.CaretPosision <= 0 )
 			{
 				Line prev = focusedLine_.PrevVisibleLine;
 				if( prev != null )
@@ -1527,12 +1531,12 @@ public class Tree : MonoBehaviour {
 	
 	public void Bind(Line line)
 	{
-		TextField field = heapFields_.Count > 0 ? heapFields_[0] : null;
+		LineField field = heapFields_.Count > 0 ? heapFields_[0] : null;
 		if( field == null )
 		{
 			for( int i = 0; i < FieldCount; ++i )
 			{
-				field = Instantiate(FieldPrefab.gameObject).GetComponent<TextField>();
+				field = Instantiate(FieldPrefab.gameObject).GetComponent<LineField>();
 				field.transform.SetParent(this.transform);
 				field.gameObject.SetActive(false);
 				heapFields_.Add(field);
@@ -1624,7 +1628,7 @@ public class Tree : MonoBehaviour {
 		wasDeleteKeyConsumed_ = true;
 	}
 
-	public void OnTextFieldDestroy(TextField field)
+	public void OnTextFieldDestroy(LineField field)
 	{
 	}
 	

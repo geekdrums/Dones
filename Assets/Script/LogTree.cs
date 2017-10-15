@@ -68,7 +68,7 @@ public class LogTree : Tree
 		ownerLogNote_ = GetComponentInParent<LogNote>();
 	}
 
-	public void Initialize(ActionManager actionManager, List<TextField> heapFields)
+	public void Initialize(ActionManager actionManager, List<LineField> heapFields)
 	{
 		actionManager_ = actionManager;
 		heapFields_ = heapFields;

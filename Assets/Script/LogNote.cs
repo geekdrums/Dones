@@ -75,7 +75,7 @@ public class LogNote : MonoBehaviour
 	DateTime endDate_;
 
 	ActionManager actionManager_;
-	List<TextField> heapFields_ = new List<TextField>();
+	List<LineField> heapFields_ = new List<LineField>();
 	LayoutElement layout_;
 	ContentSizeFitter contentSizeFitter_;
 	ScrollRect scrollRect_;

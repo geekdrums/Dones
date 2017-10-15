@@ -57,7 +57,7 @@ public class TreeNote : Tree
 		
 		for( int i = 0; i < FieldCount; ++i )
 		{
-			TextField field = Instantiate(FieldPrefab.gameObject, this.transform).GetComponent<TextField>();
+			LineField field = Instantiate(FieldPrefab.gameObject, this.transform).GetComponent<LineField>();
 			field.gameObject.SetActive(false);
 			heapFields_.Add(field);
 		}
@@ -224,7 +224,7 @@ public class TreeNote : Tree
 	public void OnFontSizeChanged()
 	{
 		rootLine_.AdjustFontSizeRecursive(GameContext.Config.FontSize, GameContext.Config.HeightPerLine);
-		foreach( TextField field in heapFields_ )
+		foreach( LineField field in heapFields_ )
 		{
 			field.textComponent.fontSize = GameContext.Config.FontSize;
 			field.RectHeight = GameContext.Config.HeightPerLine;

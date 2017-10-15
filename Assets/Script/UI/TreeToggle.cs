@@ -7,7 +7,7 @@ using UniRx.Triggers;
 
 public class TreeToggle : Toggle {
 
-	TextField textField_;
+	LineField textField_;
 	UIGaugeRenderer verticalLine_;
 	bool wasAnimRequested_ = false;
 
@@ -15,7 +15,7 @@ public class TreeToggle : Toggle {
 
 	// Use this for initialization
 	protected override void Start () {
-		textField_ = GetComponentInParent<TextField>();
+		textField_ = GetComponentInParent<LineField>();
 		verticalLine_ = GetComponentInChildren<UIGaugeRenderer>(includeInactive: true);
 		onValueChanged.AsObservable().Subscribe(x =>
 		{
