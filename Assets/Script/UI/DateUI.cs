@@ -6,13 +6,14 @@ using UnityEngine.UI;
 
 public class DateUI : MonoBehaviour {
 
+	public DateTime Date { get { return date_; } }
+	private DateTime date_;
+
 	public Text MonthText;
 	public Text DayText;
+	public DateTextBox DayTextBox;
 	public Text WeekDayText;
 	public Button AddDateButton;
-
-	private DateTime date_;
-	private LogNote ownerLogNote_;
 
 
 	// Use this for initialization
@@ -27,7 +28,7 @@ public class DateUI : MonoBehaviour {
 
 	public void AddDate()
 	{
-		ownerLogNote_.AddDate(date_.AddDays(-1.0));
+		GetComponentInParent<LogNote>().AddDate(date_.AddDays(-1.0));
 		SetEnableAddDateButtton(false);
 	}
 
@@ -36,17 +37,41 @@ public class DateUI : MonoBehaviour {
 		AddDateButton.gameObject.SetActive(enable);
 	}
 
-	public void Set(LogNote owner, DateTime date, Color color)
+	public void Set(DateTime date, Color color)
 	{
-		ownerLogNote_ = owner;
 		date_ = date;
+		SetDate(date_);
+		SetColor(color);
+	}
 
+	public void OnDateChanged(DateTime date)
+	{
+		date_ = date;
+		SetDate(date_);
+		SetColor(LogNote.ToColor(date_));
+		GetComponentInParent<LogTree>().OnDateChanged(date);
+	}
+
+	void SetDate(DateTime date)
+	{
 		MonthText.text = date.ToString("yyyy/M");
-		MonthText.color = color;
 		DayText.text = date.ToString("dd").TrimStart('0');//なぜか"d"だと6/26/2017みたいにフルで出力されるので。。
-		DayText.color = color;
+		if( DayTextBox != null )
+		{
+			DayTextBox.text = date.ToString("dd").TrimStart('0');
+		}
 		WeekDayText.text = date.ToString("ddd");
+	}
+
+	void SetColor(Color color)
+	{
+		MonthText.color = color;
+		DayText.color = color;
 		WeekDayText.color = color;
 		GetComponentInChildren<Image>().color = color;
+		if( DayTextBox != null )
+		{
+			DayTextBox.Foreground = color;
+		}
 	}
 }

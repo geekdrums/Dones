@@ -7,7 +7,7 @@ using UniRx;
 using UniRx.Triggers;
 using UnityEngine.EventSystems;
 
-public class CustomInputField : InputField
+public class CustomInputField : InputField, IColoredObject
 {
 	public bool IsFocused
 	{
@@ -28,6 +28,7 @@ public class CustomInputField : InputField
 		}
 	}
 
+	// caret
 	public int CaretPosision
 	{
 		get { return cachedCaretPos_; }
@@ -36,23 +37,150 @@ public class CustomInputField : InputField
 	protected int cachedCaretPos_;
 	protected static int desiredCaretPos_;
 	public int ActualCaretPosition { get { return m_CaretSelectPosition; } set { m_CaretSelectPosition = m_CaretPosition = value; } }
+	
+
+	// color
+	public Color Foreground { get { return textComponent.color; } set { textComponent.color = value; } }
+	public Color Background { get { return targetGraphic.canvasRenderer.GetColor(); } set { targetGraphic.CrossFadeColor(value, 0.0f, true, true); } }
+	public void SetColor(Color color) { Background = color; }
+	public Color GetColor() { return Background; }
 
 
-	public void DeleteSelection()
+	// rect
+	public Rect Rect { get { return new Rect((Vector2)targetGraphic.rectTransform.position + targetGraphic.rectTransform.rect.position, targetGraphic.rectTransform.rect.size); } }
+	public float RectY { get { return targetGraphic.rectTransform.position.y; } }
+	public float RectHeight { get { return targetGraphic.rectTransform.sizeDelta.y; } set { targetGraphic.rectTransform.sizeDelta = new Vector2(targetGraphic.rectTransform.sizeDelta.x, value); } }
+
+
+	#region text length
+
+	protected override void OnEnable()
 	{
-		if( caretPositionInternal == caretSelectPositionInternal )
+		base.OnEnable();
+		if( shouldUpdateTextLength_ )
+		{
+			StartCoroutine(UpdateTextLengthCoroutine());
+		}
+	}
+
+	protected bool shouldUpdateTextLength_ = false;
+
+	public void OnTextLengthChanged()
+	{
+		if( shouldUpdateTextLength_ == false )
+		{
+			shouldUpdateTextLength_ = true;
+			if( this.gameObject.activeInHierarchy )
+			{
+				StartCoroutine(UpdateTextLengthCoroutine());
+			}
+		}
+	}
+
+	protected IEnumerator UpdateTextLengthCoroutine()
+	{
+		yield return new WaitWhile(() => m_TextComponent.cachedTextGenerator.characterCount == 0);
+
+		bool isRendered = true;
+		ScrollRect scrollRect = GetComponentInParent<ScrollRect>();
+		yield return new WaitWhile(() =>
+		{
+			float scrollHeight = scrollRect.GetComponent<RectTransform>().rect.height;
+			float heightPerLine = GameContext.Config.HeightPerLine;
+
+			// Lineが下側に出て見えなくなった場合
+			float targetUnderHeight = -(transform.position.y - scrollRect.transform.position.y) + heightPerLine / 2 - scrollHeight;
+			if( targetUnderHeight > 0 )
+			{
+				isRendered = false;
+				return true;
+			}
+
+			// Lineが上側に出て見えなくなった場合
+			float targetOverHeight = (transform.position.y - scrollRect.transform.position.y);
+			if( targetOverHeight > 0 )
+			{
+				isRendered = false;
+				return true;
+			}
+
+			return false;
+		});
+
+		if( isRendered == false )
+		{
+			yield return new WaitForEndOfFrame();
+		}
+
+		OnUpdatedTextRectLength();
+
+		shouldUpdateTextLength_ = false;
+	}
+
+	public float GetTextRectLength()
+	{
+		TextGenerator gen = m_TextComponent.cachedTextGenerator;
+		return gen.characters[gen.characters.Count - 1].cursorPos.x - gen.characters[0].cursorPos.x;
+	}
+
+	protected virtual void OnUpdatedTextRectLength()
+	{
+
+	}
+
+	#endregion
+
+
+	#region override functions
+
+	public override void OnPointerDown(PointerEventData eventData)
+	{
+		bool myDrag = IsActive() &&
+			   IsInteractable() &&
+			   eventData.button == PointerEventData.InputButton.Left &&
+			   m_TextComponent != null &&
+			   m_Keyboard == null;
+
+		if( myDrag == false )
 			return;
 
-		if( caretPositionInternal < caretSelectPositionInternal )
+		EventSystem.current.SetSelectedGameObject(gameObject, eventData);
+
+		base.OnPointerDown(eventData);
+
+		// override this feature
+		//if( hadFocusBefore )
+		//{
+		Vector2 localMousePos;
+		RectTransformUtility.ScreenPointToLocalPointInRectangle(textComponent.rectTransform, eventData.position, eventData.pressEventCamera, out localMousePos);
+		desiredCaretPos_ = cachedCaretPos_ = caretSelectPositionInternal = caretPositionInternal = GetCharacterIndexFromPosition(localMousePos) + m_DrawStart;
+		//}
+
+		UpdateLabel();
+		eventData.Use();
+	}
+
+	protected override void LateUpdate()
+	{
+		bool oldIsFocused = isFocused;
+
+		base.LateUpdate();
+
+		if( isFocused && !oldIsFocused )
 		{
-			m_Text = text.Substring(0, caretPositionInternal) + text.Substring(caretSelectPositionInternal, text.Length - caretSelectPositionInternal);
-			caretSelectPositionInternal = caretPositionInternal;
+			cachedCaretPos_ = desiredCaretPos_;
+			if( cachedCaretPos_ > text.Length )
+			{
+				cachedCaretPos_ = text.Length;
+			}
+			selectionAnchorPosition = selectionFocusPosition = cachedCaretPos_;
+			OnFocused();
 		}
-		else
-		{
-			m_Text = text.Substring(0, caretSelectPositionInternal) + text.Substring(caretPositionInternal, text.Length - caretPositionInternal);
-			caretPositionInternal = caretSelectPositionInternal;
-		}
+	}
+
+	protected virtual void OnFocused()
+	{
+
 	}
 
 	protected static string compositionString = "";
@@ -64,4 +192,6 @@ public class CustomInputField : InputField
 		if( compositionStringDeleted )
 			UpdateLabel();
 	}
+
+	#endregion
 }

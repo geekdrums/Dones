@@ -7,7 +7,7 @@ using UniRx;
 using UniRx.Triggers;
 using UnityEngine.EventSystems;
 
-public class LineField : CustomInputField, IColoredObject
+public class LineField : CustomInputField
 {
 	#region properties
 
@@ -28,21 +28,11 @@ public class LineField : CustomInputField, IColoredObject
 	}
 	protected bool isSelected_;
 
-	protected bool isPointerEntered_ = false;
-
-	public Color Foreground { get { return textComponent.color; } set { textComponent.color = value; } }
-	public Color Background { get { return targetGraphic.canvasRenderer.GetColor(); } set { targetGraphic.CrossFadeColor(value, 0.0f, true, true); } }
-	public void SetColor(Color color) { Background = color; }
-	public Color GetColor() { return Background;  }
-
-	public Rect Rect { get { return new Rect((Vector2)targetGraphic.rectTransform.position + targetGraphic.rectTransform.rect.position, targetGraphic.rectTransform.rect.size); } }
-	public float RectY { get { return targetGraphic.rectTransform.position.y; } }
-	public float RectHeight {get{ return targetGraphic.rectTransform.sizeDelta.y; } set { targetGraphic.rectTransform.sizeDelta = new Vector2(targetGraphic.rectTransform.sizeDelta.x, value); } }
-
 	protected UIGaugeRenderer strikeLine_;
 	protected CheckMark checkMark_;
 	protected UIMidairPrimitive listMark_;
-	protected bool shouldUpdateTextLength_ = false;
+
+	protected bool isPointerEntered_ = false;
 
 	#endregion
 
@@ -58,29 +48,32 @@ public class LineField : CustomInputField, IColoredObject
 		listMark_ = textComponent.transform.Find("Mark").GetComponent<UIMidairPrimitive>();
 	}
 
-	protected override void Start()
-	{
-		base.Start();
-	}
-
 	// Update is called once per frame
 	void Update()
 	{
-	}
-
-	protected override void OnEnable()
-	{
-		base.OnEnable();
-		if( shouldUpdateTextLength_ )
-		{
-			StartCoroutine(UpdateTextLengthCoroutine());
-		}
 	}
 
 	#endregion
 
 
 	#region public functions
+	
+	public void DeleteSelection()
+	{
+		if( caretPositionInternal == caretSelectPositionInternal )
+			return;
+
+		if( caretPositionInternal < caretSelectPositionInternal )
+		{
+			m_Text = text.Substring(0, caretPositionInternal) + text.Substring(caretSelectPositionInternal, text.Length - caretSelectPositionInternal);
+			caretSelectPositionInternal = caretPositionInternal;
+		}
+		else
+		{
+			m_Text = text.Substring(0, caretSelectPositionInternal) + text.Substring(caretPositionInternal, text.Length - caretPositionInternal);
+			caretPositionInternal = caretSelectPositionInternal;
+		}
+	}
 
 	public void Paste(string pasteText)
 	{
@@ -107,6 +100,11 @@ public class LineField : CustomInputField, IColoredObject
 		UpdateLabel();
 		if( BindedLine.IsDone || BindedLine.IsOnList || BindedLine.IsLinkText ) OnTextLengthChanged();
 	}
+
+	#endregion
+
+
+	#region set state
 
 	public void SetIsDone(bool isDone, bool withAnim = true)
 	{
@@ -229,7 +227,7 @@ public class LineField : CustomInputField, IColoredObject
 		}
 	}
 
-	Color GetDesiredTextColor()
+	protected Color GetDesiredTextColor()
 	{
 		if( BindedLine != null )
 		{
@@ -272,53 +270,8 @@ public class LineField : CustomInputField, IColoredObject
 		return GameContext.Config.TextColor;
 	}
 
-	public void OnTextLengthChanged()
+	protected override void OnUpdatedTextRectLength()
 	{
-		if( shouldUpdateTextLength_ == false )
-		{
-			shouldUpdateTextLength_ = true;
-			if( this.gameObject.activeInHierarchy )
-			{
-				StartCoroutine(UpdateTextLengthCoroutine());
-			}
-		}
-	}
-
-	IEnumerator UpdateTextLengthCoroutine()
-	{
-		yield return new WaitWhile(() => m_TextComponent.cachedTextGenerator.characterCount == 0);
-
-		bool isRendered = true;
-		ScrollRect scrollRect = GetComponentInParent<ScrollRect>();
-		yield return new WaitWhile(() =>
-		{
-			float scrollHeight = scrollRect.GetComponent<RectTransform>().rect.height;
-			float heightPerLine = GameContext.Config.HeightPerLine;
-
-			// Lineが下側に出て見えなくなった場合
-			float targetUnderHeight = -(transform.position.y - scrollRect.transform.position.y) + heightPerLine / 2 - scrollHeight;
-			if( targetUnderHeight > 0 )
-			{
-				isRendered = false;
-				return true;
-			}
-
-			// Lineが上側に出て見えなくなった場合
-			float targetOverHeight = (transform.position.y - scrollRect.transform.position.y);
-			if( targetOverHeight > 0 )
-			{
-				isRendered = false;
-				return true;
-			}
-
-			return false;
-		});
-
-		if( isRendered == false )
-		{
-			yield return new WaitForEndOfFrame();
-		}
-
 		float charLength = GetTextRectLength();
 
 		if( BindedLine.IsComment == false )
@@ -327,14 +280,6 @@ public class LineField : CustomInputField, IColoredObject
 		checkMark_.gameObject.SetActive(BindedLine.IsDone);
 		checkMark_.SetPositionX(charLength + 5);
 		listMark_.GetComponent<RectTransform>().anchoredPosition = new Vector2(charLength + 15, listMark_.transform.localPosition.y);
-
-		shouldUpdateTextLength_ = false;
-	}
-
-	public float GetTextRectLength()
-	{
-		TextGenerator gen = m_TextComponent.cachedTextGenerator;
-		return gen.characters[gen.characters.Count - 1].cursorPos.x - gen.characters[0].cursorPos.x;
 	}
 
 	#endregion
@@ -348,27 +293,23 @@ public class LineField : CustomInputField, IColoredObject
 			BindedLine.Tree.OnTextFieldDestroy(this);
 	}
 
-	protected override void LateUpdate()
+
+	protected override void OnFocused()
 	{
-		bool oldIsFocused = isFocused;
-
-		base.LateUpdate();
-
-		if( oldIsFocused != isFocused && BindedLine != null && BindedLine.Tree != null )
+		if( BindedLine != null && BindedLine.Tree != null )
 		{
-			cachedCaretPos_ = desiredCaretPos_;
-			if( cachedCaretPos_ > text.Length )
-			{
-				cachedCaretPos_ = text.Length;
-			}
-			selectionAnchorPosition = selectionFocusPosition = cachedCaretPos_;
 			BindedLine.Tree.OnFocused(BindedLine);
 		}
+	}
+
+	protected override void LateUpdate()
+	{
+		base.LateUpdate();
 
 		if( isFocused && BindedLine != null && BindedLine.NeedFixInput() )
 		{
 			BindedLine.FixTextInputAction();
-		} 
+		}
 	}
 
 	public override void OnDeselect(BaseEventData eventData)
@@ -383,30 +324,8 @@ public class LineField : CustomInputField, IColoredObject
 
 	public override void OnPointerDown(PointerEventData eventData)
 	{
-		bool myDrag = IsActive() &&
-			   IsInteractable() &&
-			   eventData.button == PointerEventData.InputButton.Left &&
-			   m_TextComponent != null &&
-			   m_Keyboard == null;
-
-		if( myDrag == false )
-			return;
-
-		EventSystem.current.SetSelectedGameObject(gameObject, eventData);
-		
 		base.OnPointerDown(eventData);
-
-		// override this feature
-		//if( hadFocusBefore )
-		//{
-		Vector2 localMousePos;
-		RectTransformUtility.ScreenPointToLocalPointInRectangle(textComponent.rectTransform, eventData.position, eventData.pressEventCamera, out localMousePos);
-		desiredCaretPos_ = cachedCaretPos_ = caretSelectPositionInternal = caretPositionInternal = GetCharacterIndexFromPosition(localMousePos) + m_DrawStart;
-		//}
-
 		BindedLine.FixTextInputAction();
-		UpdateLabel();
-		eventData.Use();
 	}
 
 	public override void OnPointerEnter(PointerEventData eventData)

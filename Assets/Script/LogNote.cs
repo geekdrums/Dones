@@ -300,7 +300,7 @@ public class LogNote : MonoBehaviour
 
 		todayTree_ = Instantiate(LogTreePrefab.gameObject, this.transform).GetComponent<LogTree>();
 		DateUI dateUI = Instantiate(DateUIPrefab.gameObject, todayTree_.transform).GetComponent<DateUI>();
-		dateUI.Set(this, today_, ToColor(today_));
+		dateUI.Set(today_, GameContext.Config.DoneColor);
 		todayTree_.Initialize(actionManager_, heapFields_);
 		if( treeNote_.File != null )
 		{
@@ -334,7 +334,7 @@ public class LogNote : MonoBehaviour
 			{
 				LogTree logTree = Instantiate(LogTreePrefab.gameObject, this.transform).GetComponent<LogTree>();
 				DateUI dateUI = Instantiate(DateUIPrefab.gameObject, logTree.transform).GetComponent<DateUI>();
-				dateUI.Set(this, date, ToColor(date));
+				dateUI.Set(date, ToColor(date));
 				logTree.Initialize(actionManager_, heapFields_);
 				logTree.Load(filename, date);
 				logTree.SubscribeKeyInput();
@@ -352,7 +352,7 @@ public class LogNote : MonoBehaviour
 			lastDateUI.SetEnableAddDateButtton(false);
 		}
 		endDate_ = endDate;
-		EndDateUI.Set(this, endDate.AddDays(-1), GameContext.Config.CommentTextColor);
+		EndDateUI.Set(endDate.AddDays(-1), GameContext.Config.CommentTextColor);
 		EndDateUI.transform.parent.SetAsLastSibling();
 		UpdateLayoutElement();
 	}
@@ -361,22 +361,32 @@ public class LogNote : MonoBehaviour
 	{
 		LogTree newDateTree = Instantiate(LogTreePrefab.gameObject, this.transform).GetComponent<LogTree>();
 		DateUI dateUI = Instantiate(DateUIPrefab.gameObject, newDateTree.transform).GetComponent<DateUI>();
-		dateUI.Set(this, date, ToColor(date));
+		dateUI.Set(date, ToColor(date));
 		dateUI.SetEnableAddDateButtton(treeNote_.File == null || File.Exists(ToFileName(treeNote_.File, date.AddDays(-1.0))) == false);
 		newDateTree.Initialize(actionManager_, heapFields_);
 		newDateTree.NewTree(date);
+		newDateTree.SubscribeKeyInput();
+		SetSortedIndex(newDateTree);
+	}
+
+	public void SetSortedIndex(LogTree logTree)
+	{
+		if( logTrees_.Contains(logTree) )
+		{
+			logTrees_.Remove(logTree);
+		}
+
 		int insertIndex = logTrees_.Count;
 		for( int i = 0; i < logTrees_.Count; ++i )
 		{
-			if( logTrees_[i].Date < date )
+			if( logTrees_[i].Date < logTree.Date )
 			{
 				insertIndex = i;
 				break;
 			}
 		}
-		logTrees_.Insert(insertIndex, newDateTree);
-		newDateTree.transform.SetSiblingIndex(insertIndex + 1);//heapが最初にあるので。。
-		newDateTree.SubscribeKeyInput();
+		logTrees_.Insert(insertIndex, logTree);
+		logTree.transform.SetSiblingIndex(insertIndex);
 		UpdateLayoutElement();
 	}
 
@@ -423,11 +433,10 @@ public class LogNote : MonoBehaviour
 		LoadUntil(endDate_.AddMonths(-1));
 	}
 
-	public Color ToColor(DateTime date)
+	public static Color ToColor(DateTime date)
 	{
 		if( date.DayOfWeek == DayOfWeek.Sunday ) return GameContext.Config.AccentColor;
 		else if( date.DayOfWeek == DayOfWeek.Saturday ) return GameContext.Config.AccentColor;
-		else if( date == today_ ) return GameContext.Config.DoneColor;
 		else return GameContext.Config.TextColor;
 	}
 

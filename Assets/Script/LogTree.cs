@@ -476,5 +476,20 @@ public class LogTree : Tree
 		SaveInternal();
 	}
 
+	public void OnDateChanged(DateTime date)
+	{
+		date_ = date;
+
+		if( file_ != null )
+		{
+			file_.Delete();
+			file_ = null;
+		}
+
+		Save();
+
+		ownerLogNote_.SetSortedIndex(this);
+	}
+
 	#endregion
 }
