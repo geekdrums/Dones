@@ -91,11 +91,14 @@ public class TreeNote : Note
 	public void OnTabSelected()
 	{
 		this.gameObject.SetActive(true);
+		logNote_.gameObject.SetActive(true);
 		GameContext.CurrentActionManager = actionManager_;
 
 		UpdateLayoutElement();
 		logNote_.UpdateLayoutElement();
+
 		scrollRect_.verticalScrollbar.value = targetScrollValue_;
+		logNote_.OnTreeNoteSelected();
 
 		tree_.SubscribeKeyInput();
 		logNote_.SubscribeKeyInput();
@@ -105,9 +108,6 @@ public class TreeNote : Note
 #endif
 
 		GameContext.Window.LogTabButton.OwnerNote = this;
-
-		logNote_.gameObject.SetActive(true);
-		logNote_.OnTreeNoteSelected();
 	}
 
 	public void OnTabDeselected()

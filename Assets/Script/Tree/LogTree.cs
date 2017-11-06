@@ -356,10 +356,6 @@ public class LogTree : Tree
 			{
 				layout_.preferredHeight = Math.Max(GameContext.Config.MinLogTreeHeight, -(lastLine.TargetAbsolutePosition.y - this.transform.position.y) + GameContext.Config.HeightPerLine * 1.0f);
 				contentSizeFitter_.SetLayoutVertical();
-				if( OwnerLogNote != null && OwnerLogNote.gameObject.activeInHierarchy )
-				{
-					OwnerLogNote.UpdateLayoutElement();
-				}
 			}
 		}
 	}

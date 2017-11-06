@@ -28,7 +28,7 @@ public class DateUI : MonoBehaviour {
 
 	public void AddDate()
 	{
-		GetComponentInParent<LogNote>().AddDate(date_.AddDays(-1.0));
+		GetComponentInChildren<LogNote>().AddDate(date_.AddDays(-1.0));
 		SetEnableAddDateButtton(false);
 	}
 

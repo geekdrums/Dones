@@ -167,7 +167,13 @@ public class LogNote : Note
 		float preferredHeight = 0.0f;
 		foreach( LogTree logTree in logTrees_ )
 		{
+			logTree.UpdateLayoutElement();
 			preferredHeight += logTree.GetComponent<LayoutElement>().preferredHeight + 5;
+			if( logTree.GetComponentInParent<DateUI>() != null )
+			{
+				logTree.GetComponentInParent<DateUI>().GetComponent<LayoutElement>().preferredHeight = logTree.GetComponent<LayoutElement>().preferredHeight;
+				logTree.GetComponentInParent<DateUI>().GetComponent<ContentSizeFitter>().SetLayoutVertical();
+			}
 		}
 		preferredHeight += 100;
 		layout_.preferredHeight = preferredHeight;
@@ -192,7 +198,6 @@ public class LogNote : Note
 	public void OnTabOpened()
 	{
 		LoadUntil(today_.AddDays(-LoadDateCount));
-		UpdateLayoutElement();
 		UpdateLogTabButtons();
 	}
 
@@ -273,8 +278,8 @@ public class LogNote : Note
 		today_ = DateTime.Now.Date;
 		endDate_ = today_;
 
-		todayTree_ = Instantiate(LogTreePrefab.gameObject, this.transform).GetComponent<LogTree>();
-		DateUI dateUI = Instantiate(DateUIPrefab.gameObject, todayTree_.transform).GetComponent<DateUI>();
+		DateUI dateUI = Instantiate(DateUIPrefab.gameObject, this.transform).GetComponent<DateUI>();
+		todayTree_ = Instantiate(LogTreePrefab.gameObject, dateUI.transform).GetComponent<LogTree>();
 		dateUI.Set(today_, GameContext.Config.DoneColor);
 		todayTree_.Initialize(this, actionManager_, heapFields_);
 		todayTree_.OnEditChanged += this.OnEditChanged;
@@ -308,8 +313,8 @@ public class LogNote : Note
 			}
 			if( exist )
 			{
-				LogTree logTree = Instantiate(LogTreePrefab.gameObject, this.transform).GetComponent<LogTree>();
-				DateUI dateUI = Instantiate(DateUIPrefab.gameObject, logTree.transform).GetComponent<DateUI>();
+				DateUI dateUI = Instantiate(DateUIPrefab.gameObject, this.transform).GetComponent<DateUI>();
+				LogTree logTree = Instantiate(LogTreePrefab.gameObject, dateUI.transform).GetComponent<LogTree>();
 				dateUI.Set(date, ToColor(date));
 				logTree.Initialize(this, actionManager_, heapFields_);
 				logTree.LoadLog(new FileInfo(filename), date);
@@ -336,8 +341,8 @@ public class LogNote : Note
 
 	public void AddDate(DateTime date)
 	{
-		LogTree newDateTree = Instantiate(LogTreePrefab.gameObject, this.transform).GetComponent<LogTree>();
-		DateUI dateUI = Instantiate(DateUIPrefab.gameObject, newDateTree.transform).GetComponent<DateUI>();
+		DateUI dateUI = Instantiate(DateUIPrefab.gameObject, this.transform).GetComponent<DateUI>();
+		LogTree newDateTree = Instantiate(LogTreePrefab.gameObject, dateUI.transform).GetComponent<LogTree>();
 		dateUI.Set(date, ToColor(date));
 		dateUI.SetEnableAddDateButtton(treeNote_.File == null || File.Exists(ToFileName(treeNote_, date.AddDays(-1.0))) == false);
 		newDateTree.Initialize(this, actionManager_, heapFields_);
@@ -364,7 +369,7 @@ public class LogNote : Note
 			}
 		}
 		logTrees_.Insert(insertIndex, logTree);
-		logTree.transform.SetSiblingIndex(insertIndex);
+		logTree.GetComponentInParent<DateUI>().transform.SetSiblingIndex(insertIndex);
 		UpdateLayoutElement();
 	}
 
