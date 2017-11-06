@@ -6,11 +6,19 @@ using UnityEngine.EventSystems;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
-public class TabButton : UnityEngine.UI.Button, IDragHandler, IBeginDragHandler, IEndDragHandler
+public interface ITabButton
+{
+	bool IsOn { get; set; }
+	float Width { get; set; }
+	Vector2 TargetPosition { get; set; }
+	TabGroup OwnerTabGroup { get; set; }
+	GameObject gameObject { get; }
+}
+
+public class NoteTabButton : UnityEngine.UI.Button, IDragHandler, IBeginDragHandler, IEndDragHandler, ITabButton
 {
 	#region params
 
-	public TabGroup OwnerTabGroup;
 	public TreeNote BindedNote;
 	
 	public bool IsOn
@@ -23,13 +31,12 @@ public class TabButton : UnityEngine.UI.Button, IDragHandler, IBeginDragHandler,
 
 			if( isOn_ )
 			{
-				OwnerTabGroup.OnTreeActivated(BindedNote);
+				OwnerTabGroup.OnTabActivated(this);
 			}
 			else
 			{
 				BindedNote.OnTabDeselected();
 			}
-			BindedNote.gameObject.SetActive(isOn_);
 			if( isOn_ )
 			{
 				BindedNote.OnTabSelected();
@@ -88,6 +95,8 @@ public class TabButton : UnityEngine.UI.Button, IDragHandler, IBeginDragHandler,
 	}
 	Vector2 targetPosition_;
 
+	public TabGroup OwnerTabGroup { get; set; }
+
 	bool updateTransform_ = false;
 
 	RectTransform rect_;
@@ -127,48 +136,19 @@ public class TabButton : UnityEngine.UI.Button, IDragHandler, IBeginDragHandler,
 			IsOn = true;
 	}
 
-	public void Close()
+	public void TryClose()
 	{
-		if( BindedNote.IsEdited )
-		{
-			GameContext.Window.ModalDialog.Show(BindedNote.TitleText + "ファイルへの変更を保存しますか？", this.CloseConfirmCallback);
-			return;
-		}
-
-		if( BindedNote.LogNote.IsEdited )
-		{
-			GameContext.Window.ModalDialog.Show(BindedNote.LogNote.TitleText + "ログファイルへの変更を保存しますか？", this.CloseConfirmCallback);
-			return;
-		}
-
 		DoClose();
 	}
 
-	void DoClose()
+	public void DoClose()
 	{
 		if( IsOn )
 			IsOn = false;
 
 		BindedNote.OnTabClosed();
-		OwnerTabGroup.OnTreeClosed(BindedNote);
+		OwnerTabGroup.OnTabClosed(this);
 		Destroy(this.gameObject);
-	}
-
-	void CloseConfirmCallback(ModalDialog.DialogResult result)
-	{
-		switch(result)
-		{
-		case ModalDialog.DialogResult.Yes:
-			BindedNote.Save();
-			DoClose();
-			break;
-		case ModalDialog.DialogResult.No:
-			DoClose();
-			break;
-		case ModalDialog.DialogResult.Cancel:
-			// do nothing
-			break;
-		}
 	}
 
 	public void UpdateColor()
@@ -183,28 +163,12 @@ public class TabButton : UnityEngine.UI.Button, IDragHandler, IBeginDragHandler,
 
 	public void UpdateTitleText()
 	{
-		if( BindedNote.LogNote.IsFullArea )
-		{
-			Text = BindedNote.LogNote.TitleText + (BindedNote.LogNote.IsEdited ? "*" : "");
-		}
-		else
-		{
-			Text = BindedNote.TitleText + (BindedNote.IsEdited ? "*" : "");
-		}
+		Text = BindedNote.TitleText;
 	}
 
 	IEnumerator UpdateTransformCoroutine()
 	{
 		yield return new WaitForEndOfFrame();
-
-		/*
-		TextGenerator gen = textComponent_.cachedTextGenerator;
-
-		float charLength = gen.characters[gen.characters.Count - 1].cursorPos.x - gen.characters[0].cursorPos.x;
-		charLength /= textComponent_.pixelsPerUnit;
-
-		rect_.sizeDelta = new Vector2(charLength + 50, rect_.sizeDelta.y);
-		*/
 
 		rect_.sizeDelta = new Vector2(desiredWidth_, rect_.sizeDelta.y);
 		rect_.anchoredPosition = targetPosition_;

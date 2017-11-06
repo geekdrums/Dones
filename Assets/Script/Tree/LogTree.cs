@@ -17,66 +17,13 @@ public class LogTree : Tree
 {
 	#region params
 
+	public LogNote OwnerLogNote { get { return ownerNote_ as LogNote; } }
+
 	public DateTime Date { get { return date_; } }
 	DateTime date_;
-	LogNote ownerLogNote_;
 
-	public override bool IsEdited
-	{
-		get
-		{
-			return isEdited_;
-		}
-		set
-		{
-			base.IsEdited = value;
-			if( ownerLogNote_ != null && ownerLogNote_.TreeNote != null )
-			{
-				if( ownerLogNote_.IsFullArea )
-				{
-					if( isEdited_ )
-					{
-						ownerLogNote_.TreeNote.Tab.Text = ownerLogNote_.TitleText + "*";
-					}
-					else if( ownerLogNote_.IsEdited == false )
-					{
-						ownerLogNote_.TreeNote.Tab.Text = ownerLogNote_.TitleText;
-					}
-				}
-				else
-				{
-					if( isEdited_ )
-					{
-						ownerLogNote_.LogTabButton.Text = ownerLogNote_.TitleText + "*";
-					}
-					else if( ownerLogNote_.IsEdited == false )
-					{
-						ownerLogNote_.LogTabButton.Text = ownerLogNote_.TitleText;
-					}
-				}
-			}
-		}
-	}
-
-	#endregion
-
-
-	#region initialize
-
-	protected override void Awake()
-	{
-		ownerLogNote_ = GetComponentInParent<LogNote>();
-	}
-
-	public void Initialize(ActionManager actionManager, List<LineField> heapFields)
-	{
-		actionManager_ = actionManager;
-		heapFields_ = heapFields;
-		
-		actionManager_.ChainStarted += this.actionManager__ChainStarted;
-		actionManager_.ChainEnded += this.actionManager__ChainEnded;
-		actionManager_.Executed += this.actionManager__Executed;
-	}
+	LayoutElement layout_;
+	ContentSizeFitter contentSizeFitter_;
 
 	#endregion
 
@@ -280,16 +227,14 @@ public class LogTree : Tree
 		return hasDoneChild;
 	}
 
-
 	#endregion
 
 
-	#region input
-
+	#region input override
 
 	protected override void OnOverflowArrowInput(KeyCode key)
 	{
-		ownerLogNote_.OnOverflowArrowInput(this, key);
+		OwnerLogNote.OnOverflowArrowInput(this, key);
 	}
 
 	protected override void OnCtrlDInput()
@@ -321,7 +266,7 @@ public class LogTree : Tree
 					}
 
 					Line originalLine = null;
-					Line searchParent = ownerLogNote_.TreeNote.RootLine;
+					Line searchParent = OwnerLogNote.TreeNote.Tree.RootLine;
 					Line searchChild = targetAncestors.Pop();
 					bool found = true;
 					while( found && originalLine == null )
@@ -396,12 +341,7 @@ public class LogTree : Tree
 
 	#region layout
 
-	public override void ScrollTo(Line targetLine)
-	{
-		ownerLogNote_.ScrollTo(targetLine);
-	}
-
-	public override void UpdateLayoutElement()
+	public void UpdateLayoutElement()
 	{
 		if( layout_ == null )
 		{
@@ -416,9 +356,9 @@ public class LogTree : Tree
 			{
 				layout_.preferredHeight = Math.Max(GameContext.Config.MinLogTreeHeight, -(lastLine.TargetAbsolutePosition.y - this.transform.position.y) + GameContext.Config.HeightPerLine * 1.0f);
 				contentSizeFitter_.SetLayoutVertical();
-				if( ownerLogNote_ != null && ownerLogNote_.gameObject.activeInHierarchy )
+				if( OwnerLogNote != null && OwnerLogNote.gameObject.activeInHierarchy )
 				{
-					ownerLogNote_.UpdateLayoutElement();
+					OwnerLogNote.UpdateLayoutElement();
 				}
 			}
 		}
@@ -429,35 +369,31 @@ public class LogTree : Tree
 
 	#region file
 
-	public void NewTree(DateTime date)
+	public void NewLog(DateTime date)
 	{
 		date_ = date;
-		rootLine_ = new Line("new.dones");
-		rootLine_.Bind(this.gameObject);
-		rootLine_.Add(new Line(""));
+		NewFile("new");
 	}
 
-	public void Load(string filepath, DateTime date)
+	public void LoadLog(FileInfo file, DateTime date)
 	{
 		date_ = date;
-		file_ = new FileInfo(filepath);
+		file_ = file;
 		if( file_.Exists )
 		{
-			LoadInternal();
+			LoadFile(file_);
 		}
 		else
 		{
-			rootLine_ = new Line(file_.Name);
-			rootLine_.Bind(this.gameObject);
-			rootLine_.Add(new Line(""));
+			NewFile(file_.Name);
 		}
 	}
 	
-	public override void Save()
+	public void SaveLog()
 	{
 		if( file_ == null )
 		{
-			file_ = new FileInfo(LogNote.ToFileName(ownerLogNote_.TreeNote.File, date_));
+			file_ = new FileInfo(LogNote.ToFileName(OwnerLogNote.TreeNote, date_));
 		}
 		if( file_.Exists == false )
 		{
@@ -468,12 +404,12 @@ public class LogTree : Tree
 				return;
 			}
 		}
-		string folderName = ownerLogNote_.TreeNote.File.FullName.Replace(".dtml", ".dones");
+		string folderName = OwnerLogNote.TreeNote.File.FullName.Replace(".dtml", ".dones");
 		if( Directory.Exists(folderName) == false )
 		{
 			Directory.CreateDirectory(folderName);
 		}
-		SaveInternal();
+		SaveFile();
 	}
 
 	public void OnDateChanged(DateTime date)
@@ -486,9 +422,9 @@ public class LogTree : Tree
 			file_ = null;
 		}
 
-		Save();
+		SaveFile();
 
-		ownerLogNote_.SetSortedIndex(this);
+		OwnerLogNote.SetSortedIndex(this);
 	}
 
 	#endregion

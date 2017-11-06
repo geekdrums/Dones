@@ -13,8 +13,8 @@ using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
 // Tree structure of Lines.
-public class Tree : MonoBehaviour {
-
+public class Tree : MonoBehaviour
+{
 	#region editor params
 
 	public LineField FieldPrefab;
@@ -22,34 +22,67 @@ public class Tree : MonoBehaviour {
 
 	#endregion
 
-
 	#region params
-	
-	protected List<LineField> heapFields_ = new List<LineField>();
+
 	protected Line rootLine_;
 	protected Line focusedLine_;
 	protected Line selectionStartLine_, selectionEndLine_;
 	protected SortedList<int, Line> selectedLines_ = new SortedList<int, Line>();
+
+	protected List<LineField> heapFields_ = new List<LineField>();
 	protected ActionManager actionManager_;
+	public Note OwnerNote { get { return ownerNote_; } }
+	protected Note ownerNote_;
 
 	// input states
 	protected bool wasDeleteKeyConsumed_ = false;
-	protected bool wasCtrlMInput_ = false;
 	protected List<IDisposable> throttleInputSubscriptions_ = new List<IDisposable>();
 
 	// layout
 	protected bool isAllFolded_ = false;
 	protected List<Line> requestLayoutLines_ = new List<Line>();
 	protected int suspendLayoutCount_ = 0;
-
-	// components
-	protected LayoutElement layout_;
-	protected ContentSizeFitter contentSizeFitter_;
+	public float PreferredHeight
+	{
+		get
+		{
+			if( suspendLayoutCount_ <= 0 && rootLine_ != null && gameObject.activeInHierarchy )
+			{
+				Line lastLine = rootLine_.LastVisibleLine;
+				if( lastLine != null && lastLine.Field != null )
+				{
+					return -(lastLine.TargetAbsolutePosition.y - this.transform.position.y) + GameContext.Config.HeightPerLine * 1.5f;
+				}
+			}
+			return 0;
+		}
+	}
 
 
 	// file
 	protected FileInfo file_ = null;
+	public bool IsEdited
+	{
+		get { return isEdited_; }
+		set
+		{
+			if( value && GameContext.Config.IsAutoSave )
+			{
+				SaveFile();
+				return;
+			}
+			isEdited_ = value;
+
+			if( OnEditChanged != null )
+				OnEditChanged(this, null);
+		}
+	}
 	protected bool isEdited_ = false;
+
+
+	// event
+	public event EventHandler OnEditChanged;
+	public event EventHandler OnDoneChanged;
 
 	// properties
 	public ActionManager ActionManager { get { return actionManager_; } }
@@ -60,19 +93,6 @@ public class Tree : MonoBehaviour {
 	public string TitleText { get { return rootLine_ != null ? rootLine_.Text : ""; } }
 	public override string ToString() { return TitleText; }
 
-	public virtual bool IsEdited
-	{
-		get { return isEdited_; }
-		set
-		{
-			if( value && GameContext.Config.IsAutoSave )
-			{
-				Save();
-				return;
-			}
-			isEdited_ = value;
-		}
-	}
 
 	// utils
 	protected IEnumerable<Line> GetSelectedOrFocusedLines(bool ascending = true)
@@ -104,16 +124,22 @@ public class Tree : MonoBehaviour {
 	#endregion
 
 
-	#region unity events
-
-	protected virtual void Awake()
+	public void Initialize(Note ownerNote, ActionManager actionManager, List<LineField> heapFields)
 	{
-		layout_ = GetComponentInParent<LayoutElement>();
-		contentSizeFitter_ = GetComponentInParent<ContentSizeFitter>();
+		ownerNote_ = ownerNote;
+		actionManager_ = actionManager;
+		heapFields_ = heapFields;
+
+		actionManager_.ChainStarted += this.actionManager__ChainStarted;
+		actionManager_.ChainEnded += this.actionManager__ChainEnded;
+		actionManager_.Executed += this.actionManager__Executed;
 	}
 
+
+	#region unity events
+
 	// Update is called once per frame
-	protected virtual void Update()
+	void Update()
 	{
 		if( rootLine_ == null ) return;
 
@@ -142,10 +168,6 @@ public class Tree : MonoBehaviour {
 			{
 				SelectAll();
 			}
-			else if( Input.GetKeyDown(KeyCode.M) )
-			{
-				wasCtrlMInput_ = true;
-			}
 #if UNITY_EDITOR
 			else if( Input.GetKeyDown(KeyCode.W) )
 #else
@@ -158,7 +180,7 @@ public class Tree : MonoBehaviour {
 				}
 				else
 				{
-					Save();
+					SaveFile();
 				}
 			}
 			else if( Input.GetKeyDown(KeyCode.Space) )
@@ -178,10 +200,6 @@ public class Tree : MonoBehaviour {
 //			{
 //				OnCtrlBInput();
 //			}
-			else if( Input.GetKeyDown(KeyCode.L) && wasCtrlMInput_ == false )
-			{
-				OnCtrlLInput();
-			}
 			else if( Input.GetKeyDown(KeyCode.Home) )
 			{
 				rootLine_[0].Field.IsFocused = true;
@@ -200,18 +218,6 @@ public class Tree : MonoBehaviour {
 			else
 			{
 				OnTabInput();
-			}
-		}
-
-		if( wasCtrlMInput_ && Input.anyKeyDown )
-		{
-			if( ( Input.GetKeyDown(KeyCode.M) && ctrlOnly ) == false )
-			{
-				wasCtrlMInput_ = false;
-			}
-			if( Input.GetKeyDown(KeyCode.L) && ctrlOnly )
-			{
-				OnCtrlMLInput();
 			}
 		}
 
@@ -557,7 +563,7 @@ public class Tree : MonoBehaviour {
 		if( suspendLayoutCount_ <= 0 )
 		{
 			AdjustRequestedLayouts();
-			UpdateLayoutElement();
+			ownerNote_.UpdateLayoutElement();
 		}
 
 		if( IsEdited == false )
@@ -695,9 +701,28 @@ public class Tree : MonoBehaviour {
 		}
 		actionManager_.EndChain();
 	}
-
+	
 	protected virtual void OnCtrlSpaceInput()
 	{
+		if( focusedLine_ == null ) return;
+
+		actionManager_.StartChain();
+		foreach( Line line in GetSelectedOrFocusedLines() )
+		{
+			if( line.Text != "" )
+			{
+				Line targetLine = line;
+				actionManager_.Execute(new Action(
+					execute: () =>
+					{
+						targetLine.IsDone = !targetLine.IsDone;
+						if( OnDoneChanged != null )
+							OnDoneChanged(targetLine, null);
+					}
+					));
+			}
+		}
+		actionManager_.EndChain();
 	}
 
 	protected void OnEnterInput()
@@ -721,14 +746,14 @@ public class Tree : MonoBehaviour {
 					parent.Insert(index, line);
 					parent.AdjustLayoutRecursive(index + 1);
 					line.Field.CaretPosision = 0;
-					ScrollTo(target);
+					ownerNote_.ScrollTo(target);
 				},
 				undo: () =>
 				{
 					parent.Remove(line);
 					parent.AdjustLayoutRecursive(index);
 					target.Field.CaretPosision = caretPos;
-					ScrollTo(target);
+					ownerNote_.ScrollTo(target);
 				}
 				));
 		}
@@ -1040,14 +1065,21 @@ public class Tree : MonoBehaviour {
 						{
 							src.Parent.Insert(dest.Index, src);
 							dest.AdjustLayout();
-							ScrollTo(src);
+							ownerNote_.ScrollTo(src);
 						}
 						));
 				}
 			}
 			else if( Input.GetKey(KeyCode.LeftControl) )
 			{
-				OnFoldUpdated(focusedLine_, key == KeyCode.UpArrow);
+				if( Input.GetKey(KeyCode.LeftAlt) )
+				{
+					OnAllFoldUpdated(key == KeyCode.UpArrow);
+				}
+				else
+				{
+					OnFoldUpdated(focusedLine_, key == KeyCode.UpArrow);
+				}
 			}
 			else
 			{
@@ -1150,112 +1182,6 @@ public class Tree : MonoBehaviour {
 			}
 			break;
 		}
-	}
-	
-	protected void OnCtrlMLInput()
-	{
-		if( focusedLine_ == null ) return;
-
-		ClearSelection();
-
-		actionManager_.StartChain();
-		if( isAllFolded_ )
-		{
-			// unfold all
-			Line line = rootLine_[0];
-			while( line != null )
-			{
-				if( line.Count > 0 && line.IsFolded )
-				{
-					Line unfoldLine = line;
-					Line layoutStart = line.NextVisibleLine;
-					actionManager_.Execute(new Action(
-						execute: () =>
-						{
-							unfoldLine.IsFolded = false;
-							RequestLayout(layoutStart);
-						},
-						undo: () =>
-						{
-							unfoldLine.IsFolded = true;
-							RequestLayout(layoutStart);
-						}
-						));
-				}
-				line = line.NextVisibleLine;
-			}
-
-			actionManager_.Execute(new Action(
-				execute: () =>
-				{
-					isAllFolded_ = false;
-				},
-				undo: () =>
-				{
-					isAllFolded_ = true;
-				}
-				));
-		}
-		else
-		{
-			// fold all
-			Line addLine = rootLine_.LastVisibleLine;
-			List<Line> foldLines = new List<Line>();
-			while( addLine != null )
-			{
-				if( addLine.Count > 0 && addLine.IsFolded == false )
-				{
-					foldLines.Add(addLine);
-				}
-				addLine = addLine.PrevVisibleLine;
-			}
-
-			foreach(Line line in foldLines)
-			{
-				Line foldLine = line;
-				Line layoutStart = line.NextSiblingOrUnkleLine;
-				actionManager_.Execute(new Action(
-					execute: () =>
-					{
-						foldLine.IsFolded = true;
-						RequestLayout(layoutStart);
-					},
-					undo: () =>
-					{
-						foldLine.IsFolded = false;
-						RequestLayout(layoutStart);
-					}
-					));
-			}
-			
-			actionManager_.Execute(new Action(
-				execute: () =>
-				{
-					isAllFolded_ = true;
-				},
-				undo: () =>
-				{
-					isAllFolded_ = false;
-				}
-				));
-
-			if( focusedLine_ != null )
-			{
-				Line newFocusLine = focusedLine_;
-				while( newFocusLine.Parent.IsFolded )
-				{
-					newFocusLine = newFocusLine.Parent;
-				}
-				newFocusLine.Field.IsFocused = true;
-				OnFocused(newFocusLine);
-			}
-		}
-		actionManager_.EndChain();
-	}
-
-	protected virtual void OnCtrlLInput()
-	{
-
 	}
 
 	protected virtual void OnCtrlDInput()
@@ -1536,19 +1462,18 @@ public class Tree : MonoBehaviour {
 		{
 			for( int i = 0; i < FieldCount; ++i )
 			{
-				field = Instantiate(FieldPrefab.gameObject).GetComponent<LineField>();
-				field.transform.SetParent(this.transform);
+				field = Instantiate(FieldPrefab.gameObject, this.transform).GetComponent<LineField>();
 				field.gameObject.SetActive(false);
 				heapFields_.Add(field);
 			}
 		}
+		heapFields_.Remove(field);
 		if( field.BindedLine != null )
 		{
 			field.BindedLine.UnBind();
 		}
 		field.gameObject.SetActive(true);
 		line.Bind(field.gameObject);
-		heapFields_.Remove(field);
 	}
 
 	public void OnReBind(Line line)
@@ -1589,7 +1514,7 @@ public class Tree : MonoBehaviour {
 			selectionStartLine_ = line;
 		}
 
-		ScrollTo(focusedLine_);
+		ownerNote_.ScrollTo(focusedLine_);
 	}
 
 	public void OnFocusEnded(Line line)
@@ -1623,6 +1548,107 @@ public class Tree : MonoBehaviour {
 		}
 	}
 
+	protected void OnAllFoldUpdated(bool isAllFolded)
+	{
+		if( focusedLine_ == null ) return;
+
+		ClearSelection();
+
+		actionManager_.StartChain();
+		if( isAllFolded == false )
+		{
+			// unfold all
+			Line line = rootLine_[0];
+			while( line != null )
+			{
+				if( line.Count > 0 && line.IsFolded )
+				{
+					Line unfoldLine = line;
+					Line layoutStart = line.NextVisibleLine;
+					actionManager_.Execute(new Action(
+						execute: () =>
+						{
+							unfoldLine.IsFolded = false;
+							RequestLayout(layoutStart);
+						},
+						undo: () =>
+						{
+							unfoldLine.IsFolded = true;
+							RequestLayout(layoutStart);
+						}
+						));
+				}
+				line = line.NextVisibleLine;
+			}
+
+			actionManager_.Execute(new Action(
+				execute: () =>
+				{
+					isAllFolded_ = false;
+				},
+				undo: () =>
+				{
+					isAllFolded_ = true;
+				}
+				));
+		}
+		else
+		{
+			// fold all
+			Line addLine = rootLine_.LastVisibleLine;
+			List<Line> foldLines = new List<Line>();
+			while( addLine != null )
+			{
+				if( addLine.Count > 0 && addLine.IsFolded == false )
+				{
+					foldLines.Add(addLine);
+				}
+				addLine = addLine.PrevVisibleLine;
+			}
+
+			foreach( Line line in foldLines )
+			{
+				Line foldLine = line;
+				Line layoutStart = line.NextSiblingOrUnkleLine;
+				actionManager_.Execute(new Action(
+					execute: () =>
+					{
+						foldLine.IsFolded = true;
+						RequestLayout(layoutStart);
+					},
+					undo: () =>
+					{
+						foldLine.IsFolded = false;
+						RequestLayout(layoutStart);
+					}
+					));
+			}
+
+			actionManager_.Execute(new Action(
+				execute: () =>
+				{
+					isAllFolded_ = true;
+				},
+				undo: () =>
+				{
+					isAllFolded_ = false;
+				}
+				));
+
+			if( focusedLine_ != null )
+			{
+				Line newFocusLine = focusedLine_;
+				while( newFocusLine.Parent.IsFolded )
+				{
+					newFocusLine = newFocusLine.Parent;
+				}
+				newFocusLine.Field.IsFocused = true;
+				OnFocused(newFocusLine);
+			}
+		}
+		actionManager_.EndChain();
+	}
+
 	public void OnDeleteKeyConsumed()
 	{
 		wasDeleteKeyConsumed_ = true;
@@ -1631,29 +1657,11 @@ public class Tree : MonoBehaviour {
 	public void OnTextFieldDestroy(LineField field)
 	{
 	}
-	
-	public virtual void ScrollTo(Line targetLine)
-	{
-
-	}
 
 	#endregion
 
 
 	#region layout
-
-	public virtual void UpdateLayoutElement()
-	{
-		if( suspendLayoutCount_ <= 0 && layout_ != null && rootLine_ != null && gameObject.activeInHierarchy )
-		{
-			Line lastLine = rootLine_.LastVisibleLine;
-			if( lastLine != null && lastLine.Field != null )
-			{
-				layout_.preferredHeight = -(lastLine.TargetAbsolutePosition.y - this.transform.position.y) + GameContext.Config.HeightPerLine * 1.5f;
-				contentSizeFitter_.SetLayoutVertical();
-			}
-		}
-	}
 
 	protected void SuspendLayout()
 	{
@@ -1667,7 +1675,7 @@ public class Tree : MonoBehaviour {
 		{
 			suspendLayoutCount_ = 0;
 			AdjustRequestedLayouts();
-			UpdateLayoutElement();
+			ownerNote_.UpdateLayoutElement();
 		}
 	}
 
@@ -1708,12 +1716,23 @@ public class Tree : MonoBehaviour {
 
 	#region files
 
-	public virtual void Save()
+	public void NewFile(string name)
 	{
-
+		SuspendLayout();
+		rootLine_ = new Line(name);
+		rootLine_.Bind(this.gameObject);
+		rootLine_.Add(new Line(""));
+		ResumeLayout();
 	}
 
-	protected void SaveInternal()
+	public void SaveFileAs(FileInfo file)
+	{
+		file_ = file;
+		rootLine_.Text = file_.Name;
+		SaveFile();
+	}
+
+	public void SaveFile()
 	{
 		StringBuilder builder = new StringBuilder();
 		foreach( Line line in rootLine_.GetAllChildren() )
@@ -1728,9 +1747,11 @@ public class Tree : MonoBehaviour {
 
 		IsEdited = false;
 	}
-	
-	protected void LoadInternal()
+
+	public void LoadFile(FileInfo file)
 	{
+		file_ = file;
+
 		SuspendLayout();
 
 		rootLine_ = new Line(file_.Name);
@@ -1791,7 +1812,7 @@ public class Tree : MonoBehaviour {
 		IsEdited = false;
 	}
 
-	public void Reload()
+	public void ReloadFile()
 	{
 		if( file_ == null || file_.Exists == false )
 		{
@@ -1814,7 +1835,7 @@ public class Tree : MonoBehaviour {
 			GC.Collect();
 		}
 
-		LoadInternal();
+		LoadFile(file_);
 	}
 
 	#endregion

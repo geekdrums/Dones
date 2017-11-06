@@ -6,11 +6,11 @@ using UnityEngine.EventSystems;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
-public class LogTabButton : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDragHandler
+public class LogNoteTabButton : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDragHandler
 {
 	#region params
 
-	public TabGroup OwnerTabGroup;
+	public TreeNote OwnerNote { get; set; }
 	
 	public string Text
 	{
@@ -50,18 +50,18 @@ public class LogTabButton : MonoBehaviour, IDragHandler, IBeginDragHandler, IEnd
 
 	public void Close()
 	{
-		//if( OwnerTabGroup.ActiveNote.LogNote.IsEdited )
-		//{
-		//	GameContext.Window.ModalDialog.Show(OwnerTabGroup.ActiveNote.LogNote.TitleText + "ログファイルへの変更を保存しますか？", this.CloseConfirmCallback);
-		//	return;
-		//}
+		if( OwnerNote != null && OwnerNote.LogNote.IsEdited )
+		{
+			GameContext.Window.ModalDialog.Show(OwnerNote.LogNote.TitleText + "ログファイルへの変更を保存しますか？", this.CloseConfirmCallback);
+			return;
+		}
 
 		DoClose();
 	}
 
 	void DoClose()
 	{
-		OwnerTabGroup.ActiveNote.LogNote.IsOpended = false;
+		OwnerNote.LogNote.IsOpended = false;
 	}
 
 	void CloseConfirmCallback(ModalDialog.DialogResult result)
@@ -69,11 +69,17 @@ public class LogTabButton : MonoBehaviour, IDragHandler, IBeginDragHandler, IEnd
 		switch( result )
 		{
 		case ModalDialog.DialogResult.Yes:
-			OwnerTabGroup.ActiveNote.LogNote.Save();
+			if( OwnerNote != null )
+			{
+				OwnerNote.LogNote.SaveLog();
+			}
 			DoClose();
 			break;
 		case ModalDialog.DialogResult.No:
-			OwnerTabGroup.ActiveNote.LogNote.Reload();
+			if( OwnerNote != null )
+			{
+				OwnerNote.LogNote.ReloadLog();
+			}
 			DoClose();
 			break;
 		case ModalDialog.DialogResult.Cancel:
@@ -94,12 +100,18 @@ public class LogTabButton : MonoBehaviour, IDragHandler, IBeginDragHandler, IEnd
 
 	public void OnDrag(PointerEventData eventData)
 	{
-		OwnerTabGroup.OnLogSplitLineDragging(this, eventData);
+		if( OwnerNote != null )
+		{
+			OwnerNote.OnLogSplitLineDragging(this, eventData);
+		}
 	}
 
 	public void OnEndDrag(PointerEventData eventData)
 	{
-		OwnerTabGroup.OnLogSplitLineEndDrag(this, eventData);
+		if( OwnerNote != null )
+		{
+			OwnerNote.OnLogSplitLineEndDrag(this, eventData);
+		}
 	}
 
 	#endregion

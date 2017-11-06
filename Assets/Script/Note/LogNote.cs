@@ -13,7 +13,7 @@ using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
 // Window - [ LogNote ] - LogTree - Line
-public class LogNote : MonoBehaviour
+public class LogNote : Note
 {
 	public int LoadDateCount = 7;
 	public GameObject LogTreePrefab;
@@ -26,7 +26,9 @@ public class LogNote : MonoBehaviour
 	public TreeNote TreeNote { get { return treeNote_; } }
 	TreeNote treeNote_;
 
-	public LogTabButton LogTabButton { get { return TreeNote.Tab.OwnerTabGroup.LogTabButton; } }
+	public LogNoteTabButton LogTabButton { get { return GameContext.Window.LogTabButton; } }
+	public GameObject OpenButton { get { return GameContext.Window.OpenLogNoteButton; } }
+	public GameObject CloseButton { get { return GameContext.Window.CloseLogNoteButton; } }
 
 	public float OpenRatio
 	{
@@ -45,17 +47,25 @@ public class LogNote : MonoBehaviour
 			isOpended_ = value;
 			if( value )
 			{
-				TreeNote.Tab.OwnerTabGroup.OnLogNoteOpened(this);
+				if( OpenRatio <= 0.0f )
+				{
+					OpenRatio = 0.5f;
+				}
+				OnTabOpened();
 			}
 			else
 			{
-				TreeNote.Tab.OwnerTabGroup.OnLogNoteClosed(this);
+				if( OpenRatio >= 1.0f )
+				{
+					OpenRatio = 0.5f;
+				}
+				OnTabClosed();
 			}
 		}
 	}
 	private bool isOpended_ = false;
 
-	public string TitleText { get { return treeNote_ != null ? treeNote_.TitleText.Replace(".dtml", ".dones") : ""; } }
+	public string TitleText { get { return treeNote_ != null ? treeNote_.Tree.TitleText.Replace(".dtml", ".dones") : ""; } }
 
 	public bool IsEdited
 	{
@@ -74,44 +84,7 @@ public class LogNote : MonoBehaviour
 	DateTime today_;
 	DateTime endDate_;
 
-	ActionManager actionManager_;
-	List<LineField> heapFields_ = new List<LineField>();
-	LayoutElement layout_;
-	ContentSizeFitter contentSizeFitter_;
-	ScrollRect scrollRect_;
-	float targetScrollValue_ = 1.0f;
-	bool isScrollAnimating_;
-
-
-	#region unity events
-
-	void Awake()
-	{
-		actionManager_ = new ActionManager();
-
-		layout_ = GetComponentInParent<LayoutElement>();
-		contentSizeFitter_ = GetComponentInParent<ContentSizeFitter>();
-		scrollRect_ = GetComponentInParent<ScrollRect>();
-	}
-
-	// Update is called once per frame
-	void Update()
-	{
-		if( isScrollAnimating_ )
-		{
-			scrollRect_.verticalScrollbar.value = Mathf.Lerp(scrollRect_.verticalScrollbar.value, targetScrollValue_, 0.2f);
-			if( Mathf.Abs(scrollRect_.verticalScrollbar.value - targetScrollValue_) < 0.01f )
-			{
-				scrollRect_.verticalScrollbar.value = targetScrollValue_;
-				isScrollAnimating_ = false;
-			}
-		}
-
-		scrollRect_.enabled = Input.GetKey(KeyCode.LeftControl) == false;
-	}
-
-	#endregion
-
+	
 
 	#region input
 
@@ -189,33 +162,7 @@ public class LogNote : MonoBehaviour
 
 	#region layout
 
-	public void ScrollTo(Line targetLine)
-	{
-		float scrollHeight = scrollRect_.GetComponent<RectTransform>().rect.height;
-		float targetAbsolutePositionY = targetLine.TargetAbsolutePosition.y;
-		float targetHeight = -(targetAbsolutePositionY - this.transform.position.y);
-		float heightPerLine = GameContext.Config.HeightPerLine;
-
-		// focusLineが下側に出て見えなくなった場合
-		float targetUnderHeight = -(targetAbsolutePositionY - scrollRect_.transform.position.y) + heightPerLine / 2 - scrollHeight;
-		if( targetUnderHeight > 0 )
-		{
-			targetScrollValue_ = Mathf.Clamp01(1.0f - (targetHeight + heightPerLine * 1.5f - scrollHeight) / (layout_.preferredHeight - scrollHeight));
-			isScrollAnimating_ = true;
-			return;
-		}
-
-		// focusLineが上側に出て見えなくなった場合
-		float targetOverHeight = (targetAbsolutePositionY - scrollRect_.transform.position.y);
-		if( targetOverHeight > 0 )
-		{
-			targetScrollValue_ = Mathf.Clamp01((layout_.preferredHeight - scrollHeight - targetHeight) / (layout_.preferredHeight - scrollHeight));
-			isScrollAnimating_ = true;
-			return;
-		}
-	}
-
-	public void UpdateLayoutElement()
+	public override void UpdateLayoutElement()
 	{
 		float preferredHeight = 0.0f;
 		foreach( LogTree logTree in logTrees_ )
@@ -225,14 +172,6 @@ public class LogNote : MonoBehaviour
 		preferredHeight += 100;
 		layout_.preferredHeight = preferredHeight;
 		contentSizeFitter_.SetLayoutVertical();
-	}
-
-	public void CheckScrollbarEnabled()
-	{
-		if( scrollRect_.verticalScrollbar.isActiveAndEnabled == false )
-		{
-			scrollRect_.verticalScrollbar.value = 1.0f;
-		}
 	}
 
 	#endregion
@@ -253,36 +192,72 @@ public class LogNote : MonoBehaviour
 	public void OnTabOpened()
 	{
 		LoadUntil(today_.AddDays(-LoadDateCount));
-		TreeNote.Tab.UpdateTitleText();
-		TreeNote.Tab.UpdateColor();
 		UpdateLayoutElement();
+		UpdateLogTabButtons();
 	}
 
 	public void OnTabClosed()
 	{
-		//foreach( LogTree logTree in logTrees_ )
-		//{
-		//	if( logTree != todayTree_ )
-		//	{
-		//		Destroy(logTree.gameObject);
-		//	}
-		//}
-		//logTrees_.RemoveAll((LogTree logTree) => logTree != todayTree_);
-		//endDate_ = today_;
+		UpdateLogTabButtons();
+	}
+
+	public void UpdateLogTabButtons()
+	{
+		if( IsFullArea )
+		{
+			OpenButton.SetActive(false);
+			CloseButton.SetActive(true);
+		}
+		else if( IsOpended == false )
+		{
+			OpenButton.SetActive(true);
+			CloseButton.SetActive(false);
+		}
+		TreeNote.UpdateVerticalLayout();
 		TreeNote.Tab.UpdateTitleText();
 		TreeNote.Tab.UpdateColor();
 	}
 
-	public void OnFontSizeChanged(int fontSize, float heightPerLine)
+	public void OnFontSizeChanged()
 	{
 		foreach( LogTree logTree in logTrees_ )
 		{
-			logTree.RootLine.AdjustFontSizeRecursive(fontSize, heightPerLine);
+			logTree.RootLine.AdjustFontSizeRecursive(GameContext.Config.FontSize, GameContext.Config.HeightPerLine);
 			logTree.UpdateLayoutElement();
 		}
 		if( gameObject.activeInHierarchy )
 		{
 			UpdateLayoutElement();
+		}
+	}
+	
+	public void OnEditChanged(object sender, EventArgs e)
+	{
+		LogTree logTree = sender as LogTree;
+		if( TreeNote != null )
+		{
+			if( IsFullArea )
+			{
+				if( logTree.IsEdited )
+				{
+					TreeNote.Tab.Text = TitleText + "*";
+				}
+				else if( IsEdited == false )
+				{
+					TreeNote.Tab.Text = TitleText;
+				}
+			}
+			else
+			{
+				if( logTree.IsEdited )
+				{
+					LogTabButton.Text = TitleText + "*";
+				}
+				else if( IsEdited == false )
+				{
+					LogTabButton.Text = TitleText;
+				}
+			}
 		}
 	}
 
@@ -301,14 +276,15 @@ public class LogNote : MonoBehaviour
 		todayTree_ = Instantiate(LogTreePrefab.gameObject, this.transform).GetComponent<LogTree>();
 		DateUI dateUI = Instantiate(DateUIPrefab.gameObject, todayTree_.transform).GetComponent<DateUI>();
 		dateUI.Set(today_, GameContext.Config.DoneColor);
-		todayTree_.Initialize(actionManager_, heapFields_);
+		todayTree_.Initialize(this, actionManager_, heapFields_);
+		todayTree_.OnEditChanged += this.OnEditChanged;
 		if( treeNote_.File != null )
 		{
-			todayTree_.Load(ToFileName(treeNote_.File, today_), today_);
+			todayTree_.LoadLog(new FileInfo(ToFileName(treeNote_, today_)), today_);
 		}
 		else
 		{
-			todayTree_.NewTree(today_);
+			todayTree_.NewLog(today_);
 		}
 		logTrees_.Add(todayTree_);
 
@@ -324,7 +300,7 @@ public class LogNote : MonoBehaviour
 		while( date > endDate )
 		{
 			date = date.AddDays(-1.0);
-			string filename = ToFileName(treeNote_.File, date);
+			string filename = ToFileName(treeNote_, date);
 			bool exist = File.Exists(filename);
 			if( lastDateUI != null )
 			{
@@ -335,9 +311,10 @@ public class LogNote : MonoBehaviour
 				LogTree logTree = Instantiate(LogTreePrefab.gameObject, this.transform).GetComponent<LogTree>();
 				DateUI dateUI = Instantiate(DateUIPrefab.gameObject, logTree.transform).GetComponent<DateUI>();
 				dateUI.Set(date, ToColor(date));
-				logTree.Initialize(actionManager_, heapFields_);
-				logTree.Load(filename, date);
+				logTree.Initialize(this, actionManager_, heapFields_);
+				logTree.LoadLog(new FileInfo(filename), date);
 				logTree.SubscribeKeyInput();
+				logTree.OnEditChanged += this.OnEditChanged;
 				logTrees_.Add(logTree);
 
 				lastDateUI = dateUI;
@@ -362,9 +339,10 @@ public class LogNote : MonoBehaviour
 		LogTree newDateTree = Instantiate(LogTreePrefab.gameObject, this.transform).GetComponent<LogTree>();
 		DateUI dateUI = Instantiate(DateUIPrefab.gameObject, newDateTree.transform).GetComponent<DateUI>();
 		dateUI.Set(date, ToColor(date));
-		dateUI.SetEnableAddDateButtton(treeNote_.File == null || File.Exists(ToFileName(treeNote_.File, date.AddDays(-1.0))) == false);
-		newDateTree.Initialize(actionManager_, heapFields_);
-		newDateTree.NewTree(date);
+		dateUI.SetEnableAddDateButtton(treeNote_.File == null || File.Exists(ToFileName(treeNote_, date.AddDays(-1.0))) == false);
+		newDateTree.Initialize(this, actionManager_, heapFields_);
+		newDateTree.OnEditChanged += this.OnEditChanged;
+		newDateTree.NewLog(date);
 		newDateTree.SubscribeKeyInput();
 		SetSortedIndex(newDateTree);
 	}
@@ -390,7 +368,7 @@ public class LogNote : MonoBehaviour
 		UpdateLayoutElement();
 	}
 
-	public void Save()
+	public void SaveLog()
 	{
 		if( treeNote_.File == null )
 		{
@@ -402,18 +380,18 @@ public class LogNote : MonoBehaviour
 		{
 			if( logTree.IsEdited )
 			{
-				logTree.Save();
+				logTree.SaveFile();
 			}
 		}
 
 		LogTabButton.Text = TitleText;
 	}
 	
-	public void Reload()
+	public void ReloadLog()
 	{
 		foreach( LogTree logTree in logTrees_ )
 		{
-			logTree.Reload();
+			logTree.ReloadFile();
 		}
 		UpdateLayoutElement();
 	}
@@ -440,9 +418,9 @@ public class LogNote : MonoBehaviour
 		else return GameContext.Config.TextColor;
 	}
 
-	public static string ToFileName(FileInfo treeFile, DateTime date)
+	public static string ToFileName(TreeNote treeNote, DateTime date)
 	{
-		return String.Format("{0}/{1}.dones/{1}{2}.dtml", treeFile.DirectoryName, treeFile.Name.Replace(".dtml", ""), date.ToString("-yyyy-MM-dd"));
+		return String.Format("{0}/{1}.dones/{1}{2}.dtml", treeNote.File.DirectoryName, treeNote.File.Name.Replace(".dtml", ""), date.ToString("-yyyy-MM-dd"));
 	}
 
 	#endregion

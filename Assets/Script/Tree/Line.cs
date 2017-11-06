@@ -368,7 +368,7 @@ public class Line : IEnumerable<Line>
 	{
 		if( GameContext.Config.IsAutoSave && textAction_ != null )
 		{
-			Tree.Save();
+			Tree.SaveFile();
 		}
 
 		textAction_ = null;

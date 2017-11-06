@@ -15,7 +15,7 @@ public class ShortLineList : MonoBehaviour, IEnumerable<ShortLine>
 	public ShortLine ShortLinePrefab;
 	public float LineWidth = 200;
 	public float LineHeight = 30;
-	public float ClosedLineWidth = 10;
+	public float ClosedLineWidth = 5;
 	public float Gradation = 0.05f;
 
 	public Button OpenButton;
@@ -450,9 +450,9 @@ public class ShortLineList : MonoBehaviour, IEnumerable<ShortLine>
 
 		//AnimManager.AddShakeAnim(scrollRect_, 15.0f, 0.15f, 0.025f, ParamType.PositionY);
 
-		foreach( Tree tree in GameContext.Window.MainTabGroup )
+		foreach( TreeNote treeNote in GameContext.Window.MainTabGroup.TreeNotes )
 		{
-			tree.ActionManager.StartChain();
+			treeNote.Tree.ActionManager.StartChain();
 		}
 		foreach( Line line in doneLines )
 		{
@@ -468,9 +468,9 @@ public class ShortLineList : MonoBehaviour, IEnumerable<ShortLine>
 					InstantiateShortLine(line);
 				}));
 		}
-		foreach( Tree tree in GameContext.Window.MainTabGroup )
+		foreach( TreeNote treeNote in GameContext.Window.MainTabGroup.TreeNotes )
 		{
-			tree.ActionManager.EndChain();
+			treeNote.Tree.ActionManager.EndChain();
 		}
 	}
 	

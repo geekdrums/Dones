@@ -149,7 +149,7 @@ public class ShortLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragHa
 			{
 				BindedLine.IsVisible = true;
 			}
-			BindedLine.Tree.ScrollTo(BindedLine);
+			BindedLine.Tree.OwnerNote.ScrollTo(BindedLine);
 			BindedLine.Field.Select();
 			BindedLine.Field.IsFocused = true;
 		}
@@ -184,7 +184,7 @@ public class ShortLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragHa
 	public void Done()
 	{
 		Line line = BindedLine;
-		TreeNote treeNote = line.Tree as TreeNote;
+		TreeNote treeNote = line.Tree.OwnerNote as TreeNote;
 		line.Tree.ActionManager.Execute(new Action(
 			execute: () =>
 			{

@@ -22,9 +22,19 @@ public class Window : MonoBehaviour
 
 	public TabGroup MainTabGroup;
 
-	public TabButton TabButtonPrefab;
+	public NoteTabButton TabButtonPrefab;
 	public TreeNote TreeNotePrefab;
 	public LogNote LogNotePrefab;
+
+	public GameObject TabParent;
+	public GameObject NoteParent;
+	public GameObject LogNoteParent;
+
+	public RectTransform TreeNoteTransform;
+	public RectTransform LogNoteTransform;
+	public LogNoteTabButton LogTabButton;
+	public GameObject OpenLogNoteButton;
+	public GameObject CloseLogNoteButton;
 
 	public MenuButton FileMenu;
 	public GameObject RecentFilesSubMenu;
@@ -46,6 +56,7 @@ public class Window : MonoBehaviour
 	float currentScreenHeight_;
 	
 	List<string> recentOpenedFiles_ = new List<string>();
+	Stack<string> recentClosedFiles_ = new Stack<string>();
 	int numRecentFilesMenu = 0;
 	bool saveConfirmed_ = false;
 
@@ -109,7 +120,7 @@ public class Window : MonoBehaviour
 				if( GameContext.Config.FontSize < 20 )
 				{
 					GameContext.Config.FontSize += 1;
-					foreach( TreeNote treeNote in MainTabGroup )
+					foreach( TreeNote treeNote in MainTabGroup.TreeNotes )
 					{
 						treeNote.OnFontSizeChanged();
 					}
@@ -124,7 +135,7 @@ public class Window : MonoBehaviour
 				if( GameContext.Config.FontSize > 12 )
 				{
 					GameContext.Config.FontSize -= 1;
-					foreach( TreeNote treeNote in MainTabGroup )
+					foreach( TreeNote treeNote in MainTabGroup.TreeNotes )
 					{
 						treeNote.OnFontSizeChanged();
 					}
@@ -135,6 +146,17 @@ public class Window : MonoBehaviour
 				}
 			}
 		}
+		if( ctrl && shift )
+		{
+			if( Input.GetKeyDown(KeyCode.T) && recentClosedFiles_.Count > 0 )
+			{
+				LoadNote(recentClosedFiles_.Pop(), true);
+			}
+		}
+		if( Input.GetKeyDown(KeyCode.F5) && MainTabGroup.ActiveNote != null )
+		{
+			MainTabGroup.ActiveNote.ReloadNote();
+		}
 
 		if(	currentScreenWidth_ != UnityEngine.Screen.width )
 		{
@@ -143,7 +165,10 @@ public class Window : MonoBehaviour
 		}
 		if( currentScreenHeight_ != UnityEngine.Screen.height )
 		{
-			MainTabGroup.UpdateVerticalLayout();
+			if( MainTabGroup.ActiveNote != null )
+			{
+				MainTabGroup.ActiveNote.UpdateVerticalLayout();
+			}
 			currentScreenHeight_ = UnityEngine.Screen.height;
 		}
 	}
@@ -152,9 +177,9 @@ public class Window : MonoBehaviour
 	{
 		if( GameContext.Config.IsAutoSave )
 		{
-			foreach( TreeNote tree in MainTabGroup )
+			foreach( TreeNote tree in MainTabGroup.TreeNotes )
 			{
-				tree.Save();
+				tree.SaveNote();
 				if( GameContext.Config.DoBackUp )
 				{
 					tree.DeleteBackup();
@@ -166,9 +191,9 @@ public class Window : MonoBehaviour
 			if( saveConfirmed_ == false )
 			{
 				saveConfirmed_ = true;
-				foreach( TreeNote tree in MainTabGroup )
+				foreach( TreeNote treeNote in MainTabGroup.TreeNotes )
 				{
-					if( tree.IsEdited || tree.LogNote.IsEdited )
+					if( treeNote.IsEdited || treeNote.LogNote.IsEdited )
 					{
 						GameContext.Window.ModalDialog.Show("ファイルへの変更を保存しますか？", this.CloseConfirmCallback);
 						UnityEngine.Application.CancelQuit();
@@ -223,7 +248,7 @@ public class Window : MonoBehaviour
 			{
 				if( path.EndsWith(".dtml") && File.Exists(path) )
 				{
-					LoadTree(path, isActive);
+					LoadNote(path, isActive);
 					isActive = false;
 				}
 			}
@@ -239,32 +264,38 @@ public class Window : MonoBehaviour
 
 	public void NewFile()
 	{
-		MainTabGroup.NewFile();
+		NewNote();
 
 		FileMenu.Close();
 	}
 
 	public void Save()
 	{
-		MainTabGroup.Save();
+		if( MainTabGroup.ActiveNote != null )
+		{
+			MainTabGroup.ActiveNote.SaveNote();
+		}
 
 		FileMenu.Close();
 	}
 
 	public void SaveAs()
 	{
-		MainTabGroup.SaveAs();
+		if( MainTabGroup.ActiveNote != null )
+		{
+			MainTabGroup.ActiveNote.SaveAs();
+		}
 
 		FileMenu.Close();
 	}
 
 	public void SaveAll()
 	{
-		foreach( TreeNote tree in MainTabGroup )
+		foreach( TreeNote treeNote in MainTabGroup.TreeNotes )
 		{
-			if( tree.IsEdited )
+			if( treeNote.IsEdited )
 			{
-				tree.Save();
+				treeNote.SaveNote();
 			}
 		}
 	}
@@ -292,7 +323,7 @@ public class Window : MonoBehaviour
 
 	public void LoadRecentFile(int index)
 	{
-		LoadTree(recentOpenedFiles_[index], true);
+		LoadNote(recentOpenedFiles_[index], true);
 		FileMenu.Close();
 	}
 
@@ -310,24 +341,78 @@ public class Window : MonoBehaviour
 		}
 	}
 
-	void LoadTree(string path, bool isActive)
+	public void AddRecentClosedFiles(string path)
+	{
+		path = path.Replace('\\', '/');
+		recentClosedFiles_.Push(path);
+	}
+
+	void LoadNote(string path, bool isActive)
 	{
 		AddRecentOpenedFiles(path);
-		MainTabGroup.LoadTree(path, isActive);
+
+		foreach( TreeNote existTree in MainTabGroup.TreeNotes )
+		{
+			if( existTree.File != null && existTree.File.FullName.Replace('\\', '/') == path.Replace('\\', '/') )
+			{
+				if( existTree.IsActive == false )
+				{
+					existTree.IsActive = true;
+				}
+				return;
+			}
+		}
+
+		NoteTabButton tab = Instantiate(TabButtonPrefab.gameObject, TabParent.transform).GetComponent<NoteTabButton>();
+		TreeNote treeNote = Instantiate(TreeNotePrefab.gameObject, NoteParent.transform).GetComponent<TreeNote>();
+		LogNote logNote = Instantiate(LogNotePrefab.gameObject, LogNoteParent.transform).GetComponent<LogNote>();
+
+		MainTabGroup.OnTabCreated(tab);
+
+		treeNote.LoadNote(path, tab, logNote);
+		treeNote.IsActive = isActive;
+
+	}
+
+	void NewNote()
+	{
+		NoteTabButton tab = Instantiate(TabButtonPrefab.gameObject, TabParent.transform).GetComponent<NoteTabButton>();
+		TreeNote treeNote = Instantiate(TreeNotePrefab.gameObject, NoteParent.transform).GetComponent<TreeNote>();
+		LogNote logNote = Instantiate(LogNotePrefab.gameObject, LogNoteParent.transform).GetComponent<LogNote>();
+
+		MainTabGroup.OnTabCreated(tab);
+
+		treeNote.NewNote(tab, logNote);
 	}
 
 	#endregion
 
 
 	#region events
-	
+
 	public void OnHeaderWidthChanged()
 	{
 		MainTabGroup.UpdateHorizontalLayout();
 	}
 
+	public void OpenLogNote()
+	{
+		if( MainTabGroup.ActiveNote != null )
+		{
+			MainTabGroup.ActiveNote.OpenLogNote();
+		}
+	}
+
+	public void CloseLogNote()
+	{
+		if( MainTabGroup.ActiveNote != null )
+		{
+			MainTabGroup.ActiveNote.CloseLogNote();
+		}
+	}
+
 	#endregion
-	
+
 
 
 	#region settings save / load
@@ -382,24 +467,25 @@ public class Window : MonoBehaviour
 			case Settings.InitialFiles:
 				if( text.EndsWith(".dtml") && File.Exists(text) )
 				{
-					LoadTree(text, isActive: MainTabGroup.ActiveNote == null);
+					LoadNote(text, isActive: MainTabGroup.ActiveNote == null);
 				}
 				break;
 			case Settings.LogTab:
 				string[] tabparams = text.Split(',');
-				for( int i = 0; i < MainTabGroup.Count; ++i )
+				foreach( TreeNote treeNote in MainTabGroup.TreeNotes )
 				{
-					if( MainTabGroup[i].TitleText == tabparams[0] )
+					if( treeNote.Tree.TitleText == tabparams[0] )
 					{
-						MainTabGroup[i].LogNote.OpenRatio = float.Parse(tabparams[2].Remove(0, " ratio=".Length));
-						MainTabGroup[i].LogNote.IsOpended = tabparams[1].EndsWith("open");
-						MainTabGroup[i].Tab.UpdateTitleText();
-						MainTabGroup[i].Tab.UpdateColor();
+						treeNote.LogNote.OpenRatio = float.Parse(tabparams[2].Remove(0, " ratio=".Length));
+						treeNote.LogNote.IsOpended = tabparams[1].EndsWith("open");
 						break;
 					}
 				}
-				MainTabGroup.UpdateVerticalLayout();
-				MainTabGroup.UpdateLogTabButtons();
+				if( MainTabGroup.ActiveNote != null )
+				{
+					MainTabGroup.ActiveNote.UpdateVerticalLayout();
+					MainTabGroup.ActiveNote.LogNote.UpdateLogTabButtons();
+				}
 				break;
 			case Settings.RecentFiles:
 				if( text.EndsWith(".dtml") && File.Exists(text) )
@@ -419,7 +505,7 @@ public class Window : MonoBehaviour
 				break;
 			case Settings.FontSize:
 				GameContext.Config.FontSize = int.Parse(text);
-				foreach( TreeNote treeNote in MainTabGroup )
+				foreach( TreeNote treeNote in MainTabGroup.TreeNotes )
 				{
 					treeNote.OnFontSizeChanged();
 				}
@@ -434,10 +520,6 @@ public class Window : MonoBehaviour
 				}
 				break;
 			}
-		}
-		if( MainTabGroup.ActiveNote == null )
-		{
-			NewFile();
 		}
 		reader.Close();
 	}
@@ -455,7 +537,7 @@ public class Window : MonoBehaviour
 		StreamWriter writer = new StreamWriter(settingFile_.FullName, append: false);
 
 		writer.WriteLine(SettingsTags[(int)Settings.InitialFiles]);
-		foreach( TreeNote tree in MainTabGroup )
+		foreach( TreeNote tree in MainTabGroup.TreeNotes )
 		{
 			if( tree.File != null )
 			{
@@ -463,7 +545,7 @@ public class Window : MonoBehaviour
 			}
 		}
 		writer.WriteLine(SettingsTags[(int)Settings.LogTab]);
-		foreach( TreeNote tree in MainTabGroup )
+		foreach( TreeNote tree in MainTabGroup.TreeNotes )
 		{
 			if( tree.File != null )
 			{
@@ -596,7 +678,7 @@ public class Window : MonoBehaviour
 					{
 						if( path.EndsWith(".dtml") )
 						{
-							LoadTree(path, isActive);
+							LoadNote(path, isActive);
 							isActive = false;
 						}
 					}

@@ -425,19 +425,6 @@ public class LineField : CustomInputField
 						KeyPressed(processingEvent);
 					}
 					break;
-				case KeyCode.M:
-					if( ctrlOnly )
-					{
-						if( BindedLine.Count > 0 )
-						{
-							BindedLine.Tree.OnFoldUpdated(BindedLine, !BindedLine.IsFolded);
-						}
-						else if( BindedLine.Parent.Parent != null )
-						{
-							BindedLine.Tree.OnFoldUpdated(BindedLine.Parent, true);
-						}
-					}
-					break;
 				case KeyCode.T:
 					if( ctrlOnly && BindedLine.Tree.HasSelection == false )
 					{
