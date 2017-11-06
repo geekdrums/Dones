@@ -348,6 +348,12 @@ public class Line : IEnumerable<Line>
 		lastTextActionTime_ = Time.time;
 
 		text_ = newText;
+#if UNITY_EDITOR
+		if( Binding != null )
+		{
+			Binding.gameObject.name = text_;
+		}
+#endif
 
 		if( IsDone || IsOnList || IsLinkText )
 		{

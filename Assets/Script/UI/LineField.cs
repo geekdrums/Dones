@@ -98,6 +98,9 @@ public class LineField : CustomInputField
 		m_Text = text;
 		//BindedLine.CheckIsComment();
 		UpdateLabel();
+#if UNITY_EDITOR
+		gameObject.name = text;
+#endif
 		if( BindedLine.IsDone || BindedLine.IsOnList || BindedLine.IsLinkText ) OnTextLengthChanged();
 	}
 
