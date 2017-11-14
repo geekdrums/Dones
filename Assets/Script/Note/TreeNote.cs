@@ -58,6 +58,8 @@ public class TreeNote : Note
 
 	protected override void Update()
 	{
+		base.Update();
+
 		bool ctrl = Input.GetKey(KeyCode.LeftControl);
 		bool shift = Input.GetKey(KeyCode.LeftShift);
 		bool alt = Input.GetKey(KeyCode.LeftAlt);
