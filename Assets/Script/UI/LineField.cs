@@ -37,27 +37,15 @@ public class LineField : CustomInputField
 	#endregion
 
 
-	#region unity events
+	#region public functions
 
-	// Use this for initialization
-	protected override void Awake()
+	public void Initialize()
 	{
-		base.Awake();
 		strikeLine_ = GetComponentInChildren<UIGaugeRenderer>(includeInactive: true);
 		checkMark_ = textComponent.transform.Find("Check").GetComponent<CheckMark>();
 		listMark_ = textComponent.transform.Find("Mark").GetComponent<UIMidairPrimitive>();
 	}
 
-	// Update is called once per frame
-	void Update()
-	{
-	}
-
-	#endregion
-
-
-	#region public functions
-	
 	public void DeleteSelection()
 	{
 		if( caretPositionInternal == caretSelectPositionInternal )

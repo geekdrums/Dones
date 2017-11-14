@@ -48,7 +48,7 @@ public class DateUI : MonoBehaviour {
 	{
 		date_ = date;
 		SetDate(date_);
-		SetColor(LogNote.ToColor(date_));
+		SetColor(DiaryNoteBase.ToColor(date_));
 		GetComponentInParent<LogTree>().OnDateChanged(date);
 	}
 

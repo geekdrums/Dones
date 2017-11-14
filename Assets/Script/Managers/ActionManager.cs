@@ -23,6 +23,7 @@ public class ActionManager
 	public event EventHandler<ActionEventArgs> Executed;
 	public event EventHandler ChainStarted;
 	public event EventHandler ChainEnded;
+	public bool IsChaining { get { return chainStack_.Count > 0; } }
 
 	public void Execute(IAction action)
 	{

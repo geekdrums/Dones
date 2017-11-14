@@ -454,8 +454,13 @@ public class Line : IEnumerable<Line>
 
 	public void BackToHeap()
 	{
-		fieldSubscription_.Dispose();
-		toggleSubscription_.Dispose();
+		if( fieldSubscription_ != null )
+		{
+			fieldSubscription_.Dispose();
+			toggleSubscription_.Dispose();
+			fieldSubscription_ = null;
+			toggleSubscription_ = null;
+		}
 		Tree.BackToHeap(this);
 		BindState = EBindState.WeakBind;
 	}

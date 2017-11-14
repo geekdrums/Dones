@@ -551,6 +551,11 @@ public class Tree : MonoBehaviour
 	protected void actionManager__ChainEnded(object sender, EventArgs e)
 	{
 		ResumeLayout();
+
+		if( IsEdited == false )
+		{
+			IsEdited = true;
+		}
 	}
 
 	protected void actionManager__Executed(object sender, ActionEventArgs e)
@@ -566,7 +571,7 @@ public class Tree : MonoBehaviour
 			ownerNote_.UpdateLayoutElement();
 		}
 
-		if( IsEdited == false )
+		if( actionManager_.IsChaining == false && IsEdited == false )
 		{
 			IsEdited = true;
 		}
@@ -1464,6 +1469,7 @@ public class Tree : MonoBehaviour
 			{
 				field = Instantiate(FieldPrefab.gameObject, this.transform).GetComponent<LineField>();
 				field.gameObject.SetActive(false);
+				field.Initialize();
 				heapFields_.Add(field);
 			}
 		}
@@ -1810,6 +1816,7 @@ public class Tree : MonoBehaviour
 		ResumeLayout();
 		rootLine_.AdjustFontSizeRecursive(GameContext.Config.FontSize, GameContext.Config.HeightPerLine);
 		IsEdited = false;
+		actionManager_.Clear();
 	}
 
 	public void ReloadFile()
@@ -1828,7 +1835,7 @@ public class Tree : MonoBehaviour
 				{
 					GameContext.Window.LineList.RemoveLine(line);
 				}
-				BackToHeap(line);
+				line.BackToHeap();
 			}
 			rootLine_ = null;
 			focusedLine_ = null;

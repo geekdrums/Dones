@@ -13,7 +13,7 @@ using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
 // Window - [ LogNote ] - LogTree - Line
-public class LogNote : Note
+public class LogNote : DiaryNoteBase
 {
 	public int LoadDateCount = 7;
 	public GameObject LogTreePrefab;
@@ -66,81 +66,9 @@ public class LogNote : Note
 	private bool isOpended_ = false;
 
 	public string TitleText { get { return treeNote_ != null ? treeNote_.Tree.TitleText.Replace(".dtml", ".dones") : ""; } }
-
-	public bool IsEdited
-	{
-		get
-		{
-			foreach( LogTree logTree in logTrees_ )
-			{
-				if( logTree.IsEdited )
-					return true;
-			}
-			return false;
-		}
-	}
-
-	List<LogTree> logTrees_ = new List<LogTree>();
-	DateTime today_;
-	DateTime endDate_;
-
 	
 
 	#region input
-
-	public void SubscribeKeyInput()
-	{
-		foreach( LogTree logTree in logTrees_ )
-		{
-			logTree.SubscribeKeyInput();
-		}
-	}
-
-	public void OnOverflowArrowInput(LogTree tree, KeyCode key)
-	{
-		int index = logTrees_.IndexOf(tree);
-		switch(key)
-		{
-		case KeyCode.DownArrow:
-			{
-				Line next = (index < logTrees_.Count - 1 ? logTrees_[index + 1].RootLine[0] : null);
-				if( next != null )
-				{
-					next.Field.IsFocused = true;
-				}
-			}
-			break;
-		case KeyCode.UpArrow:
-			{
-				Line prev = (index > 0 ? logTrees_[index - 1].RootLine.LastVisibleLine : null);
-				if( prev != null )
-				{
-					prev.Field.IsFocused = true;
-				}
-			}
-			break;
-		case KeyCode.RightArrow:
-			{
-				Line next = (index < logTrees_.Count - 1 ? logTrees_[index + 1].RootLine[0] : null);
-				if( next != null )
-				{
-					next.Field.CaretPosision = 0;
-					next.Field.IsFocused = true;
-				}
-			}
-			break;
-		case KeyCode.LeftArrow:
-			{
-				Line prev = (index > 0 ? logTrees_[index - 1].RootLine.LastVisibleLine : null);
-				if( prev != null )
-				{
-					prev.Field.CaretPosision = prev.TextLength;
-					prev.Field.IsFocused = true;
-				}
-			}
-			break;
-		}
-	}
 
 	public void OnDoneChanged(Line line)
 	{
@@ -222,19 +150,6 @@ public class LogNote : Note
 		TreeNote.Tab.UpdateTitleText();
 		TreeNote.Tab.UpdateColor();
 	}
-
-	public void OnFontSizeChanged()
-	{
-		foreach( LogTree logTree in logTrees_ )
-		{
-			logTree.RootLine.AdjustFontSizeRecursive(GameContext.Config.FontSize, GameContext.Config.HeightPerLine);
-			logTree.UpdateLayoutElement();
-		}
-		if( gameObject.activeInHierarchy )
-		{
-			UpdateLayoutElement();
-		}
-	}
 	
 	public void OnEditChanged(object sender, EventArgs e)
 	{
@@ -296,7 +211,7 @@ public class LogNote : Note
 		LogTabButton.Text = TitleText;
 	}
 
-	public void LoadUntil(DateTime endDate)
+	public override void LoadUntil(DateTime endDate)
 	{
 		if( treeNote_.File == null ) return;
 
@@ -399,33 +314,6 @@ public class LogNote : Note
 			logTree.ReloadFile();
 		}
 		UpdateLayoutElement();
-	}
-
-	public void LoadMoreDay()
-	{
-		LoadUntil(endDate_.AddDays(-1));
-	}
-
-	public void LoadMoreWeek()
-	{
-		LoadUntil(endDate_.AddDays(-7));
-	}
-
-	public void LoadMoreMonth()
-	{
-		LoadUntil(endDate_.AddMonths(-1));
-	}
-
-	public static Color ToColor(DateTime date)
-	{
-		if( date.DayOfWeek == DayOfWeek.Sunday ) return GameContext.Config.AccentColor;
-		else if( date.DayOfWeek == DayOfWeek.Saturday ) return GameContext.Config.AccentColor;
-		else return GameContext.Config.TextColor;
-	}
-
-	public static string ToFileName(TreeNote treeNote, DateTime date)
-	{
-		return String.Format("{0}/{1}.dones/{1}{2}.dtml", treeNote.File.DirectoryName, treeNote.File.Name.Replace(".dtml", ""), date.ToString("-yyyy-MM-dd"));
 	}
 
 	#endregion

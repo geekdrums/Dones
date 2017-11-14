@@ -389,7 +389,7 @@ public class LogTree : Tree
 	{
 		if( file_ == null )
 		{
-			file_ = new FileInfo(LogNote.ToFileName(OwnerLogNote.TreeNote, date_));
+			file_ = new FileInfo(DiaryNoteBase.ToFileName(OwnerLogNote.TreeNote, date_));
 		}
 		if( file_.Exists == false )
 		{
