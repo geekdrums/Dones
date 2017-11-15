@@ -44,7 +44,7 @@ public class Note : MonoBehaviour
 			}
 		}
 
-		scrollRect_.enabled = Input.GetKey(KeyCode.LeftControl) == false;
+		scrollRect_.enabled = (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)) == false;
 	}
 
 

@@ -385,7 +385,7 @@ public class LogTree : Tree
 		}
 	}
 	
-	public void SaveLog()
+	public override void SaveFile()
 	{
 		if( file_ == null )
 		{
@@ -405,7 +405,7 @@ public class LogTree : Tree
 		{
 			Directory.CreateDirectory(folderName);
 		}
-		SaveFile();
+		base.SaveFile();
 	}
 
 	public void OnDateChanged(DateTime date)

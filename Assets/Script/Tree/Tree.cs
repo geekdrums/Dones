@@ -28,6 +28,7 @@ public class Tree : MonoBehaviour
 	protected Line focusedLine_;
 	protected Line selectionStartLine_, selectionEndLine_;
 	protected SortedList<int, Line> selectedLines_ = new SortedList<int, Line>();
+	protected Vector3 cachedMousePosition_;
 
 	protected List<LineField> heapFields_ = new List<LineField>();
 	protected ActionManager actionManager_;
@@ -143,9 +144,9 @@ public class Tree : MonoBehaviour
 	{
 		if( rootLine_ == null ) return;
 
-		bool ctrl = Input.GetKey(KeyCode.LeftControl);
-		bool shift = Input.GetKey(KeyCode.LeftShift);
-		bool alt = Input.GetKey(KeyCode.LeftAlt);
+		bool ctrl = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
+		bool shift = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+		bool alt = Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt);
 		bool ctrlOnly = ctrl && !alt && !shift;
 
 
@@ -202,11 +203,15 @@ public class Tree : MonoBehaviour
 //			}
 			else if( Input.GetKeyDown(KeyCode.Home) )
 			{
-				rootLine_[0].Field.IsFocused = true;
+				Line line = rootLine_[0];
+				line.Field.IsFocused = true;
+				OnFocused(line);
 			}
 			else if( Input.GetKeyDown(KeyCode.End) )
 			{
-				rootLine_.LastVisibleLine.Field.IsFocused = true;
+				Line line = rootLine_.LastVisibleLine;
+				line.Field.IsFocused = true;
+				OnFocused(line);
 			}
 		}
 		else if( Input.GetKeyDown(KeyCode.Tab) )
@@ -269,47 +274,53 @@ public class Tree : MonoBehaviour
 					selectionStartLine_ = focusedLine_;
 				}
 			}
+
+			cachedMousePosition_ = Input.mousePosition;
 		}
 		else if( Input.GetMouseButton(0) && selectionStartLine_ != null )
 		{
-			// マウス動かし中の選択動作
 			if( selectionEndLine_ == null )
 				selectionEndLine_ = selectionStartLine_;
 
-			// 現在の選択末尾から上に移動したか下に移動したかを見る
-			int moveSign = 0;
-			Rect rect = selectionEndLine_.Field.Rect;
-			if( rect.yMin > Input.mousePosition.y )
+			if( (cachedMousePosition_ - Input.mousePosition).magnitude > 2.0f )
 			{
-				moveSign = -1;
-			}
-			else if( rect.yMax < Input.mousePosition.y )
-			{
-				moveSign = 1;
-			}
-
-			// 移動していたら
-			if( moveSign != 0 )
-			{
-				foreach( Line line in selectionEndLine_.GetUntil(Input.mousePosition.y) )
+				// 現在の選択末尾から上に移動したか下に移動したかを見る
+				int moveSign = 0;
+				Rect rect = selectionEndLine_.Field.Rect;
+				if( rect.yMin > Input.mousePosition.y )
 				{
-					UpdateSelection(line, moveSign * SelectionSign >= 0/* 移動方向と選択方向が逆なら選択解除 */ || line == selectionStartLine_);
-					selectionEndLine_ = line;
+					moveSign = -1;
 				}
-				UpdateSelection(selectionEndLine_, true);
+				else if( rect.yMax < Input.mousePosition.y )
+				{
+					moveSign = 1;
+				}
+
+				// 移動していたら
+				if( moveSign != 0 )
+				{
+					foreach( Line line in selectionEndLine_.GetUntil(Input.mousePosition.y) )
+					{
+						UpdateSelection(line, moveSign * SelectionSign >= 0/* 移動方向と選択方向が逆なら選択解除 */ || line == selectionStartLine_);
+						selectionEndLine_ = line;
+					}
+					UpdateSelection(selectionEndLine_, true);
+				}
+
+				rect = selectionStartLine_.Field.Rect;
+				if( selectedLines_.Count == 1 && rect.Contains(Input.mousePosition) && Input.mousePosition.x - rect.x < selectionStartLine_.Field.GetTextRectLength() )
+				{
+					UpdateSelection(selectionStartLine_, false);
+				}
+				else if( selectedLines_.Count == 0 && rect.Contains(Input.mousePosition)
+					&& selectionStartLine_.Field.selectionFocusPosition != selectionStartLine_.Field.selectionAnchorPosition
+					&& Input.mousePosition.x - rect.x > selectionStartLine_.Field.GetTextRectLength() )
+				{
+					UpdateSelection(selectionStartLine_, true);
+				}
 			}
 
-			rect = selectionStartLine_.Field.Rect;
-			if( selectedLines_.Count == 1 && rect.Contains(Input.mousePosition) && Input.mousePosition.x - rect.x < selectionStartLine_.Field.GetTextRectLength() )
-			{
-				UpdateSelection(selectionStartLine_, false);
-			}
-			else if( selectedLines_.Count == 0 && rect.Contains(Input.mousePosition)
-				&& selectionStartLine_.Field.selectionFocusPosition != selectionStartLine_.Field.selectionAnchorPosition
-				&& Input.mousePosition.x - rect.x > selectionStartLine_.Field.GetTextRectLength() )
-			{
-				UpdateSelection(selectionStartLine_, true);
-			}
+			cachedMousePosition_ = Input.mousePosition;
 		}
 		else if( Input.GetMouseButtonUp(0) && HasSelection == false )
 		{
@@ -352,7 +363,7 @@ public class Tree : MonoBehaviour
 
 	public bool HasSelection { get { return selectedLines_.Count > 0; } }
 
-	protected void UpdateSelection(Line line, bool isSelected)
+	public void UpdateSelection(Line line, bool isSelected)
 	{
 		line.Field.IsSelected = isSelected;
 		if( isSelected && selectedLines_.Values.Contains(line) == false )
@@ -618,6 +629,20 @@ public class Tree : MonoBehaviour
 				.Subscribe(_ => OnThrottleInput(key))
 			);
 		}
+
+		IObservable<double> pointerIntervalObservable =
+			this.LateUpdateAsObservable().Where(_ => Input.GetMouseButtonDown(0))
+				.TimeInterval()
+				.Select(t => t.Interval.TotalSeconds);
+
+		pointerIntervalObservable.Buffer(2, 1)
+			.Where(list => list[0] > GameContext.Config.DoubleClickInterval)
+			.Where(list => list.Count > 1 ? list[1] <= GameContext.Config.DoubleClickInterval : false)
+			.Subscribe(_ => OnDoubleClick()).AddTo(this);
+		pointerIntervalObservable.Buffer(3, 1)
+			.Where(list => list[0] > GameContext.Config.DoubleClickInterval)
+			.Where(list => list.Count > 2 && list[1] <= GameContext.Config.DoubleClickInterval && list[2] <= GameContext.Config.DoubleClickInterval)
+			.Subscribe(_ => OnTripleClick()).AddTo(this);
 	}
 
 	protected void OnThrottleInput(KeyCode key)
@@ -639,7 +664,7 @@ public class Tree : MonoBehaviour
 		case KeyCode.UpArrow:
 		case KeyCode.RightArrow:
 		case KeyCode.LeftArrow:
-			if( Input.GetKey(KeyCode.LeftShift) ) OnShiftArrowInput(key);
+			if( Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift) ) OnShiftArrowInput(key);
 			else OnArrowInput(key);
 			break;
 		}
@@ -1058,7 +1083,7 @@ public class Tree : MonoBehaviour
 		{
 		case KeyCode.DownArrow:
 		case KeyCode.UpArrow:
-			if( Input.GetKey(KeyCode.LeftAlt) )
+			if( Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt) )
 			{
 				// 上下の兄弟と交換
 				Line src = focusedLine_;
@@ -1075,16 +1100,16 @@ public class Tree : MonoBehaviour
 						));
 				}
 			}
-			else if( Input.GetKey(KeyCode.LeftControl) )
+			else if( Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl) )
 			{
-				if( Input.GetKey(KeyCode.LeftAlt) )
-				{
-					OnAllFoldUpdated(key == KeyCode.UpArrow);
-				}
-				else
-				{
+				//if( Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt) )
+				//{
+				//	OnAllFoldUpdated(key == KeyCode.UpArrow);
+				//}
+				//else
+				//{
 					OnFoldUpdated(focusedLine_, key == KeyCode.UpArrow);
-				}
+				//}
 			}
 			else
 			{
@@ -1234,6 +1259,22 @@ public class Tree : MonoBehaviour
 		actionManager_.EndChain();
 	}
 
+	public void OnDoubleClick()
+	{
+		if( focusedLine_ != null )
+		{
+			focusedLine_.Field.OnDoubleClick();
+		}
+	}
+
+	public void OnTripleClick()
+	{
+		if( focusedLine_ != null )
+		{
+			UpdateSelection(focusedLine_, true);
+		}
+	}
+
 	#endregion
 
 
@@ -1256,7 +1297,7 @@ public class Tree : MonoBehaviour
 	{
 		if( HasSelection )
 		{
-			bool appendTag = Input.GetKey(KeyCode.LeftShift) == false;
+			bool appendTag = (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)) == false;
 			int ignoreLevel = selectedLines_.Values[0].Level;
 			StringBuilder clipboardLines = new StringBuilder();
 			foreach( Line line in selectedLines_.Values )
@@ -1738,7 +1779,7 @@ public class Tree : MonoBehaviour
 		SaveFile();
 	}
 
-	public void SaveFile()
+	public virtual void SaveFile()
 	{
 		StringBuilder builder = new StringBuilder();
 		foreach( Line line in rootLine_.GetAllChildren() )

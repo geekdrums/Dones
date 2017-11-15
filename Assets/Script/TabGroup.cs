@@ -61,15 +61,15 @@ public class TabGroup : MonoBehaviour, IEnumerable<ITabButton>
 	void Update()
 	{
 		if( activeTab_ == null ) return;
-
-		bool ctrl = Input.GetKey(KeyCode.LeftControl);
-		bool shift = Input.GetKey(KeyCode.LeftShift);
-		bool alt = Input.GetKey(KeyCode.LeftAlt);
+		
+		bool ctrl = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
+		bool shift = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+		bool alt = Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt);
 		bool ctrlOnly = ctrl && !alt && !shift;
 
 		if( ctrlOnly )
 		{
-			if( Input.GetKeyDown(KeyCode.LeftArrow) && Input.GetKey(KeyCode.LeftCommand) )
+			if( (Input.GetKeyDown(KeyCode.LeftArrow) && Input.GetKey(KeyCode.LeftCommand)) || Input.GetKeyDown(KeyCode.PageUp) )
 			{
 				int index = tabButtons_.IndexOf(activeTab_);
 				if( index > 0 )
@@ -77,7 +77,7 @@ public class TabGroup : MonoBehaviour, IEnumerable<ITabButton>
 					tabButtons_[index - 1].IsOn = true;
 				}
 			}
-			else if( Input.GetKeyDown(KeyCode.RightArrow) && Input.GetKey(KeyCode.LeftCommand) )
+			else if( (Input.GetKeyDown(KeyCode.RightArrow) && Input.GetKey(KeyCode.LeftCommand)) || Input.GetKeyDown(KeyCode.PageDown) )
 			{
 				int index = tabButtons_.IndexOf(activeTab_);
 				if( index < tabButtons_.Count - 1 )

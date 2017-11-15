@@ -21,7 +21,6 @@ public class ControlManager : MonoBehaviour {
 	{
 		KeyCode[] throttleKeys = new KeyCode[]
 		{
-			
 #if UNITY_EDITOR
 			KeyCode.Q,
 			KeyCode.U,
@@ -36,10 +35,10 @@ public class ControlManager : MonoBehaviour {
 		foreach( KeyCode key in throttleKeys )
 		{
 			// 最初の入力
-			updateStream.Where(x => Input.GetKey(KeyCode.LeftControl) && Input.GetKeyDown(key))
+			updateStream.Where(x => (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)) && Input.GetKeyDown(key))
 				.Merge(
 			// 押しっぱなしにした時の自動連打
-			updateStream.Where(x => Input.GetKey(KeyCode.LeftControl) && Input.GetKey(key))
+			updateStream.Where(x => (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)) && Input.GetKey(key))
 				.Delay(TimeSpan.FromSeconds(GameContext.Config.ArrowStreamDelayTime))
 				.ThrottleFirst(TimeSpan.FromSeconds(GameContext.Config.ArrowStreamIntervalTime))
 				)
@@ -57,7 +56,7 @@ public class ControlManager : MonoBehaviour {
 			{
 #if UNITY_EDITOR
 			case KeyCode.Q:
-				if( Input.GetKey(KeyCode.LeftShift) )
+				if( Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift) )
 				{
 					GameContext.CurrentActionManager.Redo();
 				}

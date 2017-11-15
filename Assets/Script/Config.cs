@@ -44,6 +44,9 @@ public class Config : MonoBehaviour
 	public Color ToggleColor;
 	public Color ToggleOpenedColor;
 
+	public string TimeFormat = "HH:mm";
+	public string DateFormat = "yyyy/M/d (ddd)";
+
 	// Use this for initialization
 	void Awake()
 	{

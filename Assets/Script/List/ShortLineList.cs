@@ -91,9 +91,9 @@ public class ShortLineList : MonoBehaviour, IEnumerable<ShortLine>
 	{
 		if( selectedLine_ == null ) return;
 
-		bool ctrl = Input.GetKey(KeyCode.LeftControl);
-		bool shift = Input.GetKey(KeyCode.LeftShift);
-		bool alt = Input.GetKey(KeyCode.LeftAlt);
+		bool ctrl = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
+		bool shift = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+		bool alt = Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt);
 		bool ctrlOnly = ctrl && !alt && !shift;
 		
 		List<ShortLine> list = selectedLine_.IsDone ? doneLines_ : lines_;

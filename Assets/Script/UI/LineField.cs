@@ -303,6 +303,12 @@ public class LineField : CustomInputField
 		}
 	}
 
+	public void OnDoubleClick()
+	{
+		caretSelectPositionInternal = 0;
+		caretPositionInternal = text.Length;
+	}
+
 	public override void OnDeselect(BaseEventData eventData)
 	{
 		base.OnDeselect(eventData);
@@ -417,6 +423,7 @@ public class LineField : CustomInputField
 					}
 					break;
 				case KeyCode.T:
+				case KeyCode.Semicolon:
 					if( ctrlOnly && BindedLine.Tree.HasSelection == false )
 					{
 						DateTime now = DateTime.Now;
@@ -424,7 +431,7 @@ public class LineField : CustomInputField
 						BindedLine.Tree.ActionManager.Execute(new Action(
 							execute: () =>
 							{
-								Paste(now.ToString("HH:mm"));
+								Paste(now.ToString(GameContext.Config.TimeFormat));
 							},
 							undo: () =>
 							{
@@ -434,6 +441,8 @@ public class LineField : CustomInputField
 					}
 					break;
 				case KeyCode.H:
+				case KeyCode.Colon:
+				case KeyCode.Equals://日本語キーボードだとこっちになってるらしい。どうしたものか。Configにするか。
 					if( ctrlOnly && BindedLine.Tree.HasSelection == false )
 					{
 						DateTime date = DateTime.Now;
@@ -441,7 +450,7 @@ public class LineField : CustomInputField
 						BindedLine.Tree.ActionManager.Execute(new Action(
 							execute: () =>
 							{
-								Paste(date.ToString("yyyy/M/d (ddd)"));
+								Paste(date.ToString(GameContext.Config.DateFormat));
 							},
 							undo: () =>
 							{
