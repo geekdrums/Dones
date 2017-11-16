@@ -94,6 +94,10 @@ public class Window : MonoBehaviour
 		LoadSettings();
 		LoadLineList();
 		MainTabGroup.UpdateLayoutAll();
+		foreach( TreeNote treeNote in MainTabGroup.TreeNotes )
+		{
+			treeNote.OnFontSizeChanged();
+		}
 	}
 
 	// Update is called once per frame
@@ -424,7 +428,6 @@ public class Window : MonoBehaviour
 		RecentFiles,
 		InitialDirectory,
 		ScreenSize,
-		FontSize,
 		IsToDoListOpened,
 		Count
 	}
@@ -435,7 +438,6 @@ public class Window : MonoBehaviour
 		"[recent files]",
 		"[initial files]",
 		"[screen]",
-		"[font size]",
 		"[todo list]"
 	};
 
@@ -462,63 +464,63 @@ public class Window : MonoBehaviour
 					break;
 				}
 			}
-			switch(setting)
+			try
 			{
-			case Settings.InitialFiles:
-				if( text.EndsWith(".dtml") && File.Exists(text) )
+				switch( setting )
 				{
-					LoadNote(text, isActive: MainTabGroup.ActiveNote == null);
-				}
-				break;
-			case Settings.LogTab:
-				string[] tabparams = text.Split(',');
-				foreach( TreeNote treeNote in MainTabGroup.TreeNotes )
-				{
-					if( treeNote.Tree.TitleText == tabparams[0] )
+				case Settings.InitialFiles:
+					if( text.EndsWith(".dtml") && File.Exists(text) )
 					{
-						treeNote.LogNote.OpenRatio = float.Parse(tabparams[2].Remove(0, " ratio=".Length));
-						treeNote.LogNote.IsOpended = tabparams[1].EndsWith("open");
-						break;
+						LoadNote(text, isActive: MainTabGroup.ActiveNote == null);
 					}
+					break;
+				case Settings.LogTab:
+					string[] tabparams = text.Split(',');
+					foreach( TreeNote treeNote in MainTabGroup.TreeNotes )
+					{
+						if( treeNote.Tree.TitleText == tabparams[0] )
+						{
+							treeNote.LogNote.OpenRatio = float.Parse(tabparams[2].Remove(0, " ratio=".Length));
+							treeNote.LogNote.IsOpended = tabparams[1].EndsWith("open");
+							break;
+						}
+					}
+					if( MainTabGroup.ActiveNote != null )
+					{
+						MainTabGroup.ActiveNote.UpdateVerticalLayout();
+						MainTabGroup.ActiveNote.LogNote.UpdateLogTabButtons();
+					}
+					break;
+				case Settings.RecentFiles:
+					if( text.EndsWith(".dtml") && File.Exists(text) )
+					{
+						AddRecentOpenedFiles(text);
+					}
+					break;
+				case Settings.InitialDirectory:
+					if( Directory.Exists(text) )
+					{
+						initialDirectory_ = text;
+					}
+					break;
+				case Settings.ScreenSize:
+					string[] size = text.Split(',');
+					UnityEngine.Screen.SetResolution(int.Parse(size[0]), int.Parse(size[1]), size[2] == "true");
+					break;
+				case Settings.IsToDoListOpened:
+					if( text == "open" )
+					{
+					}
+					else if( text == "close" )
+					{
+						LineList.Close();
+					}
+					break;
 				}
-				if( MainTabGroup.ActiveNote != null )
-				{
-					MainTabGroup.ActiveNote.UpdateVerticalLayout();
-					MainTabGroup.ActiveNote.LogNote.UpdateLogTabButtons();
-				}
-				break;
-			case Settings.RecentFiles:
-				if( text.EndsWith(".dtml") && File.Exists(text) )
-				{
-					AddRecentOpenedFiles(text);
-				}
-				break;
-			case Settings.InitialDirectory:
-				if( Directory.Exists(text) )
-				{
-					initialDirectory_ = text;
-				}
-				break;
-			case Settings.ScreenSize:
-				string[] size = text.Split(',');
-				UnityEngine.Screen.SetResolution(int.Parse(size[0]), int.Parse(size[1]), size[2] == "true");
-				break;
-			case Settings.FontSize:
-				GameContext.Config.FontSize = int.Parse(text);
-				foreach( TreeNote treeNote in MainTabGroup.TreeNotes )
-				{
-					treeNote.OnFontSizeChanged();
-				}
-				break;
-			case Settings.IsToDoListOpened:
-				if( text == "open" )
-				{
-				}
-				else if( text == "close" )
-				{
-					LineList.Close();
-				}
-				break;
+			}
+			catch(Exception e)
+			{
+				print(e.Message);
 			}
 		}
 		reader.Close();
@@ -564,8 +566,6 @@ public class Window : MonoBehaviour
 		}
 		writer.WriteLine(SettingsTags[(int)Settings.ScreenSize]);
 		writer.WriteLine(String.Format("{0},{1},{2}", UnityEngine.Screen.width, UnityEngine.Screen.height, UnityEngine.Screen.fullScreen ? "true" : "false"));
-		writer.WriteLine(SettingsTags[(int)Settings.FontSize]);
-		writer.WriteLine(GameContext.Config.FontSize);
 		writer.WriteLine(SettingsTags[(int)Settings.IsToDoListOpened]);
 		writer.WriteLine(LineList.IsOpened ? "open" : "close");
 

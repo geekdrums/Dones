@@ -157,8 +157,9 @@ public class TreeNote : Note
 			field.RectHeight = GameContext.Config.HeightPerLine;
 			field.OnTextLengthChanged();
 		}
-		UpdateLayoutElement();
 		logNote_.OnFontSizeChanged();
+		UpdateLayoutElement();
+		CheckScrollbarEnabled();
 	}
 
 	#endregion
@@ -245,8 +246,11 @@ public class TreeNote : Note
 
 	public override void UpdateLayoutElement()
 	{
-		layout_.preferredHeight = tree_.PreferredHeight;
-		contentSizeFitter_.SetLayoutVertical();
+		if( gameObject.activeInHierarchy )
+		{
+			layout_.preferredHeight = tree_.PreferredHeight;
+			contentSizeFitter_.SetLayoutVertical();
+		}
 	}
 
 	public override void ScrollTo(Line targetLine)

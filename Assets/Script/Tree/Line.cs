@@ -962,6 +962,18 @@ public class Line : IEnumerable<Line>
 		}
 	}
 
+	public Line NextUnkleLine
+	{
+		get
+		{
+			if( parent_ != null )
+			{
+				return parent_.NextSiblingOrUnkleLine;
+			}
+			return null;
+		}
+	}
+
 	public Line NextSiblingOrUnkleLine
 	{
 		get

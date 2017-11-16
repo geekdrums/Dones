@@ -59,10 +59,8 @@ public class Config : MonoBehaviour
 	{
 		GameContext.Config = this;
 		configFile_ = new FileInfo(System.Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + "/Dones/config.txt");
-
-#if !UNITY_EDITOR
+		
 		LoadConfig();
-#endif
 	}
 
 	// Update is called once per frame
@@ -89,6 +87,7 @@ public class Config : MonoBehaviour
 		DoBackUp,
 		TimeFormat,
 		DateFormat,
+		FontSize,
 		Count
 	}
 	static string[] ConfigTags = new string[(int)ConfigParams.Count] {
@@ -96,6 +95,7 @@ public class Config : MonoBehaviour
 		"[DoBackUp]",
 		"[TimeFormat]",
 		"[DateFormat]",
+		"[FontSize]",
 	};
 	void LoadConfig()
 	{
@@ -138,6 +138,9 @@ public class Config : MonoBehaviour
 			case ConfigParams.DateFormat:
 				DateFormat = text;
 				break;
+			case ConfigParams.FontSize:
+				int.TryParse(text, out FontSize);
+				break;
 			}
 		}
 
@@ -164,6 +167,8 @@ public class Config : MonoBehaviour
 		writer.WriteLine(TimeFormat);
 		writer.WriteLine(ConfigTags[(int)ConfigParams.DateFormat]);
 		writer.WriteLine(DateFormat);
+		writer.WriteLine(ConfigTags[(int)ConfigParams.FontSize]);
+		writer.WriteLine(FontSize);
 
 		writer.Flush();
 		writer.Close();

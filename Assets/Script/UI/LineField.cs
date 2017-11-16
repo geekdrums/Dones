@@ -532,7 +532,7 @@ public class LineField : CustomInputField
 					{
 						// process in ownerTree
 					}
-					else if( processingEvent.keyCode == KeyCode.None && BindedLine.Tree.HasSelection && processingEvent.character.ToString() != Line.TabString )
+					else if( ctrl == false && alt == false && processingEvent.keyCode == KeyCode.None && BindedLine.Tree.HasSelection && processingEvent.character.ToString() != Line.TabString )
 					{
 						LineField newField = BindedLine.Tree.DeleteSelection().Field;
 						newField.KeyPressed(processingEvent);

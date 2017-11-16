@@ -43,8 +43,6 @@ public class Note : MonoBehaviour
 				isScrollAnimating_ = false;
 			}
 		}
-
-		scrollRect_.enabled = (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)) == false;
 	}
 
 

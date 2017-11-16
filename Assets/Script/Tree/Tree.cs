@@ -1102,14 +1102,19 @@ public class Tree : MonoBehaviour
 			}
 			else if( Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl) )
 			{
-				//if( Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt) )
-				//{
-				//	OnAllFoldUpdated(key == KeyCode.UpArrow);
-				//}
-				//else
-				//{
+				if( focusedLine_.Count > 0 && (key == KeyCode.UpArrow) != focusedLine_.IsFolded )
+				{
 					OnFoldUpdated(focusedLine_, key == KeyCode.UpArrow);
-				//}
+				}
+				else
+				{
+					Line newFocus = key == KeyCode.UpArrow ? focusedLine_.Parent : focusedLine_.NextSiblingOrUnkleLine;
+					if( newFocus != null && newFocus != rootLine_ )
+					{
+						newFocus.Field.IsFocused = true;
+						OnFocused(newFocus);
+					}
+				}
 			}
 			else
 			{
