@@ -1,6 +1,11 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using System;
+using System.IO;
+using System.Xml;
+using System.Runtime.InteropServices;
+using System.Windows.Forms;
 
 public class Config : MonoBehaviour
 {
@@ -47,10 +52,17 @@ public class Config : MonoBehaviour
 	public string TimeFormat = "HH:mm";
 	public string DateFormat = "yyyy/M/d (ddd)";
 
+	FileInfo configFile_;
+
 	// Use this for initialization
 	void Awake()
 	{
 		GameContext.Config = this;
+		configFile_ = new FileInfo(System.Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + "/Dones/config.txt");
+
+#if !UNITY_EDITOR
+		LoadConfig();
+#endif
 	}
 
 	// Update is called once per frame
@@ -63,4 +75,99 @@ public class Config : MonoBehaviour
 	{
 		AnimInfoBase.overshoot = AnimOvershoot;
 	}
+
+	void OnApplicationQuit()
+	{
+		SaveConfig();
+	}
+
+	#region config save / load
+
+	enum ConfigParams
+	{
+		IsAutoSave,
+		DoBackUp,
+		TimeFormat,
+		DateFormat,
+		Count
+	}
+	static string[] ConfigTags = new string[(int)ConfigParams.Count] {
+		"[IsAutoSave]",
+		"[DoBackUp]",
+		"[TimeFormat]",
+		"[DateFormat]",
+	};
+	void LoadConfig()
+	{
+		if( configFile_.Exists == false )
+		{
+			return;
+		}
+
+		StreamReader reader = new StreamReader(configFile_.OpenRead());
+		string text = null;
+
+		ConfigParams configParam = ConfigParams.IsAutoSave;
+		while( (text = reader.ReadLine()) != null )
+		{
+			foreach( ConfigParams param in (ConfigParams[])Enum.GetValues(typeof(ConfigParams)) )
+			{
+				if( param == ConfigParams.Count ) break;
+				else if( ConfigTags[(int)param] == text )
+				{
+					configParam = param;
+					break;
+				}
+			}
+			text = reader.ReadLine();
+			while( text.StartsWith("//") )
+			{
+				text = reader.ReadLine();
+			}
+			switch( configParam )
+			{
+			case ConfigParams.IsAutoSave:
+				Boolean.TryParse(text, out IsAutoSave);
+				break;
+			case ConfigParams.DoBackUp:
+				Boolean.TryParse(text, out DoBackUp);
+				break;
+			case ConfigParams.TimeFormat:
+				TimeFormat = text;
+				break;
+			case ConfigParams.DateFormat:
+				DateFormat = text;
+				break;
+			}
+		}
+
+		reader.Close();
+	}
+
+	void SaveConfig()
+	{
+		if( configFile_.Exists == false )
+		{
+			if( Directory.Exists(configFile_.DirectoryName) == false )
+			{
+				Directory.CreateDirectory(configFile_.DirectoryName);
+			}
+		}
+
+		StreamWriter writer = new StreamWriter(configFile_.FullName);
+
+		writer.WriteLine(ConfigTags[(int)ConfigParams.IsAutoSave]);
+		writer.WriteLine(IsAutoSave.ToString());
+		writer.WriteLine(ConfigTags[(int)ConfigParams.DoBackUp]);
+		writer.WriteLine(DoBackUp.ToString());
+		writer.WriteLine(ConfigTags[(int)ConfigParams.TimeFormat]);
+		writer.WriteLine(TimeFormat);
+		writer.WriteLine(ConfigTags[(int)ConfigParams.DateFormat]);
+		writer.WriteLine(DateFormat);
+
+		writer.Flush();
+		writer.Close();
+	}
+
+	#endregion
 }

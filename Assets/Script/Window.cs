@@ -641,15 +641,15 @@ public class Window : MonoBehaviour
 	#region window title
 
 	// How can i change the title of the standalone player window? https://answers.unity3d.com/questions/148723/how-can-i-change-the-title-of-the-standalone-playe.html
-	[DllImport("user32.dll", EntryPoint = "SetWindowText")]
-	public static extern bool SetWindowText(System.IntPtr hwnd, System.String lpString);
+	[DllImport("user32.dll", EntryPoint = "SetWindowText", CharSet = CharSet.Unicode)]
+	public static extern bool SetWindowText(System.IntPtr hwnd, IntPtr lpString);
 
 	[DllImport("user32.dll")]
 	static extern System.IntPtr GetActiveWindow();
 
 	public void SetTitle(string text)
 	{
-		SetWindowText(GetActiveWindow(), text);
+		SetWindowText(GetActiveWindow(), Marshal.StringToHGlobalUni(text));
 	}
 
 	#endregion
