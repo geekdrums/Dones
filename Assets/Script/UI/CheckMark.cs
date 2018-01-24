@@ -21,6 +21,10 @@ public class CheckMark : MonoBehaviour {
 
 	public void SetPositionX(float x)
 	{
+		if( rect_ == null )
+		{
+			rect_ = GetComponent<RectTransform>();
+		}
 		Vector2 size = rect_.rect.size;
 		rect_.offsetMin = new Vector2(x, rect_.offsetMin.y);
 		rect_.offsetMax = rect_.offsetMin + size;

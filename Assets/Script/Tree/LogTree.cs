@@ -234,7 +234,7 @@ public class LogTree : Tree
 
 	protected override void OnOverflowArrowInput(KeyCode key)
 	{
-		OwnerLogNote.OnOverflowArrowInput(this, key);
+		(ownerNote_ as DiaryNoteBase).OnOverflowArrowInput(this, key);
 	}
 
 	protected override void OnCtrlDInput()
@@ -244,7 +244,7 @@ public class LogTree : Tree
 
 	protected override void OnCtrlSpaceInput()
 	{
-		if( focusedLine_ == null ) return;
+		if( focusedLine_ == null || OwnerLogNote == null ) return;
 
 		actionManager_.StartChain();
 		foreach( Line line in GetSelectedOrFocusedLines() )
@@ -341,7 +341,7 @@ public class LogTree : Tree
 
 	#region layout
 
-	public void UpdateLayoutElement()
+	public void UpdateLayoutElement(bool applyMinHeight = true)
 	{
 		if( layout_ == null )
 		{
@@ -354,7 +354,11 @@ public class LogTree : Tree
 			Line lastLine = rootLine_.LastVisibleLine;
 			if( lastLine != null && lastLine.Field != null )
 			{
-				layout_.preferredHeight = Math.Max(GameContext.Config.MinLogTreeHeight, -(lastLine.TargetAbsolutePosition.y - this.transform.position.y) + GameContext.Config.HeightPerLine * 1.0f);
+				layout_.preferredHeight = -(lastLine.TargetAbsolutePosition.y - this.transform.position.y) + GameContext.Config.HeightPerLine * 1.0f;
+				if( applyMinHeight )
+				{
+					layout_.preferredHeight = Math.Max(GameContext.Config.MinLogTreeHeight, layout_.preferredHeight);
+				}
 				contentSizeFitter_.SetLayoutVertical();
 			}
 		}
@@ -389,7 +393,20 @@ public class LogTree : Tree
 	{
 		if( file_ == null )
 		{
-			file_ = new FileInfo(DiaryNoteBase.ToFileName(OwnerLogNote.TreeNote, date_));
+			if( OwnerLogNote != null )
+			{ 
+				string folderName = OwnerLogNote.TreeNote.File.FullName.Replace(".dtml", ".dones");
+				if( Directory.Exists(folderName) == false )
+				{
+					Directory.CreateDirectory(folderName);
+				}
+				file_ = new FileInfo(DiaryNoteBase.ToFileName(OwnerLogNote.TreeNote, date_));
+			}
+			else
+			{
+				print("failed to save file.");
+				return;
+			}
 		}
 		if( file_.Exists == false )
 		{
@@ -400,27 +417,25 @@ public class LogTree : Tree
 				return;
 			}
 		}
-		string folderName = OwnerLogNote.TreeNote.File.FullName.Replace(".dtml", ".dones");
-		if( Directory.Exists(folderName) == false )
-		{
-			Directory.CreateDirectory(folderName);
-		}
 		base.SaveFile();
 	}
 
 	public void OnDateChanged(DateTime date)
 	{
-		date_ = date;
-
-		if( file_ != null )
+		if( OwnerLogNote != null )
 		{
-			file_.Delete();
-			file_ = null;
+			date_ = date;
+
+			if( file_ != null )
+			{
+				file_.Delete();
+				file_ = null;
+			}
+
+			SaveFile();
+
+			OwnerLogNote.SetSortedIndex(this);
 		}
-
-		SaveFile();
-
-		OwnerLogNote.SetSortedIndex(this);
 	}
 
 	#endregion

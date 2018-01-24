@@ -6,20 +6,11 @@ using UnityEngine.EventSystems;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
-public interface ITabButton
-{
-	bool IsOn { get; set; }
-	float Width { get; set; }
-	Vector2 TargetPosition { get; set; }
-	TabGroup OwnerTabGroup { get; set; }
-	GameObject gameObject { get; }
-}
-
-public class NoteTabButton : UnityEngine.UI.Button, IDragHandler, IBeginDragHandler, IEndDragHandler, ITabButton
+public class TabButton : UnityEngine.UI.Button, IDragHandler, IBeginDragHandler, IEndDragHandler
 {
 	#region params
 
-	public TreeNote BindedNote;
+	public Note BindedNote;
 	
 	public bool IsOn
 	{
@@ -153,12 +144,27 @@ public class NoteTabButton : UnityEngine.UI.Button, IDragHandler, IBeginDragHand
 
 	public void UpdateColor()
 	{
-		Background = isOn_ ? ( BindedNote.LogNote.IsFullArea ? GameContext.Config.DoneColor : GameContext.Config.ThemeColor ) : Color.white;
-		if( isOn_ )
+		if( BindedNote is TreeNote )
 		{
-			OwnerTabGroup.UnderBar.color = BindedNote.LogNote.IsFullArea ? GameContext.Config.DoneColor : GameContext.Config.ThemeColor;
+			TreeNote treeNote = BindedNote as TreeNote;
+			Background = isOn_ ? (treeNote.LogNote.IsFullArea ? GameContext.Config.DoneColor : GameContext.Config.ThemeColor) : Color.white;
+			if( isOn_ )
+			{
+				OwnerTabGroup.UnderBar.color = treeNote.LogNote.IsFullArea ? GameContext.Config.DoneColor : GameContext.Config.ThemeColor;
+			}
 		}
-		textComponent_.color = isOn_ ? Color.white : GameContext.Config.TextColor;
+		if( BindedNote is DiaryNote )
+		{
+			Background = isOn_ ? GameContext.Config.DiaryColor : Color.white;
+			if( isOn_ )
+			{
+				OwnerTabGroup.UnderBar.color = GameContext.Config.DiaryColor;
+			}
+		}
+		if( textComponent_ != null )
+		{
+			textComponent_.color = isOn_ ? Color.white : GameContext.Config.TextColor;
+		}
 	}
 
 	public void UpdateTitleText()

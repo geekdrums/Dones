@@ -20,16 +20,12 @@ public class TreeNote : Note
 	public Tree Tree { get { return tree_; } }
 	protected Tree tree_;
 
-	public NoteTabButton Tab { get { return tabButton_; } }
-	protected NoteTabButton tabButton_;
-	public bool IsActive { get { return (tabButton_ != null ? tabButton_.IsOn : false); } set { if( tabButton_ != null ) tabButton_.IsOn = value; } }
-
 	public LogNote LogNote { get { return logNote_; } }
 	protected LogNote logNote_;
 
 	public bool IsEdited { get { return tree_.IsEdited; } }
 	public FileInfo File { get { return tree_ != null ? tree_.File : null; } }
-	public string TitleText
+	public override string TitleText
 	{
 		get
 		{
@@ -90,38 +86,29 @@ public class TreeNote : Note
 
 	#region tab
 
-	public void OnTabSelected()
+	public override void OnTabSelected()
 	{
-		this.gameObject.SetActive(true);
+		base.OnTabSelected();
+
 		logNote_.gameObject.SetActive(true);
-		GameContext.CurrentActionManager = actionManager_;
-
-		UpdateLayoutElement();
 		logNote_.UpdateLayoutElement();
-
-		scrollRect_.verticalScrollbar.value = targetScrollValue_;
 		logNote_.OnTreeNoteSelected();
 
 		tree_.SubscribeKeyInput();
 		logNote_.SubscribeKeyInput();
 
-#if UNITY_STANDALONE_WIN
-		GameContext.Window.SetTitle(tree_.TitleText + " - Dones");
-#endif
-
 		GameContext.Window.LogTabButton.OwnerNote = this;
 	}
 
-	public void OnTabDeselected()
+	public override void OnTabDeselected()
 	{
-		this.gameObject.SetActive(false);
-		targetScrollValue_ = scrollRect_.verticalScrollbar.gameObject.activeInHierarchy ? scrollRect_.verticalScrollbar.value : 1.0f;
-
+		base.OnTabDeselected();
+		
 		logNote_.OnTreeNoteDeselected();
 		logNote_.gameObject.SetActive(false);
 	}
 
-	public void OnTabClosed()
+	public override void OnTabClosed()
 	{
 		List<ShortLine> removeList = new List<ShortLine>();
 		foreach( ShortLine shortLine in GameContext.Window.LineList )
@@ -148,6 +135,14 @@ public class TreeNote : Note
 		Destroy(logNote_.gameObject);
 	}
 
+	public override void OnBeginTabDrag()
+	{
+		if( Tree.FocusedLine != null )
+		{
+			Tree.FocusedLine.Field.IsFocused = false;
+		}
+	}
+
 	public void OnFontSizeChanged()
 	{
 		tree_.RootLine.AdjustFontSizeRecursive(GameContext.Config.FontSize, GameContext.Config.HeightPerLine);
@@ -166,24 +161,6 @@ public class TreeNote : Note
 
 
 	#region logtab
-
-	public void UpdateVerticalLayout()
-	{
-		RectTransform logNoteTransform = GameContext.Window.LogNoteTransform;
-		RectTransform treeNoteTransform = GameContext.Window.TreeNoteTransform;
-
-		GameContext.Window.LogTabButton.transform.parent.gameObject.SetActive(logNote_.IsOpended && logNote_.IsFullArea == false);
-
-		float logNoteRatio = logNote_.IsOpended ? logNote_.OpenRatio : 0.0f;
-		float height = Tab.OwnerTabGroup.NoteAreaTransform.rect.height;
-
-		treeNoteTransform.sizeDelta = new Vector2(treeNoteTransform.sizeDelta.x, height * (1.0f - logNoteRatio) - (logNoteRatio > 0.0f ? 40.0f : 0.0f));
-		logNoteTransform.sizeDelta = new Vector2(logNoteTransform.sizeDelta.x, height * logNoteRatio);
-		logNoteTransform.anchoredPosition = new Vector2(logNoteTransform.anchoredPosition.x, -height + logNoteTransform.sizeDelta.y);
-
-		CheckScrollbarEnabled();
-		logNote_.CheckScrollbarEnabled();
-	}
 
 	public void OnLogSplitLineDragging(object sender, PointerEventData eventData)
 	{
@@ -216,8 +193,7 @@ public class TreeNote : Note
 		}
 		else if( logNote_.OpenRatio >= 1 )
 		{
-			logNote_.UpdateLogTabButtons();
-			UpdateVerticalLayout();
+			GameContext.Window.UpdateVerticalLayout();
 		}
 	}
 
@@ -227,7 +203,7 @@ public class TreeNote : Note
 		{
 			logNote_.IsOpended = true;
 		}
-		UpdateVerticalLayout();
+		GameContext.Window.UpdateVerticalLayout();
 	}
 
 	public void CloseLogNote()
@@ -268,7 +244,7 @@ public class TreeNote : Note
 
 	#region file
 
-	public void NewNote(NoteTabButton tab, LogNote logNote)
+	public void NewNote(TabButton tab, LogNote logNote)
 	{
 		tabButton_ = tab;
 		logNote_ = logNote;
@@ -281,7 +257,7 @@ public class TreeNote : Note
 		logNote.LoadToday(this);
 	}
 
-	public void LoadNote(string path, NoteTabButton tab, LogNote logNote)
+	public void LoadNote(string path, TabButton tab, LogNote logNote)
 	{
 		tabButton_ = tab;
 		logNote_ = logNote;

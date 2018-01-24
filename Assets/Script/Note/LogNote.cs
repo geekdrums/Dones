@@ -15,7 +15,6 @@ using System.Windows.Forms;
 // Window - [ LogNote ] - LogTree - Line
 public class LogNote : DiaryNoteBase
 {
-	public int LoadDateCount = 7;
 	public GameObject LogTreePrefab;
 	public GameObject DateUIPrefab;
 	public DateUI EndDateUI;
@@ -27,8 +26,6 @@ public class LogNote : DiaryNoteBase
 	TreeNote treeNote_;
 
 	public LogNoteTabButton LogTabButton { get { return GameContext.Window.LogTabButton; } }
-	public GameObject OpenButton { get { return GameContext.Window.OpenLogNoteButton; } }
-	public GameObject CloseButton { get { return GameContext.Window.CloseLogNoteButton; } }
 
 	public float OpenRatio
 	{
@@ -51,7 +48,7 @@ public class LogNote : DiaryNoteBase
 				{
 					OpenRatio = 0.5f;
 				}
-				OnTabOpened();
+				OnAreaOpened();
 			}
 			else
 			{
@@ -59,13 +56,13 @@ public class LogNote : DiaryNoteBase
 				{
 					OpenRatio = 0.5f;
 				}
-				OnTabClosed();
+				OnAreaClosed();
 			}
 		}
 	}
 	private bool isOpended_ = false;
 
-	public string TitleText { get { return treeNote_ != null ? treeNote_.Tree.TitleText.Replace(".dtml", ".dones") : ""; } }
+	public override string TitleText { get { return treeNote_ != null ? treeNote_.Tree.TitleText.Replace(".dtml", ".dones") : ""; } }
 	
 
 	#region input
@@ -123,32 +120,15 @@ public class LogNote : DiaryNoteBase
 		targetScrollValue_ = scrollRect_.verticalScrollbar.gameObject.activeInHierarchy ? scrollRect_.verticalScrollbar.value : 1.0f;
 	}
 
-	public void OnTabOpened()
+	public void OnAreaOpened()
 	{
 		LoadUntil(today_.AddDays(-LoadDateCount));
-		UpdateLogTabButtons();
+		GameContext.Window.UpdateVerticalLayout();
 	}
 
-	public void OnTabClosed()
+	public void OnAreaClosed()
 	{
-		UpdateLogTabButtons();
-	}
-
-	public void UpdateLogTabButtons()
-	{
-		if( IsFullArea )
-		{
-			OpenButton.SetActive(false);
-			CloseButton.SetActive(true);
-		}
-		else if( IsOpended == false )
-		{
-			OpenButton.SetActive(true);
-			CloseButton.SetActive(false);
-		}
-		TreeNote.UpdateVerticalLayout();
-		TreeNote.Tab.UpdateTitleText();
-		TreeNote.Tab.UpdateColor();
+		GameContext.Window.UpdateVerticalLayout();
 	}
 	
 	public void OnEditChanged(object sender, EventArgs e)

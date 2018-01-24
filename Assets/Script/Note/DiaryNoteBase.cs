@@ -15,6 +15,8 @@ using System.Windows.Forms;
 // Window - [ LogNote ] - LogTree - Line
 public class DiaryNoteBase : Note
 {
+	public int LoadDateCount = 7;
+
 	public bool IsEdited
 	{
 		get
@@ -31,7 +33,7 @@ public class DiaryNoteBase : Note
 	protected List<LogTree> logTrees_ = new List<LogTree>();
 	protected DateTime today_;
 	protected DateTime endDate_;
-	
+
 	protected override void Awake()
 	{
 		base.Awake();

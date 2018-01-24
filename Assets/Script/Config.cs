@@ -32,6 +32,7 @@ public class Config : MonoBehaviour
 	public Color ThemeColor;
 	public Color AccentColor;
 	public Color DoneColor;
+	public Color DiaryColor;
 
 	public Color SelectionColor;
 	public Color TextColor;

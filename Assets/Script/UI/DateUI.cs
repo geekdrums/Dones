@@ -28,7 +28,7 @@ public class DateUI : MonoBehaviour {
 
 	public void AddDate()
 	{
-		GetComponentInChildren<LogNote>().AddDate(date_.AddDays(-1.0));
+		GetComponentInParent<LogNote>().AddDate(date_.AddDays(-1.0));
 		SetEnableAddDateButtton(false);
 	}
 
@@ -49,7 +49,7 @@ public class DateUI : MonoBehaviour {
 		date_ = date;
 		SetDate(date_);
 		SetColor(DiaryNoteBase.ToColor(date_));
-		GetComponentInParent<LogTree>().OnDateChanged(date);
+		GetComponentInChildren<LogTree>().OnDateChanged(date);
 	}
 
 	void SetDate(DateTime date)

@@ -22,9 +22,10 @@ public class Window : MonoBehaviour
 
 	public TabGroup MainTabGroup;
 
-	public NoteTabButton TabButtonPrefab;
+	public TabButton TabButtonPrefab;
 	public TreeNote TreeNotePrefab;
 	public LogNote LogNotePrefab;
+	public DiaryNote DiaryNotePrefab;
 
 	public GameObject TabParent;
 	public GameObject NoteParent;
@@ -93,6 +94,7 @@ public class Window : MonoBehaviour
 		yield return new WaitForEndOfFrame();
 		LoadSettings();
 		LoadLineList();
+		OpenDiary();	//test
 		MainTabGroup.UpdateLayoutAll();
 		foreach( TreeNote treeNote in MainTabGroup.TreeNotes )
 		{
@@ -157,9 +159,9 @@ public class Window : MonoBehaviour
 				LoadNote(recentClosedFiles_.Pop(), true);
 			}
 		}
-		if( Input.GetKeyDown(KeyCode.F5) && MainTabGroup.ActiveNote != null )
+		if( Input.GetKeyDown(KeyCode.F5) && MainTabGroup.ActiveTreeNote != null )
 		{
-			MainTabGroup.ActiveNote.ReloadNote();
+			MainTabGroup.ActiveTreeNote.ReloadNote();
 		}
 
 		if(	currentScreenWidth_ != UnityEngine.Screen.width )
@@ -169,10 +171,7 @@ public class Window : MonoBehaviour
 		}
 		if( currentScreenHeight_ != UnityEngine.Screen.height )
 		{
-			if( MainTabGroup.ActiveNote != null )
-			{
-				MainTabGroup.ActiveNote.UpdateVerticalLayout();
-			}
+			UpdateVerticalLayout();
 			currentScreenHeight_ = UnityEngine.Screen.height;
 		}
 	}
@@ -257,9 +256,9 @@ public class Window : MonoBehaviour
 				}
 			}
 
-			if( MainTabGroup.ActiveNote != null )
+			if( MainTabGroup.ActiveTreeNote != null )
 			{
-				initialDirectory_ = MainTabGroup.ActiveNote.File.Directory.FullName;
+				initialDirectory_ = MainTabGroup.ActiveTreeNote.File.Directory.FullName;
 			}
 		}
 
@@ -275,9 +274,9 @@ public class Window : MonoBehaviour
 
 	public void Save()
 	{
-		if( MainTabGroup.ActiveNote != null )
+		if( MainTabGroup.ActiveTreeNote != null )
 		{
-			MainTabGroup.ActiveNote.SaveNote();
+			MainTabGroup.ActiveTreeNote.SaveNote();
 		}
 
 		FileMenu.Close();
@@ -285,9 +284,9 @@ public class Window : MonoBehaviour
 
 	public void SaveAs()
 	{
-		if( MainTabGroup.ActiveNote != null )
+		if( MainTabGroup.ActiveTreeNote != null )
 		{
-			MainTabGroup.ActiveNote.SaveAs();
+			MainTabGroup.ActiveTreeNote.SaveAs();
 		}
 
 		FileMenu.Close();
@@ -367,7 +366,7 @@ public class Window : MonoBehaviour
 			}
 		}
 
-		NoteTabButton tab = Instantiate(TabButtonPrefab.gameObject, TabParent.transform).GetComponent<NoteTabButton>();
+		TabButton tab = Instantiate(TabButtonPrefab.gameObject, TabParent.transform).GetComponent<TabButton>();
 		TreeNote treeNote = Instantiate(TreeNotePrefab.gameObject, NoteParent.transform).GetComponent<TreeNote>();
 		LogNote logNote = Instantiate(LogNotePrefab.gameObject, LogNoteParent.transform).GetComponent<LogNote>();
 
@@ -380,13 +379,24 @@ public class Window : MonoBehaviour
 
 	void NewNote()
 	{
-		NoteTabButton tab = Instantiate(TabButtonPrefab.gameObject, TabParent.transform).GetComponent<NoteTabButton>();
+		TabButton tab = Instantiate(TabButtonPrefab.gameObject, TabParent.transform).GetComponent<TabButton>();
 		TreeNote treeNote = Instantiate(TreeNotePrefab.gameObject, NoteParent.transform).GetComponent<TreeNote>();
 		LogNote logNote = Instantiate(LogNotePrefab.gameObject, LogNoteParent.transform).GetComponent<LogNote>();
 
 		MainTabGroup.OnTabCreated(tab);
 
 		treeNote.NewNote(tab, logNote);
+	}
+
+	void OpenDiary()
+	{
+		TabButton tab = Instantiate(TabButtonPrefab.gameObject, TabParent.transform).GetComponent<TabButton>();
+		DiaryNote diaryNote = Instantiate(DiaryNotePrefab.gameObject, NoteParent.transform).GetComponent<DiaryNote>();
+
+		MainTabGroup.OnTabCreated(tab);
+
+		diaryNote.LoadDiary(tab);
+		diaryNote.IsActive = false;
 	}
 
 	#endregion
@@ -401,21 +411,64 @@ public class Window : MonoBehaviour
 
 	public void OpenLogNote()
 	{
-		if( MainTabGroup.ActiveNote != null )
+		if( MainTabGroup.ActiveTreeNote != null )
 		{
-			MainTabGroup.ActiveNote.OpenLogNote();
+			MainTabGroup.ActiveTreeNote.OpenLogNote();
 		}
 	}
 
 	public void CloseLogNote()
 	{
-		if( MainTabGroup.ActiveNote != null )
+		if( MainTabGroup.ActiveTreeNote != null )
 		{
-			MainTabGroup.ActiveNote.CloseLogNote();
+			MainTabGroup.ActiveTreeNote.CloseLogNote();
 		}
 	}
 
 	#endregion
+
+	#region layout
+
+	public void UpdateVerticalLayout()
+	{
+		float logNoteRatio = 0;
+		float height = MainTabGroup.NoteAreaTransform.rect.height;
+		TreeNote treeNote = MainTabGroup.ActiveTreeNote;
+		LogNote logNote = null;
+		if( treeNote != null )
+		{
+			logNote = treeNote.LogNote;
+			LogTabButton.transform.parent.gameObject.SetActive(logNote.IsOpended && logNote.IsFullArea == false);
+
+			logNoteRatio = logNote.IsOpended ? logNote.OpenRatio : 0.0f;
+			
+			if( logNote.IsFullArea )
+			{
+				OpenLogNoteButton.SetActive(false);
+				CloseLogNoteButton.SetActive(true);
+			}
+			else if( logNote.IsOpended == false )
+			{
+				OpenLogNoteButton.SetActive(true);
+				CloseLogNoteButton.SetActive(false);
+			}
+			treeNote.Tab.UpdateTitleText();
+			treeNote.Tab.UpdateColor();
+		}
+
+		TreeNoteTransform.sizeDelta = new Vector2(TreeNoteTransform.sizeDelta.x, height * (1.0f - logNoteRatio) - (logNoteRatio > 0.0f ? 40.0f : 0.0f));
+		LogNoteTransform.sizeDelta = new Vector2(LogNoteTransform.sizeDelta.x, height * logNoteRatio);
+		LogNoteTransform.anchoredPosition = new Vector2(LogNoteTransform.anchoredPosition.x, -height + LogNoteTransform.sizeDelta.y);
+
+		if( treeNote != null )
+		{
+			treeNote.CheckScrollbarEnabled();
+			logNote.CheckScrollbarEnabled();
+		}
+	}
+
+	#endregion
+
 
 
 
@@ -471,7 +524,7 @@ public class Window : MonoBehaviour
 				case Settings.InitialFiles:
 					if( text.EndsWith(".dtml") && File.Exists(text) )
 					{
-						LoadNote(text, isActive: MainTabGroup.ActiveNote == null);
+						LoadNote(text, isActive: MainTabGroup.ActiveTreeNote == null);
 					}
 					break;
 				case Settings.LogTab:
@@ -485,11 +538,7 @@ public class Window : MonoBehaviour
 							break;
 						}
 					}
-					if( MainTabGroup.ActiveNote != null )
-					{
-						MainTabGroup.ActiveNote.UpdateVerticalLayout();
-						MainTabGroup.ActiveNote.LogNote.UpdateLogTabButtons();
-					}
+					UpdateVerticalLayout();
 					break;
 				case Settings.RecentFiles:
 					if( text.EndsWith(".dtml") && File.Exists(text) )

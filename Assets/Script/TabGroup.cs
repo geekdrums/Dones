@@ -9,7 +9,7 @@ using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using System.Text;
 
-public class TabGroup : MonoBehaviour, IEnumerable<ITabButton>
+public class TabGroup : MonoBehaviour, IEnumerable<TabButton>
 {
 	#region editor params
 
@@ -23,11 +23,12 @@ public class TabGroup : MonoBehaviour, IEnumerable<ITabButton>
 
 	#region params
 
-	public ITabButton ActiveTab { get { return activeTab_; } }
-	public TreeNote ActiveNote { get { return activeTab_ is NoteTabButton ? (activeTab_ as NoteTabButton).BindedNote : null; } }
+	public TabButton ActiveTab { get { return activeTab_; } }
+	public Note ActiveNote { get { return activeTab_ != null ? activeTab_.BindedNote : null; } }
+	public TreeNote ActiveTreeNote { get { return activeTab_ != null && activeTab_.BindedNote != null ? activeTab_.BindedNote as TreeNote : null; } }
 
-	ITabButton activeTab_;
-	List<ITabButton> tabButtons_ = new List<ITabButton>();
+	TabButton activeTab_;
+	List<TabButton> tabButtons_ = new List<TabButton>();
 
 	float desiredTabGroupWidth_;
 	float currentTabWidth_;
@@ -36,11 +37,11 @@ public class TabGroup : MonoBehaviour, IEnumerable<ITabButton>
 	{
 		get
 		{
-			foreach( ITabButton tab in this )
+			foreach( TabButton tab in this )
 			{
-				if( tab is NoteTabButton )
+				if( tab.BindedNote is TreeNote )
 				{
-					yield return (tab as NoteTabButton).BindedNote;
+					yield return tab.BindedNote as TreeNote;
 				}
 			}
 		}
@@ -94,33 +95,28 @@ public class TabGroup : MonoBehaviour, IEnumerable<ITabButton>
 
 	#region events
 
-	public void OnTabCreated(ITabButton newTab)
+	public void OnTabCreated(TabButton newTab)
 	{
 		newTab.OwnerTabGroup = this;
 		tabButtons_.Add(newTab);
 		UpdateHorizontalLayout();
 	}
 
-	public void OnTabActivated(ITabButton tab)
+	public void OnTabActivated(TabButton tab)
 	{
 		if( activeTab_ != null && tab != activeTab_ )
 		{
 			activeTab_.IsOn = false;
 		}
 		activeTab_ = tab;
-
-		if( ActiveNote != null )
-		{
-			ActiveNote.LogNote.UpdateLogTabButtons();
-			ActiveNote.UpdateVerticalLayout();
-		}
+		GameContext.Window.UpdateVerticalLayout();
 	}
 
-	public void OnTabClosed(ITabButton tab)
+	public void OnTabClosed(TabButton tab)
 	{
-		if( tab is NoteTabButton && (tab as NoteTabButton).BindedNote.File != null )
+		if( tab.BindedNote is TreeNote && (tab.BindedNote as TreeNote).File != null )
 		{
-			GameContext.Window.AddRecentClosedFiles((tab as NoteTabButton).BindedNote.File.FullName);
+			GameContext.Window.AddRecentClosedFiles((tab.BindedNote as TreeNote).File.FullName);
 		}
 
 		int index = tabButtons_.IndexOf(tab);
@@ -142,11 +138,11 @@ public class TabGroup : MonoBehaviour, IEnumerable<ITabButton>
 	public void UpdateLayoutAll()
 	{
 		UpdateHorizontalLayout();
-		if( ActiveNote != null )
+		GameContext.Window.UpdateVerticalLayout();
+		if( ActiveTreeNote != null )
 		{
-			ActiveNote.UpdateLayoutElement();
-			ActiveNote.UpdateVerticalLayout();
-			ActiveNote.LogNote.UpdateLayoutElement();
+			ActiveTreeNote.UpdateLayoutElement();
+			ActiveTreeNote.LogNote.UpdateLayoutElement();
 		}
 	}
 
@@ -160,14 +156,14 @@ public class TabGroup : MonoBehaviour, IEnumerable<ITabButton>
 		{
 			currentTabWidth_ = desiredTabGroupWidth_ / tabButtons_.Count;
 		}
-		foreach( ITabButton tab in tabButtons_ )
+		foreach( TabButton tab in tabButtons_ )
 		{
 			tab.Width = currentTabWidth_;
 			tab.TargetPosition = GetTabPosition(tab);
 		}
 	}
 
-	Vector3 GetTabPosition(ITabButton tab)
+	Vector3 GetTabPosition(TabButton tab)
 	{
 		return Vector3.right * currentTabWidth_ * (tabButtons_.IndexOf(tab));
 	}
@@ -177,17 +173,17 @@ public class TabGroup : MonoBehaviour, IEnumerable<ITabButton>
 
 	#region dragging
 
-	public void OnBeginTabDrag(NoteTabButton tab)
+	public void OnBeginTabDrag(TabButton tab)
 	{
 		tab.IsOn = true;
-		if( tab.BindedNote.Tree.FocusedLine != null )
+		if( tab.BindedNote is TreeNote && (tab.BindedNote as TreeNote).Tree.FocusedLine != null )
 		{
-			tab.BindedNote.Tree.FocusedLine.Field.IsFocused = false;
+			(tab.BindedNote as TreeNote).Tree.FocusedLine.Field.IsFocused = false;
 		}
 		tab.transform.SetAsLastSibling();
 	}
 
-	public void OnTabDragging(NoteTabButton tab, PointerEventData eventData)
+	public void OnTabDragging(TabButton tab, PointerEventData eventData)
 	{
 		int index = tabButtons_.IndexOf(tab);
 		tab.transform.localPosition += new Vector3(eventData.delta.x, 0);
@@ -213,7 +209,7 @@ public class TabGroup : MonoBehaviour, IEnumerable<ITabButton>
 		}
 	}
 
-	public void OnEndTabDrag(NoteTabButton tab)
+	public void OnEndTabDrag(TabButton tab)
 	{
 		AnimManager.AddAnim(tab, GetTabPosition(tab), ParamType.Position, AnimType.Time, GameContext.Config.AnimTime);
 	}
@@ -223,9 +219,9 @@ public class TabGroup : MonoBehaviour, IEnumerable<ITabButton>
 
 	#region IEnumerable<Tree>
 
-	public IEnumerator<ITabButton> GetEnumerator()
+	public IEnumerator<TabButton> GetEnumerator()
 	{
-		foreach( ITabButton tab in tabButtons_ )
+		foreach( TabButton tab in tabButtons_ )
 		{
 			yield return tab;
 		}
@@ -237,7 +233,7 @@ public class TabGroup : MonoBehaviour, IEnumerable<ITabButton>
 
 	public int Count { get { return tabButtons_.Count; } }
 
-	public ITabButton this[int index]
+	public TabButton this[int index]
 	{
 		get
 		{

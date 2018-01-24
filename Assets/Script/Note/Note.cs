@@ -14,6 +14,11 @@ using System.Windows.Forms;
 
 public class Note : MonoBehaviour
 {
+	public TabButton Tab { get { return tabButton_; } }
+	protected TabButton tabButton_;
+	public bool IsActive { get { return (tabButton_ != null ? tabButton_.IsOn : false); } set { if( tabButton_ != null ) tabButton_.IsOn = value; } }
+	public virtual string TitleText { get { return ""; } }
+
 	protected ActionManager actionManager_ = new ActionManager();
 	protected List<LineField> heapFields_ = new List<LineField>();
 	
@@ -82,6 +87,34 @@ public class Note : MonoBehaviour
 	}
 
 	public virtual void UpdateLayoutElement()
+	{
+	}
+
+
+	public virtual void OnTabSelected()
+	{
+		this.gameObject.SetActive(true);
+		GameContext.CurrentActionManager = actionManager_;
+		UpdateLayoutElement();
+		scrollRect_.verticalScrollbar.value = targetScrollValue_;
+
+#if UNITY_STANDALONE_WIN
+		GameContext.Window.SetTitle(TitleText + " - Dones");
+#endif
+	}
+
+	public virtual void OnTabDeselected()
+	{
+		this.gameObject.SetActive(false);
+		targetScrollValue_ = scrollRect_.verticalScrollbar.gameObject.activeInHierarchy ? scrollRect_.verticalScrollbar.value : 1.0f;
+	}
+
+	public virtual void OnTabClosed()
+	{
+		Destroy(this.gameObject);
+	}
+
+	public virtual void OnBeginTabDrag()
 	{
 	}
 }
