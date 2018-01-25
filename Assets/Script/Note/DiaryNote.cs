@@ -97,9 +97,10 @@ public class DiaryNote : DiaryNoteBase
 					titleText.text = treeNote.Tree.TitleText;
 
 					LogTree logTree = Instantiate(LogTreePrefab.gameObject, dateUI.GetComponentInChildren<VerticalLayoutGroup>().transform).GetComponent<LogTree>();
-					logTree.Initialize(this, actionManager_, heapFields_);
+					logTree.Initialize(this, new ActionManagerProxy(actionManager_), heapFields_);
 					logTree.LoadLog(new FileInfo(filename), date);
 					logTree.SubscribeKeyInput();
+					logTree.OnEdited += this.OnEdited;
 					logTrees_.Add(logTree);
 				}
 			}

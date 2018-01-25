@@ -31,7 +31,7 @@ public class Tree : MonoBehaviour
 	protected Vector3 cachedMousePosition_;
 
 	protected List<LineField> heapFields_ = new List<LineField>();
-	protected ActionManager actionManager_;
+	protected ActionManagerProxy actionManager_;
 	public Note OwnerNote { get { return ownerNote_; } }
 	protected Note ownerNote_;
 
@@ -67,26 +67,21 @@ public class Tree : MonoBehaviour
 		get { return isEdited_; }
 		set
 		{
-			if( value && GameContext.Config.IsAutoSave )
-			{
-				SaveFile();
-				return;
-			}
 			isEdited_ = value;
 
-			if( OnEditChanged != null )
-				OnEditChanged(this, null);
+			if( isEdited_ && OnEdited != null )
+				OnEdited(this, null);
 		}
 	}
 	protected bool isEdited_ = false;
 
 
 	// event
-	public event EventHandler OnEditChanged;
+	public event EventHandler OnEdited;
 	public event EventHandler OnDoneChanged;
 
 	// properties
-	public ActionManager ActionManager { get { return actionManager_; } }
+	public ActionManagerProxy ActionManager { get { return actionManager_; } }
 	public FileInfo File { get { return file_; } }
 	public Line FocusedLine { get { return focusedLine_; } }
 	public Line RootLine { get { return rootLine_; } }
@@ -125,7 +120,7 @@ public class Tree : MonoBehaviour
 	#endregion
 
 
-	public void Initialize(Note ownerNote, ActionManager actionManager, List<LineField> heapFields)
+	public void Initialize(Note ownerNote, ActionManagerProxy actionManager, List<LineField> heapFields)
 	{
 		ownerNote_ = ownerNote;
 		actionManager_ = actionManager;
@@ -563,10 +558,7 @@ public class Tree : MonoBehaviour
 	{
 		ResumeLayout();
 
-		if( IsEdited == false )
-		{
-			IsEdited = true;
-		}
+		IsEdited = true;
 	}
 
 	protected void actionManager__Executed(object sender, ActionEventArgs e)
@@ -582,7 +574,7 @@ public class Tree : MonoBehaviour
 			ownerNote_.UpdateLayoutElement();
 		}
 
-		if( actionManager_.IsChaining == false && IsEdited == false )
+		if( actionManager_.IsChaining == false )
 		{
 			IsEdited = true;
 		}
@@ -1559,7 +1551,7 @@ public class Tree : MonoBehaviour
 		}
 
 		focusedLine_ = line;
-		GameContext.CurrentActionManager = actionManager_;
+		GameContext.CurrentActionManager = (ActionManager)actionManager_;
 
 		if( focusedLine_ != null && focusedLine_.Field.Rect.Contains(Input.mousePosition) )
 		{

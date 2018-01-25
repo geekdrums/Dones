@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class CheckMark : MonoBehaviour {
+public class CheckMark : MonoBehaviour, IColoredObject {
 
 	public UIGaugeRenderer Line1;
 	public UIGaugeRenderer Line2;
@@ -37,5 +37,16 @@ public class CheckMark : MonoBehaviour {
 		AnimManager.AddAnim(Line1, 1.0f, ParamType.GaugeRate, AnimType.Time, 0.05f);
 		AnimManager.AddAnim(Line2, 1.5f, ParamType.GaugeRate, AnimType.Time, 0.1f, 0.05f);
 		AnimManager.AddAnim(Line2, 1.0f, ParamType.GaugeRate, AnimType.Time, 0.05f, 0.15f);
+	}
+
+	public void SetColor(Color color)
+	{
+		Line1.SetColor(color);
+		Line2.SetColor(color);
+	}
+
+	public Color GetColor()
+	{
+		return Line1.GetColor();
 	}
 }

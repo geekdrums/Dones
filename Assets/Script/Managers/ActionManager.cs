@@ -6,9 +6,9 @@ using System.Text;
 
 public class ActionEventArgs : EventArgs
 {
-	public IAction Action { get; set; }
+	public ActionBase Action { get; set; }
 
-	public ActionEventArgs(IAction action)
+	public ActionEventArgs(ActionBase action)
 	{
 		Action = action;
 	}
@@ -16,7 +16,7 @@ public class ActionEventArgs : EventArgs
 
 public class ActionManager
 {
-	List<IAction> actions_ = new List<IAction>();
+	List<ActionBase> actions_ = new List<ActionBase>();
 	int currentIndex_ = -1;
 	Stack<ChainAction> chainStack_ = new Stack<ChainAction>();
 
@@ -25,7 +25,7 @@ public class ActionManager
 	public event EventHandler ChainEnded;
 	public bool IsChaining { get { return chainStack_.Count > 0; } }
 
-	public void Execute(IAction action)
+	public void Execute(ActionBase action)
 	{
 		action.Execute();
 		if( Executed != null )
@@ -50,18 +50,30 @@ public class ActionManager
 	{
 		if( 0 <= currentIndex_ && currentIndex_ < actions_.Count )
 		{
-			IAction action = actions_[currentIndex_--];
+			ActionBase action = actions_[currentIndex_--];
 			if( action is ChainAction )
 			{
 				OnChainStarted();
+				if( action.Proxy != null )
+				{
+					action.Proxy.OnChainStarted();
+				}
 				action.Undo();
 				OnChainEnded();
+				if( action.Proxy != null )
+				{
+					action.Proxy.OnChainEnded();
+				}
 			}
 			else
 			{
 				action.Undo();
 				if( Executed != null )
 					Executed(this, new ActionEventArgs(action));
+				if( action.Proxy != null )
+				{
+					action.Proxy.OnExecuted(new ActionEventArgs(action));
+				}
 			}
 		}
 	}
@@ -70,18 +82,30 @@ public class ActionManager
 	{
 		if( currentIndex_ + 1 < actions_.Count )
 		{
-			IAction action = actions_[++currentIndex_];
+			ActionBase action = actions_[++currentIndex_];
 			if( action is ChainAction )
 			{
 				OnChainStarted();
+				if( action.Proxy != null )
+				{
+					action.Proxy.OnChainStarted();
+				}
 				action.Redo();
 				OnChainEnded();
+				if( action.Proxy != null )
+				{
+					action.Proxy.OnChainEnded();
+				}
 			}
 			else
 			{
 				action.Redo();
 				if( Executed != null )
 					Executed(this, new ActionEventArgs(action));
+				if( action.Proxy != null )
+				{
+					action.Proxy.OnExecuted(new ActionEventArgs(action));
+				}
 			}
 		}
 	}
@@ -147,5 +171,69 @@ public class ActionManager
 	{
 		if( ChainEnded != null )
 			ChainEnded(this, EventArgs.Empty);
+	}
+}
+
+public class ActionManagerProxy
+{
+	private ActionManager actionManager_;
+	public static explicit operator ActionManager(ActionManagerProxy proxy)
+	{
+		return proxy.actionManager_;
+	}
+
+	public event EventHandler<ActionEventArgs> Executed;
+	public event EventHandler ChainStarted;
+	public event EventHandler ChainEnded;
+	public bool IsChaining { get { return actionManager_.IsChaining; } }
+
+	public ActionManagerProxy(ActionManager actionManager)
+	{
+		actionManager_ = actionManager;
+	}
+
+	public void Execute(ActionBase action)
+	{
+		action.Proxy = this;
+		actionManager_.Execute(action);
+		OnExecuted(new ActionEventArgs(action));
+	}
+	
+	public void Clear()
+	{
+		actionManager_.Clear();
+	}
+
+	public void StartChain()
+	{
+		if( actionManager_.IsChaining == false )
+		{
+			OnChainStarted();
+		}
+		actionManager_.StartChain();
+	}
+
+	public void EndChain()
+	{
+		actionManager_.EndChain();
+		if( actionManager_.IsChaining == false )
+		{
+			OnChainEnded();
+		}
+	}
+
+	public void OnExecuted(ActionEventArgs e)
+	{
+		Executed(this, e);
+	}
+
+	public void OnChainStarted()
+	{
+		ChainStarted(this, EventArgs.Empty);
+	}
+
+	public void OnChainEnded()
+	{
+		ChainEnded(this, EventArgs.Empty);
 	}
 }

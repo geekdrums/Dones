@@ -217,7 +217,7 @@ public class Line : IEnumerable<Line>
 
 	#region TextInputAction
 
-	public abstract class TextAction : IAction
+	public abstract class TextAction : ActionBase
 	{
 		public StringBuilder Text = new StringBuilder();
 		public int CaretPos;
@@ -229,10 +229,6 @@ public class Line : IEnumerable<Line>
 			line_ = line;
 			CaretPos = line.Field.CaretPosision;
 		}
-
-		public abstract void Execute();
-		public abstract void Undo();
-		public abstract void Redo();
 	}
 
 	public class TextInputAction : TextAction
@@ -348,6 +344,8 @@ public class Line : IEnumerable<Line>
 		lastTextActionTime_ = Time.time;
 
 		text_ = newText;
+		Tree.IsEdited = true;
+
 #if UNITY_EDITOR
 		if( Binding != null )
 		{
@@ -372,11 +370,6 @@ public class Line : IEnumerable<Line>
 
 	public void FixTextInputAction()
 	{
-		if( GameContext.Config.IsAutoSave && textAction_ != null )
-		{
-			Tree.SaveFile();
-		}
-
 		textAction_ = null;
 	}
 

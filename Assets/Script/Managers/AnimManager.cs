@@ -55,6 +55,7 @@ public enum AnimType
 public enum AnimEndOption
 {
 	None,
+	Loop,
 	Destroy,
 	Deactivate,
 }
@@ -95,12 +96,13 @@ public abstract class AnimInfoBase
 
 	public static float overshoot = 1.70158f;
 
-	public AnimInfoBase(GameObject obj, object target, ParamType paramType, AnimType animType, float factor = 0.1f, float delay = 0.0f, AnimEndOption endOption = AnimEndOption.None)
+	public AnimInfoBase(GameObject obj, object target, ParamType paramType, AnimType animType, float factor = 0.1f, float delay = 0.0f, AnimEndOption endOption = AnimEndOption.None, object initValue = null)
 	{
 		Object = obj;
 		Param = paramType;
 		Anim = animType;
 		Target = target;
+		initialValue_ = initValue;
 		Factor = factor;
 		Delay = delay;
 		EndOption = endOption;
@@ -178,7 +180,12 @@ public abstract class AnimInfoBase
 
 		if( AnimManager.IsAnimating(Object) == false )
 		{
-			if( EndOption == AnimEndOption.Destroy )
+			if( EndOption == AnimEndOption.Loop )
+			{
+				normalizedValue_ = 0;
+				animValue_ = 0;
+			}
+			else if( EndOption == AnimEndOption.Destroy )
 			{
 				GameObject.Destroy(Object.gameObject);
 			}
@@ -232,8 +239,8 @@ public class TransformAnimInfo : AnimInfoBase
 {
 	protected Transform transform_;
 
-	public TransformAnimInfo(GameObject obj, object target, ParamType paramType, AnimType animType, float factor = 0.1f, float delay = 0.0f, AnimEndOption endOption = AnimEndOption.None)
-		: base(obj, target, paramType, animType, factor, delay, endOption)
+	public TransformAnimInfo(GameObject obj, object target, ParamType paramType, AnimType animType, float factor = 0.1f, float delay = 0.0f, AnimEndOption endOption = AnimEndOption.None, object initValue = null)
+		: base(obj, target, paramType, animType, factor, delay, endOption, initValue)
 	{
 		if( ParamType.PositionZ < paramType )
 		{
@@ -243,42 +250,39 @@ public class TransformAnimInfo : AnimInfoBase
 
 	protected override void InitValue()
 	{
+		transform_ = Object.transform;
+		if( initialValue_ != null )
+		{
+			UpdateAnimValue();
+			return;
+		}
 		switch( Param )
 		{
 		case ParamType.Scale:
-			transform_ = Object.transform;
 			initialValue_ = transform_.localScale;
 			break;
 		case ParamType.ScaleX:
-			transform_ = Object.transform;
 			initialValue_ = (float)transform_.localScale.x;
 			break;
 		case ParamType.ScaleY:
-			transform_ = Object.transform;
 			initialValue_ = (float)transform_.localScale.y;
 			break;
 		case ParamType.ScaleZ:
-			transform_ = Object.transform;
 			initialValue_ = (float)transform_.localScale.z;
 			break;
 		case ParamType.Position:
-			transform_ = Object.transform;
 			initialValue_ = transform_.localPosition;
 			break;
 		case ParamType.PositionX:
-			transform_ = Object.transform;
 			initialValue_ = (float)transform_.localPosition.x;
 			break;
 		case ParamType.PositionY:
-			transform_ = Object.transform;
 			initialValue_ = (float)transform_.localPosition.y;
 			break;
 		case ParamType.PositionZ:
-			transform_ = Object.transform;
 			initialValue_ = (float)transform_.localPosition.z;
 			break;
 		case ParamType.RotationZ:
-			transform_ = Object.transform;
 			initialValue_ = (float)(transform_.rotation.eulerAngles.z + 360) % 360;
 			break;
 		}
@@ -324,8 +328,8 @@ public class PrimitiveAnimInfo : AnimInfoBase
 	protected MidairPrimitive primitive_;
 	protected UIMidairPrimitive uiprimitive_;
 
-	public PrimitiveAnimInfo(GameObject obj, object target, ParamType paramType, AnimType animType, float factor = 0.1f, float delay = 0.0f, AnimEndOption endOption = AnimEndOption.None)
-		: base(obj, target, paramType, animType, factor, delay, endOption)
+	public PrimitiveAnimInfo(GameObject obj, object target, ParamType paramType, AnimType animType, float factor = 0.1f, float delay = 0.0f, AnimEndOption endOption = AnimEndOption.None, object initValue = null)
+		: base(obj, target, paramType, animType, factor, delay, endOption, initValue)
 	{
 		if( paramType < ParamType.PrimitiveRadius || ParamType.PrimitiveArc < paramType )
 		{
@@ -337,6 +341,11 @@ public class PrimitiveAnimInfo : AnimInfoBase
 	{
 		primitive_ = Object.GetComponentInChildren<MidairPrimitive>();
 		uiprimitive_ = Object.GetComponentInChildren<UIMidairPrimitive>();
+		if( initialValue_ != null )
+		{
+			UpdateAnimValue();
+			return;
+		}
 		if( primitive_ != null )
 		{
 			switch( Param )
@@ -409,8 +418,8 @@ public class GaugeAnimInfo : AnimInfoBase
 	protected GaugeRenderer gauge_;
 	protected UIGaugeRenderer uigauge_;
 
-	public GaugeAnimInfo(GameObject obj, object target, ParamType paramType, AnimType animType, float factor = 0.1f, float delay = 0.0f, AnimEndOption endOption = AnimEndOption.None)
-		: base(obj, target, paramType, animType, factor, delay, endOption)
+	public GaugeAnimInfo(GameObject obj, object target, ParamType paramType, AnimType animType, float factor = 0.1f, float delay = 0.0f, AnimEndOption endOption = AnimEndOption.None, object initValue = null)
+		: base(obj, target, paramType, animType, factor, delay, endOption, initValue)
 	{
 		if( paramType < ParamType.GaugeLength || ParamType.GaugeWidth < paramType )
 		{
@@ -422,6 +431,11 @@ public class GaugeAnimInfo : AnimInfoBase
 	{
 		gauge_ = Object.GetComponentInChildren<GaugeRenderer>();
 		uigauge_ = Object.GetComponentInChildren<UIGaugeRenderer>();
+		if( initialValue_ != null )
+		{
+			UpdateAnimValue();
+			return;
+		}
 		if( gauge_ != null )
 		{
 			switch( Param )
@@ -494,8 +508,8 @@ public class ColorAnimInfo : AnimInfoBase
 	protected IColoredObject coloredObj_;
 	protected Color baseColor_;
 
-	public ColorAnimInfo(GameObject obj, object target, ParamType paramType, AnimType animType, float factor = 0.1f, float delay = 0.0f, AnimEndOption endOption = AnimEndOption.None)
-		: base(obj, target, paramType, animType, factor, delay, endOption)
+	public ColorAnimInfo(GameObject obj, object target, ParamType paramType, AnimType animType, float factor = 0.1f, float delay = 0.0f, AnimEndOption endOption = AnimEndOption.None, object initValue = null)
+		: base(obj, target, paramType, animType, factor, delay, endOption, initValue)
 	{
 		if( paramType != ParamType.Color && paramType != ParamType.AlphaColor )
 		{
@@ -506,12 +520,20 @@ public class ColorAnimInfo : AnimInfoBase
 	protected override void InitValue()
 	{
 		coloredObj_ = Object.GetComponentInChildren<IColoredObject>();
+		if( Param == ParamType.AlphaColor )
+		{
+			baseColor_ = (Color)coloredObj_.GetColor();
+			baseColor_.a = 1.0f;
+		}
+		if( initialValue_ != null )
+		{
+			UpdateAnimValue();
+			return;
+		}
 		initialValue_ = coloredObj_.GetColor();
 		if( Param == ParamType.AlphaColor )
 		{
-			baseColor_ = (Color)initialValue_;
 			initialValue_ = baseColor_.a;
-			baseColor_.a = 1.0f;
 		}
 	}
 
@@ -534,8 +556,8 @@ public class TextAnimInfo : AnimInfoBase
 	protected Text uitext_;
 	protected Color baseColor_;
 
-	public TextAnimInfo(GameObject obj, object target, ParamType paramType, AnimType animType, float factor = 0.1f, float delay = 0.0f, AnimEndOption endOption = AnimEndOption.None)
-		: base(obj, target, paramType, animType, factor, delay, endOption)
+	public TextAnimInfo(GameObject obj, object target, ParamType paramType, AnimType animType, float factor = 0.1f, float delay = 0.0f, AnimEndOption endOption = AnimEndOption.None, object initValue = null)
+		: base(obj, target, paramType, animType, factor, delay, endOption, initValue)
 	{
 		if( paramType != ParamType.TextColor && paramType != ParamType.TextAlphaColor )
 		{
@@ -546,14 +568,22 @@ public class TextAnimInfo : AnimInfoBase
 	protected override void InitValue()
 	{
 		uitext_ = Object.GetComponentInChildren<Text>();
+		if( Param == ParamType.TextAlphaColor )
+		{
+			baseColor_ = (Color)uitext_.color;
+			baseColor_.a = 1.0f;
+		}
+		if( initialValue_ != null )
+		{
+			UpdateAnimValue();
+			return;
+		}
 		if( uitext_ != null )
 		{
 			initialValue_ = uitext_.color;
 			if( Param == ParamType.TextAlphaColor )
 			{
-				baseColor_ = (Color)initialValue_;
 				initialValue_ = baseColor_.a;
-				baseColor_.a = 1.0f;
 			}
 			return;
 		}
@@ -563,9 +593,7 @@ public class TextAnimInfo : AnimInfoBase
 			initialValue_ = text_.color;
 			if( Param == ParamType.TextAlphaColor )
 			{
-				baseColor_ = (Color)initialValue_;
 				initialValue_ = baseColor_.a;
-				baseColor_.a = 1.0f;
 			}
 			return;
 		}
@@ -706,7 +734,7 @@ public class AnimManager : MonoBehaviour
 		return gameObject;
 	}
 
-	public static void AddAnim(Object obj, object target, ParamType paramType, AnimType animType = AnimType.Linear, float timeFactor = 0.1f, float delay = 0.0f, AnimEndOption endOption = AnimEndOption.None)
+	public static void AddAnim(Object obj, object target, ParamType paramType, AnimType animType = AnimType.Linear, float timeFactor = 0.1f, float delay = 0.0f, AnimEndOption endOption = AnimEndOption.None, object initValue = null)
 	{
 		GameObject gameObject = ToGameObject(obj);
 
@@ -721,26 +749,26 @@ public class AnimManager : MonoBehaviour
 		case ParamType.PositionX:
 		case ParamType.PositionY:
 		case ParamType.PositionZ:
-			Instance.Animations.Add(new TransformAnimInfo(gameObject, target, paramType, animType, timeFactor, delay, endOption));
+			Instance.Animations.Add(new TransformAnimInfo(gameObject, target, paramType, animType, timeFactor, delay, endOption, initValue));
 			break;
 		case ParamType.PrimitiveRadius:
 		case ParamType.PrimitiveWidth:
 		case ParamType.PrimitiveArc:
-			Instance.Animations.Add(new PrimitiveAnimInfo(gameObject, target, paramType, animType, timeFactor, delay, endOption));
+			Instance.Animations.Add(new PrimitiveAnimInfo(gameObject, target, paramType, animType, timeFactor, delay, endOption, initValue));
 			break;
 
 		case ParamType.GaugeLength:
 		case ParamType.GaugeRate:
 		case ParamType.GaugeWidth:
-			Instance.Animations.Add(new GaugeAnimInfo(gameObject, target, paramType, animType, timeFactor, delay, endOption));
+			Instance.Animations.Add(new GaugeAnimInfo(gameObject, target, paramType, animType, timeFactor, delay, endOption, initValue));
 			break;
 		case ParamType.Color:
 		case ParamType.AlphaColor:
-			Instance.Animations.Add(new ColorAnimInfo(gameObject, target, paramType, animType, timeFactor, delay, endOption));
+			Instance.Animations.Add(new ColorAnimInfo(gameObject, target, paramType, animType, timeFactor, delay, endOption, initValue));
 			break;
 		case ParamType.TextColor:
 		case ParamType.TextAlphaColor:
-			Instance.Animations.Add(new TextAnimInfo(gameObject, target, paramType, animType, timeFactor, delay, endOption));
+			Instance.Animations.Add(new TextAnimInfo(gameObject, target, paramType, animType, timeFactor, delay, endOption, initValue));
 			break;
 		case ParamType.Any:
 			break;

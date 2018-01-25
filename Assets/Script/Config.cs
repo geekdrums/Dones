@@ -12,8 +12,7 @@ public class Config : MonoBehaviour
 	public int DefaultFontSize = 14;
 	public float DefaultWidthPerLevel = 27;
 	public float DefaultHeightPerLine = 27.0f;
-
-	public bool IsAutoSave = true;
+	
 	public bool DoBackUp = true;
 
 	public int FontSize = 14;
@@ -28,6 +27,7 @@ public class Config : MonoBehaviour
 	public float TextInputFixIntervalTime = 1.0f;
 	public float DoubleClickInterval = 0.25f;
 	public float MinLogTreeHeight = 100.0f;
+	public float AutoSaveTime = 1.5f;
 
 	public Color ThemeColor;
 	public Color AccentColor;
@@ -127,9 +127,6 @@ public class Config : MonoBehaviour
 			}
 			switch( configParam )
 			{
-			case ConfigParams.IsAutoSave:
-				Boolean.TryParse(text, out IsAutoSave);
-				break;
 			case ConfigParams.DoBackUp:
 				Boolean.TryParse(text, out DoBackUp);
 				break;
@@ -159,9 +156,7 @@ public class Config : MonoBehaviour
 		}
 
 		StreamWriter writer = new StreamWriter(configFile_.FullName);
-
-		writer.WriteLine(ConfigTags[(int)ConfigParams.IsAutoSave]);
-		writer.WriteLine(IsAutoSave.ToString());
+		
 		writer.WriteLine(ConfigTags[(int)ConfigParams.DoBackUp]);
 		writer.WriteLine(DoBackUp.ToString());
 		writer.WriteLine(ConfigTags[(int)ConfigParams.TimeFormat]);

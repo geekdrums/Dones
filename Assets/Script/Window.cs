@@ -42,6 +42,7 @@ public class Window : MonoBehaviour
 	public ShortLineList LineList;
 	public ModalDialog ModalDialog;
 	public Text FontSizeText;
+	public SaveText SaveText;
 
 	#endregion
 
@@ -163,6 +164,22 @@ public class Window : MonoBehaviour
 		{
 			MainTabGroup.ActiveTreeNote.ReloadNote();
 		}
+		if( MainTabGroup.ActiveNote != null )
+		{
+			float time = MainTabGroup.ActiveNote.TimeFromRequestedAutoSave();
+			if( time > 0 )
+			{
+				if( time > GameContext.Config.AutoSaveTime )
+				{
+					MainTabGroup.ActiveNote.DoAutoSave();
+					SaveText.Saved();
+				}
+				else
+				{
+					SaveText.StartSaving();
+				}
+			}
+		}
 
 		if(	currentScreenWidth_ != UnityEngine.Screen.width )
 		{
@@ -178,31 +195,12 @@ public class Window : MonoBehaviour
 
 	void OnApplicationQuit()
 	{
-		if( GameContext.Config.IsAutoSave )
+		foreach( TreeNote tree in MainTabGroup.TreeNotes )
 		{
-			foreach( TreeNote tree in MainTabGroup.TreeNotes )
+			tree.SaveNote();
+			if( GameContext.Config.DoBackUp )
 			{
-				tree.SaveNote();
-				if( GameContext.Config.DoBackUp )
-				{
-					tree.DeleteBackup();
-				}
-			}
-		}
-		else
-		{
-			if( saveConfirmed_ == false )
-			{
-				saveConfirmed_ = true;
-				foreach( TreeNote treeNote in MainTabGroup.TreeNotes )
-				{
-					if( treeNote.IsEdited || treeNote.LogNote.IsEdited )
-					{
-						GameContext.Window.ModalDialog.Show("ファイルへの変更を保存しますか？", this.CloseConfirmCallback);
-						UnityEngine.Application.CancelQuit();
-						return;
-					}
-				}
+				tree.DeleteBackup();
 			}
 		}
 

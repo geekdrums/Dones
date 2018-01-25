@@ -21,12 +21,14 @@ public class Note : MonoBehaviour
 
 	protected ActionManager actionManager_ = new ActionManager();
 	protected List<LineField> heapFields_ = new List<LineField>();
+	protected List<Tree> saveRequestedTrees_ = new List<Tree>();
 	
 	protected LayoutElement layout_;
 	protected ContentSizeFitter contentSizeFitter_;
 	protected ScrollRect scrollRect_;
 	protected float targetScrollValue_ = 1.0f;
 	protected bool isScrollAnimating_;
+	protected float lastSaveRequestedTime_ = 0;
 
 	protected virtual void Awake()
 	{
@@ -116,5 +118,29 @@ public class Note : MonoBehaviour
 
 	public virtual void OnBeginTabDrag()
 	{
+	}
+
+	public void OnEdited(object sender, EventArgs e)
+	{
+		Tree tree = sender as Tree;
+		if( saveRequestedTrees_.Contains(tree) == false )
+			saveRequestedTrees_.Add(tree);
+		
+		lastSaveRequestedTime_ = Time.time;
+	}
+
+	public float TimeFromRequestedAutoSave()
+	{
+		return saveRequestedTrees_.Count > 0  ? Time.time - lastSaveRequestedTime_ : -1;
+	}
+
+	public void DoAutoSave()
+	{
+		foreach( Tree tree in saveRequestedTrees_ )
+		{
+			tree.SaveFile();
+		}
+		saveRequestedTrees_.Clear();
+		lastSaveRequestedTime_ = 0;
 	}
 }

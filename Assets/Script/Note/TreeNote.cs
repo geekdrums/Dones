@@ -31,11 +31,11 @@ public class TreeNote : Note
 		{
 			if( logNote_.IsFullArea )
 			{
-				return logNote_.TitleText + (logNote_.IsEdited ? "*" : "");
+				return logNote_.TitleText;
 			}
 			else
 			{
-				return tree_.TitleText + (tree_.IsEdited ? "*" : "");
+				return tree_.TitleText;
 			}
 		}
 	}
@@ -46,8 +46,8 @@ public class TreeNote : Note
 	{
 		base.Awake();
 		tree_ = GetComponent<Tree>();
-		tree_.Initialize(this, actionManager_, heapFields_);
-		tree_.OnEditChanged += this.OnEditChanged;
+		tree_.Initialize(this, new ActionManagerProxy(actionManager_), heapFields_);
+		tree_.OnEdited += this.OnEdited;
 		tree_.OnDoneChanged += this.OnDoneChanged;
 	}
 
@@ -69,12 +69,6 @@ public class TreeNote : Note
 
 	#region event
 	
-	void OnEditChanged(object sender, EventArgs e)
-	{
-		Tree tree = sender as Tree;
-		tabButton_.Text = tree.TitleText + (tree.IsEdited ? "*" : "");
-	}
-
 	void OnDoneChanged(object sender, EventArgs e)
 	{
 		Line line = sender as Line;
@@ -122,14 +116,11 @@ public class TreeNote : Note
 		{
 			GameContext.Window.LineList.RemoveShortLine(shortLine);
 		}
-
-		if( GameContext.Config.IsAutoSave )
+		
+		SaveNote();
+		if( GameContext.Config.DoBackUp )
 		{
-			SaveNote();
-			if( GameContext.Config.DoBackUp )
-			{
-				DeleteBackup();
-			}
+			DeleteBackup();
 		}
 		Destroy(this.gameObject);
 		Destroy(logNote_.gameObject);
@@ -263,7 +254,7 @@ public class TreeNote : Note
 		logNote_ = logNote;
 
 		tree_.LoadFile(new FileInfo(path));
-		if( GameContext.Config.IsAutoSave && GameContext.Config.DoBackUp && tree_.File.Exists )
+		if( GameContext.Config.DoBackUp && tree_.File.Exists )
 		{
 			tree_.File.CopyTo(tree_.File.FullName + ".bak", overwrite: true);
 		}
@@ -296,7 +287,7 @@ public class TreeNote : Note
 		DialogResult dialogResult = saveFileDialog.ShowDialog();
 		if( dialogResult == DialogResult.OK )
 		{
-			if( GameContext.Config.IsAutoSave && GameContext.Config.DoBackUp )
+			if( GameContext.Config.DoBackUp )
 			{
 				DeleteBackup();
 			}
@@ -335,7 +326,6 @@ public class TreeNote : Note
 	
 	public bool AskDoClose()
 	{
-
 		if( IsEdited )
 		{
 			GameContext.Window.ModalDialog.Show(tree_.TitleText + "ファイルへの変更を保存しますか？", this.CloseConfirmCallback);

@@ -3,14 +3,16 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-public interface IAction
+public abstract class ActionBase
 {
-	void Execute();
-	void Undo();
-	void Redo();
+	public abstract void Execute();
+	public abstract void Undo();
+	public abstract void Redo();
+	
+	public ActionManagerProxy Proxy { get; set; }
 }
 
-public class Action : IAction
+public class Action : ActionBase
 {
 	System.Action execute_;
 	System.Action undo_;
@@ -38,25 +40,25 @@ public class Action : IAction
 		redo_ = redo;
 	}
 
-	public void Execute()
+	public override void Execute()
 	{
 		execute_();
 	}
 
-	public void Undo()
+	public override void Undo()
 	{
 		undo_();
 	}
 
-	public void Redo()
+	public override void Redo()
 	{
 		redo_();
 	}
 }
 
-public class ChainAction : IAction
+public class ChainAction : ActionBase
 {
-	List<IAction> chain_ = new List<IAction>();
+	List<ActionBase> chain_ = new List<ActionBase>();
 
 	public ChainAction()
 	{
@@ -67,20 +69,20 @@ public class ChainAction : IAction
 		return chain_.Count > 0;
 	}
 
-	public void AddChain(IAction action)
+	public void AddChain(ActionBase action)
 	{
 		chain_.Add(action);
 	}
 
-	public void Execute()
+	public override void Execute()
 	{
-		foreach( IAction action in chain_ )
+		foreach( ActionBase action in chain_ )
 		{
 			action.Execute();
 		}
 	}
 
-	public void Undo()
+	public override void Undo()
 	{
 		for( int i = chain_.Count - 1; i >= 0; --i )
 		{
@@ -88,9 +90,9 @@ public class ChainAction : IAction
 		}
 	}
 
-	public void Redo()
+	public override void Redo()
 	{
-		foreach( IAction action in chain_ )
+		foreach( ActionBase action in chain_ )
 		{
 			action.Redo();
 		}

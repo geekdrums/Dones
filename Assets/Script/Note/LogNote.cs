@@ -130,36 +130,6 @@ public class LogNote : DiaryNoteBase
 	{
 		GameContext.Window.UpdateVerticalLayout();
 	}
-	
-	public void OnEditChanged(object sender, EventArgs e)
-	{
-		LogTree logTree = sender as LogTree;
-		if( TreeNote != null )
-		{
-			if( IsFullArea )
-			{
-				if( logTree.IsEdited )
-				{
-					TreeNote.Tab.Text = TitleText + "*";
-				}
-				else if( IsEdited == false )
-				{
-					TreeNote.Tab.Text = TitleText;
-				}
-			}
-			else
-			{
-				if( logTree.IsEdited )
-				{
-					LogTabButton.Text = TitleText + "*";
-				}
-				else if( IsEdited == false )
-				{
-					LogTabButton.Text = TitleText;
-				}
-			}
-		}
-	}
 
 	#endregion
 
@@ -176,8 +146,8 @@ public class LogNote : DiaryNoteBase
 		DateUI dateUI = Instantiate(DateUIPrefab.gameObject, this.transform).GetComponent<DateUI>();
 		todayTree_ = Instantiate(LogTreePrefab.gameObject, dateUI.transform).GetComponent<LogTree>();
 		dateUI.Set(today_, GameContext.Config.DoneColor);
-		todayTree_.Initialize(this, actionManager_, heapFields_);
-		todayTree_.OnEditChanged += this.OnEditChanged;
+		todayTree_.Initialize(this, new ActionManagerProxy(actionManager_), heapFields_);
+		todayTree_.OnEdited += this.OnEdited;
 		if( treeNote_.File != null )
 		{
 			todayTree_.LoadLog(new FileInfo(ToFileName(treeNote_, today_)), today_);
@@ -211,10 +181,10 @@ public class LogNote : DiaryNoteBase
 				DateUI dateUI = Instantiate(DateUIPrefab.gameObject, this.transform).GetComponent<DateUI>();
 				LogTree logTree = Instantiate(LogTreePrefab.gameObject, dateUI.transform).GetComponent<LogTree>();
 				dateUI.Set(date, ToColor(date));
-				logTree.Initialize(this, actionManager_, heapFields_);
+				logTree.Initialize(this, new ActionManagerProxy(actionManager_), heapFields_);
 				logTree.LoadLog(new FileInfo(filename), date);
 				logTree.SubscribeKeyInput();
-				logTree.OnEditChanged += this.OnEditChanged;
+				logTree.OnEdited += this.OnEdited;
 				logTrees_.Add(logTree);
 
 				lastDateUI = dateUI;
@@ -240,8 +210,8 @@ public class LogNote : DiaryNoteBase
 		LogTree newDateTree = Instantiate(LogTreePrefab.gameObject, dateUI.transform).GetComponent<LogTree>();
 		dateUI.Set(date, ToColor(date));
 		dateUI.SetEnableAddDateButtton(treeNote_.File == null || File.Exists(ToFileName(treeNote_, date.AddDays(-1.0))) == false);
-		newDateTree.Initialize(this, actionManager_, heapFields_);
-		newDateTree.OnEditChanged += this.OnEditChanged;
+		newDateTree.Initialize(this, new ActionManagerProxy(actionManager_), heapFields_);
+		newDateTree.OnEdited += this.OnEdited;
 		newDateTree.NewLog(date);
 		newDateTree.SubscribeKeyInput();
 		SetSortedIndex(newDateTree);
@@ -283,8 +253,6 @@ public class LogNote : DiaryNoteBase
 				logTree.SaveFile();
 			}
 		}
-
-		LogTabButton.Text = TitleText;
 	}
 	
 	public void ReloadLog()
