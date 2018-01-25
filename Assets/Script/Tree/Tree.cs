@@ -198,15 +198,29 @@ public class Tree : MonoBehaviour
 //			}
 			else if( Input.GetKeyDown(KeyCode.Home) )
 			{
-				Line line = rootLine_[0];
-				line.Field.IsFocused = true;
-				OnFocused(line);
+				if( ownerNote_ is TreeNote )
+				{
+					Line line = rootLine_[0];
+					line.Field.IsFocused = true;
+					OnFocused(line);
+				}
+				else if( ownerNote_ is DiaryNoteBase )
+				{
+					(ownerNote_ as DiaryNoteBase).OnHomeEndInput(KeyCode.Home);
+				}
 			}
 			else if( Input.GetKeyDown(KeyCode.End) )
 			{
-				Line line = rootLine_.LastVisibleLine;
-				line.Field.IsFocused = true;
-				OnFocused(line);
+				if( ownerNote_ is TreeNote )
+				{
+					Line line = rootLine_.LastVisibleLine;
+					line.Field.IsFocused = true;
+					OnFocused(line);
+				}
+				else if( ownerNote_ is DiaryNoteBase )
+				{
+					(ownerNote_ as DiaryNoteBase).OnHomeEndInput(KeyCode.End);
+				}
 			}
 		}
 		else if( Input.GetKeyDown(KeyCode.Tab) )

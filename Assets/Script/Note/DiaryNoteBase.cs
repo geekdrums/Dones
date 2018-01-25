@@ -97,6 +97,24 @@ public class DiaryNoteBase : Note
 		}
 	}
 	
+	public void OnHomeEndInput(KeyCode key)
+	{
+		if( logTrees_.Count > 0 )
+		{
+			if( key == KeyCode.Home )
+			{
+				Line line = logTrees_[0].RootLine[0];
+				line.Field.IsFocused = true;
+				logTrees_[0].OnFocused(line);
+			}
+			else if( key == KeyCode.End )
+			{
+				Line line = logTrees_[logTrees_.Count - 1].RootLine.LastVisibleLine;
+				line.Field.IsFocused = true;
+				logTrees_[logTrees_.Count - 1].OnFocused(line);
+			}
+		}
+	}
 	
 	public void OnFontSizeChanged()
 	{

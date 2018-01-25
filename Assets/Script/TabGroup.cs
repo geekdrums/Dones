@@ -26,6 +26,15 @@ public class TabGroup : MonoBehaviour, IEnumerable<TabButton>
 	public TabButton ActiveTab { get { return activeTab_; } }
 	public Note ActiveNote { get { return activeTab_ != null ? activeTab_.BindedNote : null; } }
 	public TreeNote ActiveTreeNote { get { return activeTab_ != null && activeTab_.BindedNote != null ? activeTab_.BindedNote as TreeNote : null; } }
+	public DiaryNote ExistDiaryNote
+	{
+		get
+		{
+			TabButton diaryTab = tabButtons_.Find((TabButton tab) => tab.BindedNote is DiaryNote);
+			if( diaryTab != null ) return diaryTab.BindedNote as DiaryNote;
+			else return null;
+		}
+	}
 
 	TabButton activeTab_;
 	List<TabButton> tabButtons_ = new List<TabButton>();

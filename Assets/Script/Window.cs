@@ -95,7 +95,6 @@ public class Window : MonoBehaviour
 		yield return new WaitForEndOfFrame();
 		LoadSettings();
 		LoadLineList();
-		OpenDiary();	//test
 		MainTabGroup.UpdateLayoutAll();
 		foreach( TreeNote treeNote in MainTabGroup.TreeNotes )
 		{
@@ -159,6 +158,10 @@ public class Window : MonoBehaviour
 			{
 				LoadNote(recentClosedFiles_.Pop(), true);
 			}
+		}
+		if( ctrl && alt && Input.GetKeyDown(KeyCode.L) )
+		{
+			OpenDiary();
 		}
 		if( Input.GetKeyDown(KeyCode.F5) && MainTabGroup.ActiveNote != null )
 		{
@@ -310,6 +313,23 @@ public class Window : MonoBehaviour
 		}
 	}
 
+	public void OpenDiary(bool isActive = true)
+	{
+		DiaryNote diaryNote = MainTabGroup.ExistDiaryNote;
+		if( diaryNote == null )
+		{
+			TabButton tab = Instantiate(TabButtonPrefab.gameObject, TabParent.transform).GetComponent<TabButton>();
+			diaryNote = Instantiate(DiaryNotePrefab.gameObject, NoteParent.transform).GetComponent<DiaryNote>();
+
+			MainTabGroup.OnTabCreated(tab);
+
+			diaryNote.LoadDiary(tab);
+		}
+		diaryNote.IsActive = isActive;
+
+		FileMenu.Close();
+	}
+
 	public void RecentFiles()
 	{
 		if( recentOpenedFiles_.Count > 0 )
@@ -394,17 +414,6 @@ public class Window : MonoBehaviour
 
 		treeNote.NewNote(path, tab, logNote);
 		treeNote.IsActive = true;
-	}
-
-	void OpenDiary()
-	{
-		TabButton tab = Instantiate(TabButtonPrefab.gameObject, TabParent.transform).GetComponent<TabButton>();
-		DiaryNote diaryNote = Instantiate(DiaryNotePrefab.gameObject, NoteParent.transform).GetComponent<DiaryNote>();
-
-		MainTabGroup.OnTabCreated(tab);
-
-		diaryNote.LoadDiary(tab);
-		diaryNote.IsActive = false;
 	}
 
 	#endregion
@@ -497,6 +506,7 @@ public class Window : MonoBehaviour
 		InitialDirectory,
 		ScreenSize,
 		IsToDoListOpened,
+		IsDiaryOpened,
 		Count
 	}
 
@@ -506,7 +516,8 @@ public class Window : MonoBehaviour
 		"[recent files]",
 		"[initial directory]",
 		"[screen]",
-		"[todo list]"
+		"[todo list]",
+		"[open diary]"
 	};
 
 	void LoadSettings()
@@ -580,6 +591,12 @@ public class Window : MonoBehaviour
 						LineList.Close();
 					}
 					break;
+				case Settings.IsDiaryOpened:
+					if( text == "open" )
+					{
+						OpenDiary(false);
+					}
+					break;
 				}
 			}
 			catch(Exception e)
@@ -632,6 +649,8 @@ public class Window : MonoBehaviour
 		writer.WriteLine(String.Format("{0},{1},{2}", UnityEngine.Screen.width, UnityEngine.Screen.height, UnityEngine.Screen.fullScreen ? "true" : "false"));
 		writer.WriteLine(SettingsTags[(int)Settings.IsToDoListOpened]);
 		writer.WriteLine(LineList.IsOpened ? "open" : "close");
+		writer.WriteLine(SettingsTags[(int)Settings.IsDiaryOpened]);
+		writer.WriteLine(MainTabGroup.ExistDiaryNote != null ? "open" : "close");
 
 		writer.Flush();
 		writer.Close();
