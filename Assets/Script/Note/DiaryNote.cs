@@ -68,10 +68,17 @@ public class DiaryNote : DiaryNoteBase
 		foreach( DateUI dateUI in dateUIlist_ )
 		{
 			float datePreferredHeight = 0;
-			foreach( LogTree logTree in dateUI.GetComponentsInChildren<LogTree>() )
+			foreach( LogTree logTree in dateUI.GetComponentsInChildren<LogTree>(includeInactive:true) )
 			{
-				logTree.UpdateLayoutElement(applyMinHeight: false);
-				datePreferredHeight += logTree.GetComponent<LayoutElement>().preferredHeight + 30;
+				if( logTree.gameObject.activeInHierarchy )
+				{
+					logTree.UpdateLayoutElement(applyMinHeight: false);
+					datePreferredHeight += logTree.GetComponent<LayoutElement>().preferredHeight + 30;
+				}
+				else
+				{
+					datePreferredHeight += 30;
+				}
 			}
 			datePreferredHeight = Math.Max(GameContext.Config.MinLogTreeHeight, datePreferredHeight);
 			dateUI.GetComponent<LayoutElement>().preferredHeight = datePreferredHeight;
@@ -94,7 +101,7 @@ public class DiaryNote : DiaryNoteBase
 				string filename = ToFileName(treeNote, date);
 				if( File.Exists(filename) )
 				{
-					LoadDate(ref dateUI, date, filename, treeNote.Tree.TitleText);
+					logTrees_.Add(LoadDate(ref dateUI, date, filename, treeNote.Tree.TitleText));
 				}
 			}
 			date = date.AddDays(-1.0);
@@ -108,6 +115,8 @@ public class DiaryNote : DiaryNoteBase
 	public override void ReloadNote()
 	{
 		DateTime date = DateTime.Now;
+		List<LogTree> cachedLogTrees = new List<LogTree>(logTrees_);
+		logTrees_.Clear();
 		while( date > endDate_ )
 		{
 			DateUI dateUI = dateUIlist_.Find((DateUI dui) => dui.Date.Date == date.Date);
@@ -116,14 +125,15 @@ public class DiaryNote : DiaryNoteBase
 				string filename = ToFileName(treeNote, date);
 				if( File.Exists(filename) )
 				{
-					LogTree existTree = logTrees_.Find((LogTree lt) => lt.File.Name == Path.GetFileName(filename));
+					LogTree existTree = cachedLogTrees.Find((LogTree lt) => lt.File.Name == Path.GetFileName(filename));
 					if( existTree != null )
 					{
 						existTree.ReloadFile();
+						logTrees_.Add(existTree);
 					}
 					else
 					{
-						LoadDate(ref dateUI, date, filename, treeNote.Tree.TitleText);
+						logTrees_.Add(LoadDate(ref dateUI, date, filename, treeNote.Tree.TitleText));
 					}
 				}
 			}
@@ -133,7 +143,7 @@ public class DiaryNote : DiaryNoteBase
 		UpdateLayoutElement();
 	}
 
-	protected void LoadDate(ref DateUI dateUI, DateTime date, string filename, string title)
+	protected LogTree LoadDate(ref DateUI dateUI, DateTime date, string filename, string title)
 	{
 		if( dateUI == null )
 		{
@@ -143,15 +153,17 @@ public class DiaryNote : DiaryNoteBase
 			dateUIlist_.Add(dateUI);
 		}
 
-		Text titleText = Instantiate(TitleTextPrefab.gameObject, dateUI.GetComponentInChildren<VerticalLayoutGroup>().transform).GetComponentInChildren<Text>();
-		titleText.text = title;
+		LogTitleText titleText = Instantiate(TitleTextPrefab.gameObject, dateUI.GetComponentInChildren<VerticalLayoutGroup>().transform).GetComponent<LogTitleText>();
 
 		LogTree logTree = Instantiate(LogTreePrefab.gameObject, dateUI.GetComponentInChildren<VerticalLayoutGroup>().transform).GetComponent<LogTree>();
 		logTree.Initialize(this, new ActionManagerProxy(actionManager_), heapFields_);
 		logTree.LoadLog(new FileInfo(filename), date);
 		logTree.SubscribeKeyInput();
 		logTree.OnEdited += this.OnEdited;
-		logTrees_.Add(logTree);
+
+		titleText.Intialize(logTree, title);
+
+		return logTree;
 	}
 
 	public override void OnEdited(object sender, EventArgs e)

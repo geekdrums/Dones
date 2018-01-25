@@ -54,11 +54,21 @@ public class DiaryNoteBase : Note
 	public void OnOverflowArrowInput(LogTree tree, KeyCode key)
 	{
 		int index = logTrees_.IndexOf(tree);
+		int nextIndex = index + 1;
+		while( nextIndex < logTrees_.Count - 1 && logTrees_[nextIndex].gameObject.activeInHierarchy == false )
+		{
+			++nextIndex;
+		}
+		int prevIndex = index - 1;
+		while( prevIndex > 0 && logTrees_[prevIndex].gameObject.activeInHierarchy == false )
+		{
+			--prevIndex;
+		}
 		switch(key)
 		{
 		case KeyCode.DownArrow:
 			{
-				Line next = (index < logTrees_.Count - 1 ? logTrees_[index + 1].RootLine[0] : null);
+				Line next = (nextIndex < logTrees_.Count ? logTrees_[nextIndex].RootLine[0] : null);
 				if( next != null )
 				{
 					next.Field.IsFocused = true;
@@ -67,7 +77,7 @@ public class DiaryNoteBase : Note
 			break;
 		case KeyCode.UpArrow:
 			{
-				Line prev = (index > 0 ? logTrees_[index - 1].RootLine.LastVisibleLine : null);
+				Line prev = (prevIndex >= 0 ? logTrees_[prevIndex].RootLine.LastVisibleLine : null);
 				if( prev != null )
 				{
 					prev.Field.IsFocused = true;
@@ -76,7 +86,7 @@ public class DiaryNoteBase : Note
 			break;
 		case KeyCode.RightArrow:
 			{
-				Line next = (index < logTrees_.Count - 1 ? logTrees_[index + 1].RootLine[0] : null);
+				Line next = (nextIndex < logTrees_.Count ? logTrees_[nextIndex].RootLine[0] : null);
 				if( next != null )
 				{
 					next.Field.CaretPosision = 0;
@@ -86,7 +96,7 @@ public class DiaryNoteBase : Note
 			break;
 		case KeyCode.LeftArrow:
 			{
-				Line prev = (index > 0 ? logTrees_[index - 1].RootLine.LastVisibleLine : null);
+				Line prev = (prevIndex >= 0 ? logTrees_[prevIndex].RootLine.LastVisibleLine : null);
 				if( prev != null )
 				{
 					prev.Field.CaretPosision = prev.TextLength;
