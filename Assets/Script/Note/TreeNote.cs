@@ -304,7 +304,7 @@ public class TreeNote : Note
 		}
 	}
 
-	public void ReloadNote()
+	public override void ReloadNote()
 	{
 		if( tree_.File != null )
 		{

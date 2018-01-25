@@ -160,9 +160,9 @@ public class Window : MonoBehaviour
 				LoadNote(recentClosedFiles_.Pop(), true);
 			}
 		}
-		if( Input.GetKeyDown(KeyCode.F5) && MainTabGroup.ActiveTreeNote != null )
+		if( Input.GetKeyDown(KeyCode.F5) && MainTabGroup.ActiveNote != null )
 		{
-			MainTabGroup.ActiveTreeNote.ReloadNote();
+			MainTabGroup.ActiveNote.ReloadNote();
 		}
 		if( MainTabGroup.ActiveNote != null )
 		{
@@ -463,6 +463,12 @@ public class Window : MonoBehaviour
 			}
 			treeNote.Tab.UpdateTitleText();
 			treeNote.Tab.UpdateColor();
+		}
+		else
+		{
+			OpenLogNoteButton.SetActive(false);
+			CloseLogNoteButton.SetActive(false);
+			LogTabButton.transform.parent.gameObject.SetActive(false);
 		}
 
 		TreeNoteTransform.sizeDelta = new Vector2(TreeNoteTransform.sizeDelta.x, height * (1.0f - logNoteRatio) - (logNoteRatio > 0.0f ? 40.0f : 0.0f));

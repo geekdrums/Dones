@@ -113,6 +113,7 @@ public class LogNote : DiaryNoteBase
 	public void OnTreeNoteSelected()
 	{
 		scrollRect_.verticalScrollbar.value = targetScrollValue_;
+		LogTabButton.Text = TitleText;
 
 		foreach( LogTree logTree in logTrees_ )
 		{
@@ -133,6 +134,10 @@ public class LogNote : DiaryNoteBase
 	{
 		LoadUntil(today_.AddDays(-LoadDateCount));
 		GameContext.Window.UpdateVerticalLayout();
+		if( treeNote_.IsActive )
+		{
+			LogTabButton.Text = TitleText;
+		}
 	}
 
 	public void OnAreaClosed()
@@ -151,10 +156,8 @@ public class LogNote : DiaryNoteBase
 
 		today_ = DateTime.Now.Date;
 		endDate_ = today_;
-		
-		LoadLog(today_, ToFileName(treeNote_, today_));
 
-		LogTabButton.Text = TitleText;
+		todayTree_ = LoadLog(today_, ToFileName(treeNote_, today_));
 	}
 
 	public override void LoadUntil(DateTime endDate)

@@ -78,8 +78,7 @@ public class Note : MonoBehaviour
 			return;
 		}
 	}
-
-
+	
 	public void CheckScrollbarEnabled()
 	{
 		if( scrollRect_.verticalScrollbar.isActiveAndEnabled == false )
@@ -133,6 +132,8 @@ public class Note : MonoBehaviour
 		lastSaveRequestedTime_ = Time.time;
 		GameContext.Window.SaveText.StartSaving();
 	}
+
+	public virtual void ReloadNote() { }
 
 	public float TimeFromRequestedAutoSave()
 	{
