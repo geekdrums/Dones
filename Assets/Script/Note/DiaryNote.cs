@@ -40,6 +40,15 @@ public class DiaryNote : DiaryNoteBase
 		SubscribeKeyInput();
 
 		GameContext.Window.LogTabButton.OwnerNote = null;
+		
+		foreach( LogTree logTree in logTrees_ )
+		{
+			if( EditedLogTreeDict.ContainsKey(logTree.File.FullName) )
+			{
+				logTree.ReloadFile();
+				EditedLogTreeDict.Remove(logTree.File.FullName);
+			}
+		}
 	}
 
 	public override void OnBeginTabDrag()
@@ -110,6 +119,16 @@ public class DiaryNote : DiaryNoteBase
 		EndDateUI.Set(endDate.AddDays(-1), GameContext.Config.CommentTextColor);
 		EndDateUI.transform.parent.SetAsLastSibling();
 		UpdateLayoutElement();
+	}
+
+	public override void OnEdited(object sender, EventArgs e)
+	{
+		base.OnEdited(sender, e);
+		LogTree logTree = sender as LogTree;
+		if( EditedLogTreeDict.ContainsValue(logTree) == false )
+		{
+			EditedLogTreeDict.Add(logTree.File.FullName, logTree);
+		}
 	}
 
 	public void SaveDiary()

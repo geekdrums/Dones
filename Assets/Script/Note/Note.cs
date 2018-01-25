@@ -124,7 +124,7 @@ public class Note : MonoBehaviour
 	{
 	}
 
-	public void OnEdited(object sender, EventArgs e)
+	public virtual void OnEdited(object sender, EventArgs e)
 	{
 		Tree tree = sender as Tree;
 		if( saveRequestedTrees_.Contains(tree) == false )

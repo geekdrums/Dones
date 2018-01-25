@@ -15,6 +15,7 @@ using System.Windows.Forms;
 // Window - [ LogNote ] - LogTree - Line
 public class DiaryNoteBase : Note
 {
+	protected static Dictionary<string, LogTree> EditedLogTreeDict = new Dictionary<string, LogTree>();
 	public int LoadDateCount = 7;
 
 	public bool IsEdited
@@ -137,7 +138,8 @@ public class DiaryNoteBase : Note
 
 	public static Color ToColor(DateTime date)
 	{
-		if( date.DayOfWeek == DayOfWeek.Sunday ) return GameContext.Config.AccentColor;
+		if( date.Date == DateTime.Now.Date ) return GameContext.Config.DoneColor;
+		else if( date.DayOfWeek == DayOfWeek.Sunday ) return GameContext.Config.AccentColor;
 		else if( date.DayOfWeek == DayOfWeek.Saturday ) return GameContext.Config.AccentColor;
 		else return GameContext.Config.TextColor;
 	}
