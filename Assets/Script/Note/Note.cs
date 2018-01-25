@@ -109,6 +109,10 @@ public class Note : MonoBehaviour
 	{
 		this.gameObject.SetActive(false);
 		targetScrollValue_ = scrollRect_.verticalScrollbar.gameObject.activeInHierarchy ? scrollRect_.verticalScrollbar.value : 1.0f;
+		if( saveRequestedTrees_.Count > 0 )
+		{
+			DoAutoSave();
+		}
 	}
 
 	public virtual void OnTabClosed()
@@ -127,6 +131,7 @@ public class Note : MonoBehaviour
 			saveRequestedTrees_.Add(tree);
 		
 		lastSaveRequestedTime_ = Time.time;
+		GameContext.Window.SaveText.StartSaving();
 	}
 
 	public float TimeFromRequestedAutoSave()
@@ -142,5 +147,6 @@ public class Note : MonoBehaviour
 		}
 		saveRequestedTrees_.Clear();
 		lastSaveRequestedTime_ = 0;
+		GameContext.Window.SaveText.Saved();
 	}
 }

@@ -235,12 +235,12 @@ public class TreeNote : Note
 
 	#region file
 
-	public void NewNote(TabButton tab, LogNote logNote)
+	public void NewNote(string path, TabButton tab, LogNote logNote)
 	{
 		tabButton_ = tab;
 		logNote_ = logNote;
-
-		tree_.NewFile("new");
+		
+		tree_.NewFile(new FileInfo(path));
 
 		tabButton_.BindedNote = this;
 		tabButton_.Text = tree_.TitleText;
@@ -277,6 +277,7 @@ public class TreeNote : Note
 			tree_.SaveFile();
 			logNote_.SaveLog();
 		}
+		saveRequestedTrees_.Clear();
 	}
 
 	public void SaveAs()

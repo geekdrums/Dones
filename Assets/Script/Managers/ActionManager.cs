@@ -55,15 +55,17 @@ public class ActionManager
 			{
 				OnChainStarted();
 				if( action.Proxy != null )
-				{
 					action.Proxy.OnChainStarted();
-				}
+
 				action.Undo();
+				if( Executed != null )
+					Executed(this, new ActionEventArgs(action));
+				if( action.Proxy != null )
+					action.Proxy.OnExecuted(new ActionEventArgs(action));
+
 				OnChainEnded();
 				if( action.Proxy != null )
-				{
 					action.Proxy.OnChainEnded();
-				}
 			}
 			else
 			{
@@ -71,9 +73,7 @@ public class ActionManager
 				if( Executed != null )
 					Executed(this, new ActionEventArgs(action));
 				if( action.Proxy != null )
-				{
 					action.Proxy.OnExecuted(new ActionEventArgs(action));
-				}
 			}
 		}
 	}
@@ -87,15 +87,17 @@ public class ActionManager
 			{
 				OnChainStarted();
 				if( action.Proxy != null )
-				{
 					action.Proxy.OnChainStarted();
-				}
+
 				action.Redo();
+				if( Executed != null )
+					Executed(this, new ActionEventArgs(action));
+				if( action.Proxy != null )
+					action.Proxy.OnExecuted(new ActionEventArgs(action));
+
 				OnChainEnded();
 				if( action.Proxy != null )
-				{
 					action.Proxy.OnChainEnded();
-				}
 			}
 			else
 			{
@@ -103,9 +105,7 @@ public class ActionManager
 				if( Executed != null )
 					Executed(this, new ActionEventArgs(action));
 				if( action.Proxy != null )
-				{
 					action.Proxy.OnExecuted(new ActionEventArgs(action));
-				}
 			}
 		}
 	}
@@ -117,13 +117,15 @@ public class ActionManager
 		chainStack_.Clear();
 	}
 
-	public void StartChain()
+	public void StartChain(ActionManagerProxy proxy = null)
 	{
 		if( chainStack_.Count == 0 )
 		{
 			OnChainStarted();
 		}
-		chainStack_.Push(new ChainAction());
+		ChainAction chainAction = new ChainAction();
+		chainAction.Proxy = proxy;
+		chainStack_.Push(chainAction);
 	}
 
 	public void EndChain()
@@ -210,7 +212,7 @@ public class ActionManagerProxy
 		{
 			OnChainStarted();
 		}
-		actionManager_.StartChain();
+		actionManager_.StartChain(proxy: this);
 	}
 
 	public void EndChain()

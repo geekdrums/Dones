@@ -147,15 +147,8 @@ public class LogNote : DiaryNoteBase
 		todayTree_ = Instantiate(LogTreePrefab.gameObject, dateUI.transform).GetComponent<LogTree>();
 		dateUI.Set(today_, GameContext.Config.DoneColor);
 		todayTree_.Initialize(this, new ActionManagerProxy(actionManager_), heapFields_);
-		todayTree_.OnEdited += this.OnEdited;
-		if( treeNote_.File != null )
-		{
-			todayTree_.LoadLog(new FileInfo(ToFileName(treeNote_, today_)), today_);
-		}
-		else
-		{
-			todayTree_.NewLog(today_);
-		}
+		todayTree_.OnEdited += treeNote_.OnEdited;
+		todayTree_.LoadLog(new FileInfo(ToFileName(treeNote_, today_)), today_);
 		logTrees_.Add(todayTree_);
 
 		LogTabButton.Text = TitleText;
@@ -184,7 +177,7 @@ public class LogNote : DiaryNoteBase
 				logTree.Initialize(this, new ActionManagerProxy(actionManager_), heapFields_);
 				logTree.LoadLog(new FileInfo(filename), date);
 				logTree.SubscribeKeyInput();
-				logTree.OnEdited += this.OnEdited;
+				logTree.OnEdited += treeNote_.OnEdited;
 				logTrees_.Add(logTree);
 
 				lastDateUI = dateUI;
@@ -211,8 +204,8 @@ public class LogNote : DiaryNoteBase
 		dateUI.Set(date, ToColor(date));
 		dateUI.SetEnableAddDateButtton(treeNote_.File == null || File.Exists(ToFileName(treeNote_, date.AddDays(-1.0))) == false);
 		newDateTree.Initialize(this, new ActionManagerProxy(actionManager_), heapFields_);
-		newDateTree.OnEdited += this.OnEdited;
-		newDateTree.NewLog(date);
+		newDateTree.OnEdited += treeNote_.OnEdited;
+		newDateTree.LoadLog(new FileInfo(ToFileName(treeNote_, date)), date);
 		newDateTree.SubscribeKeyInput();
 		SetSortedIndex(newDateTree);
 	}
@@ -253,6 +246,8 @@ public class LogNote : DiaryNoteBase
 				logTree.SaveFile();
 			}
 		}
+
+		saveRequestedTrees_.Clear();
 	}
 	
 	public void ReloadLog()

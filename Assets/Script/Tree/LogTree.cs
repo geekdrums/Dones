@@ -369,12 +369,6 @@ public class LogTree : Tree
 
 	#region file
 
-	public void NewLog(DateTime date)
-	{
-		date_ = date;
-		NewFile("new");
-	}
-
 	public void LoadLog(FileInfo file, DateTime date)
 	{
 		date_ = date;
@@ -385,7 +379,7 @@ public class LogTree : Tree
 		}
 		else
 		{
-			NewFile(file_.Name);
+			NewFile(file_);
 		}
 	}
 	

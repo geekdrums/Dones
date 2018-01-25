@@ -166,18 +166,9 @@ public class Window : MonoBehaviour
 		}
 		if( MainTabGroup.ActiveNote != null )
 		{
-			float time = MainTabGroup.ActiveNote.TimeFromRequestedAutoSave();
-			if( time > 0 )
+			if( MainTabGroup.ActiveNote.TimeFromRequestedAutoSave() > GameContext.Config.AutoSaveTime )
 			{
-				if( time > GameContext.Config.AutoSaveTime )
-				{
-					MainTabGroup.ActiveNote.DoAutoSave();
-					SaveText.Saved();
-				}
-				else
-				{
-					SaveText.StartSaving();
-				}
+				MainTabGroup.ActiveNote.DoAutoSave();
 			}
 		}
 
@@ -265,7 +256,24 @@ public class Window : MonoBehaviour
 
 	public void NewFile()
 	{
-		NewNote();
+		SaveFileDialog newFileDialog = new SaveFileDialog();
+		newFileDialog.Filter = "dones file (*.dtml)|*.dtml";
+		if( initialDirectory_ != null )
+			newFileDialog.InitialDirectory = initialDirectory_;
+		DialogResult dialogResult = newFileDialog.ShowDialog();
+		if( dialogResult == DialogResult.OK && newFileDialog.FileName.EndsWith(".dtml") )
+		{
+			if( File.Exists(newFileDialog.FileName) == false )
+			{
+				File.Create(newFileDialog.FileName).Close();
+			}
+			NewNote(newFileDialog.FileName);
+
+			if( MainTabGroup.ActiveTreeNote != null )
+			{
+				initialDirectory_ = MainTabGroup.ActiveTreeNote.File.Directory.FullName;
+			}
+		}
 
 		FileMenu.Close();
 	}
@@ -275,6 +283,7 @@ public class Window : MonoBehaviour
 		if( MainTabGroup.ActiveTreeNote != null )
 		{
 			MainTabGroup.ActiveTreeNote.SaveNote();
+			SaveText.Saved();
 		}
 
 		FileMenu.Close();
@@ -375,7 +384,7 @@ public class Window : MonoBehaviour
 
 	}
 
-	void NewNote()
+	void NewNote(string path)
 	{
 		TabButton tab = Instantiate(TabButtonPrefab.gameObject, TabParent.transform).GetComponent<TabButton>();
 		TreeNote treeNote = Instantiate(TreeNotePrefab.gameObject, NoteParent.transform).GetComponent<TreeNote>();
@@ -383,7 +392,8 @@ public class Window : MonoBehaviour
 
 		MainTabGroup.OnTabCreated(tab);
 
-		treeNote.NewNote(tab, logNote);
+		treeNote.NewNote(path, tab, logNote);
+		treeNote.IsActive = true;
 	}
 
 	void OpenDiary()
@@ -424,6 +434,7 @@ public class Window : MonoBehaviour
 	}
 
 	#endregion
+
 
 	#region layout
 
@@ -487,7 +498,7 @@ public class Window : MonoBehaviour
 		"[initial files]",
 		"[log tab]",
 		"[recent files]",
-		"[initial files]",
+		"[initial directory]",
 		"[screen]",
 		"[todo list]"
 	};

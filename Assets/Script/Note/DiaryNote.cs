@@ -111,4 +111,17 @@ public class DiaryNote : DiaryNoteBase
 		EndDateUI.transform.parent.SetAsLastSibling();
 		UpdateLayoutElement();
 	}
+
+	public void SaveDiary()
+	{
+		foreach( LogTree logTree in logTrees_ )
+		{
+			if( logTree.IsEdited )
+			{
+				logTree.SaveFile();
+			}
+		}
+
+		saveRequestedTrees_.Clear();
+	}
 }

@@ -1760,10 +1760,12 @@ public class Tree : MonoBehaviour
 
 	#region files
 
-	public void NewFile(string name)
+	public void NewFile(FileInfo file)
 	{
+		file_ = file;
 		SuspendLayout();
-		rootLine_ = new Line(name);
+		rootLine_ = new Line(file_.Name);
+		gameObject.name = "Tree - " + TitleText;
 		rootLine_.Bind(this.gameObject);
 		rootLine_.Add(new Line(""));
 		ResumeLayout();
