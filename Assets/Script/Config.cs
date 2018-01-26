@@ -28,6 +28,7 @@ public class Config : MonoBehaviour
 	public float DoubleClickInterval = 0.25f;
 	public float MinLogTreeHeight = 100.0f;
 	public float AutoSaveTime = 1.5f;
+	public int LogLoadUnit = 7;
 
 	public Color ThemeColor;
 	public Color AccentColor;

@@ -1,12 +1,19 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
 using UnityEngine.UI;
 
 public class LogTitleText : MonoBehaviour {
 
+	public bool IsExistFile { get { return logTree_ != null; } }
+
+	DiaryNote ownerNote_;
 	LogTree logTree_;
 	bool isVisible_ = true;
+	string filepath_;
+
+	Graphic graphic_;
 
 	// Use this for initialization
 	void Start () {
@@ -18,16 +25,32 @@ public class LogTitleText : MonoBehaviour {
 		
 	}
 
-	public void Intialize(LogTree logTree, string text)
+	public void Intialize(DiaryNote owner, string filepath, LogTree logTree, string text)
 	{
+		ownerNote_ = owner;
+		name = Path.GetFileName(filepath);
+		filepath_ = filepath;
 		logTree_ = logTree;
 		GetComponentInChildren<Text>().text = text;
+		graphic_ = GetComponent<Button>().targetGraphic;
+		if( logTree_ == null )
+		{
+			graphic_.color = ColorManager.MakeAlpha(graphic_.color, 0.6f);
+		}
 	}
 
 	public void OnPush()
 	{
-		isVisible_ = !isVisible_;
-		logTree_.gameObject.SetActive(isVisible_);
-		GetComponentInParent<DiaryNote>().UpdateLayoutElement();
+		if( logTree_ != null )
+		{
+			isVisible_ = !isVisible_;
+			logTree_.gameObject.SetActive(isVisible_);
+			ownerNote_.UpdateLayoutElement();
+		}
+		else
+		{
+			logTree_ = ownerNote_.InsertLogTree(this, GetComponentInParent<DateUI>().Date, filepath_);
+			graphic_.color = ColorManager.MakeAlpha(graphic_.color, 1.0f);
+		}
 	}
 }

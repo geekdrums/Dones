@@ -16,7 +16,6 @@ using System.Windows.Forms;
 public class DiaryNoteBase : Note
 {
 	protected static Dictionary<string, LogTree> EditedLogTreeDict = new Dictionary<string, LogTree>();
-	public int LoadDateCount = 7;
 
 	public bool IsEdited
 	{
@@ -34,12 +33,23 @@ public class DiaryNoteBase : Note
 	protected List<LogTree> logTrees_ = new List<LogTree>();
 	protected DateTime today_;
 	protected DateTime endDate_;
+	protected bool endLoad_ = false;
 
 	protected override void Awake()
 	{
 		base.Awake();
 		today_ = DateTime.Now.Date;
 		endDate_ = today_;
+	}
+
+	protected override void Update()
+	{
+		base.Update();
+
+		if( endLoad_ == false && scrollRect_.verticalScrollbar.isActiveAndEnabled && scrollRect_.verticalScrollbar.value <= 100.0f / layout_.preferredHeight )
+		{
+			LoadMore();
+		}
 	}
 	
 	
@@ -142,23 +152,9 @@ public class DiaryNoteBase : Note
 
 	#region file
 
-	public virtual void LoadUntil(DateTime endDate)
+	public virtual void LoadMore()
 	{
-	}
-
-	public void LoadMoreDay()
-	{
-		LoadUntil(endDate_.AddDays(-1));
-	}
-
-	public void LoadMoreWeek()
-	{
-		LoadUntil(endDate_.AddDays(-7));
-	}
-
-	public void LoadMoreMonth()
-	{
-		LoadUntil(endDate_.AddMonths(-1));
+		endLoad_ = true;
 	}
 
 	#endregion
@@ -170,6 +166,11 @@ public class DiaryNoteBase : Note
 		else if( date.DayOfWeek == DayOfWeek.Sunday ) return GameContext.Config.AccentColor;
 		else if( date.DayOfWeek == DayOfWeek.Saturday ) return GameContext.Config.AccentColor;
 		else return GameContext.Config.TextColor;
+	}
+
+	public static string ToDirectoryName(TreeNote treeNote)
+	{
+		return String.Format("{0}/{1}.dones/", treeNote.File.DirectoryName, treeNote.File.Name.Replace(".dtml", ""));
 	}
 
 	public static string ToFileName(TreeNote treeNote, DateTime date)

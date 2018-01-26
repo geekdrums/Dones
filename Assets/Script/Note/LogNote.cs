@@ -17,7 +17,6 @@ public class LogNote : DiaryNoteBase
 {
 	public GameObject LogTreePrefab;
 	public GameObject DateUIPrefab;
-	public DateUI EndDateUI;
 
 	public LogTree TodayTree { get { return todayTree_; } }
 	private LogTree todayTree_;
@@ -63,7 +62,8 @@ public class LogNote : DiaryNoteBase
 	private bool isOpended_ = false;
 
 	public override string TitleText { get { return treeNote_ != null ? treeNote_.Tree.TitleText.Replace(".dtml", ".dones") : ""; } }
-	
+
+	SortedList<DateTime, string> logFileList_ = new SortedList<DateTime, string>();
 
 	#region input
 
@@ -132,7 +132,10 @@ public class LogNote : DiaryNoteBase
 
 	public void OnAreaOpened()
 	{
-		LoadUntil(today_.AddDays(-LoadDateCount));
+		if( endDate_ == today_ )
+		{
+			LoadMore();
+		}
 		GameContext.Window.UpdateVerticalLayout();
 		if( treeNote_.IsActive )
 		{
@@ -150,63 +153,65 @@ public class LogNote : DiaryNoteBase
 
 	#region file
 
-	public void LoadToday(TreeNote treeNote)
+	public void Initialize(TreeNote treeNote)
 	{
 		treeNote_ = treeNote;
 
+		string header = treeNote_.File.Name.Replace(".dtml", "");
+		foreach( string path in Directory.GetFiles(ToDirectoryName(treeNote_)) )
+		{
+			// path would be like "dones-2017-01-01.dtml"
+			if( Path.GetExtension(path) == ".dtml" )
+			{
+				// splitPath would be like "[dones][2017][01][01]"
+				string[] splitPath = Path.GetFileNameWithoutExtension(path).Split('-');
+				int year, month, day;
+				if( splitPath.Length == 4 && splitPath[0] == header && int.TryParse(splitPath[1], out year) && int.TryParse(splitPath[2], out month) && int.TryParse(splitPath[3], out day) )
+				{
+					DateTime date = new DateTime(year, month, day);
+					logFileList_.Add(date, path);
+				}
+			}
+		}
+
 		today_ = DateTime.Now.Date;
 		endDate_ = today_;
-
-		todayTree_ = LoadLog(today_, ToFileName(treeNote_, today_));
+		todayTree_ = LoadLogTree(today_, ToFileName(treeNote_, today_));
+		if( logFileList_.ContainsKey(today_.Date) )
+		{
+			logFileList_.Remove(today_.Date);
+		}
 	}
 
-	public override void LoadUntil(DateTime endDate)
+	public override void LoadMore()
 	{
 		if( treeNote_.File == null ) return;
-
-		DateTime date = endDate_;
-		DateUI lastDateUI = logTrees_.Count == 0 ? null : logTrees_[logTrees_.Count - 1].GetComponentInChildren<DateUI>();
-		while( date > endDate )
+		
+		int loadCount = GameContext.Config.LogLoadUnit;
+		while( logFileList_.Count > 0 && loadCount > 0 )
 		{
-			date = date.AddDays(-1.0);
-			string filename = ToFileName(treeNote_, date);
-			bool exist = File.Exists(filename);
-			if( lastDateUI != null )
-			{
-				lastDateUI.SetEnableAddDateButtton(exist == false);
-			}
-			if( exist )
-			{
-				LogTree logTree = LoadLog(date, filename);
-				lastDateUI = logTree.GetComponentInParent<DateUI>();
-			}
-			else
-			{
-				lastDateUI = null;
-			}
+			DateTime date = logFileList_.Last().Key;
+			LogTree logTree = LoadLogTree(date, logFileList_[date]);
+			--loadCount;
+			logFileList_.Remove(date);
+			endDate_ = date;
 		}
-		if( lastDateUI != null )
-		{
-			lastDateUI.SetEnableAddDateButtton(false);
-		}
-		endDate_ = endDate;
-		EndDateUI.Set(endDate.AddDays(-1), GameContext.Config.CommentTextColor);
-		EndDateUI.transform.parent.SetAsLastSibling();
+		endLoad_ = logFileList_.Count == 0;
 		UpdateLayoutElement();
 	}
 
 	public void AddDate(DateTime date)
 	{
-		LogTree logTree = LoadLog(date, ToFileName(treeNote_, date));
-		logTree.GetComponentInParent<DateUI>().SetEnableAddDateButtton(treeNote_.File == null || File.Exists(ToFileName(treeNote_, date.AddDays(-1.0))) == false);
+		LogTree logTree = LoadLogTree(date, ToFileName(treeNote_, date));
 		SetSortedIndex(logTree);
 	}
 
-	protected LogTree LoadLog(DateTime date, string filename)
+	protected LogTree LoadLogTree(DateTime date, string filename)
 	{
 		DateUI dateUI = Instantiate(DateUIPrefab.gameObject, this.transform).GetComponent<DateUI>();
 		LogTree logTree = Instantiate(LogTreePrefab.gameObject, dateUI.transform).GetComponent<LogTree>();
 		dateUI.Set(date, ToColor(date));
+		dateUI.SetEnableAddDateButtton(File.Exists(ToFileName(treeNote_, date.AddDays(-1.0))) == false);
 		logTree.Initialize(this, new ActionManagerProxy(actionManager_), heapFields_);
 		logTree.LoadLog(new FileInfo(filename), date);
 		logTree.SubscribeKeyInput();

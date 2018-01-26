@@ -245,7 +245,7 @@ public class TreeNote : Note
 		tabButton_.BindedNote = this;
 		tabButton_.Text = tree_.TitleText;
 
-		logNote.LoadToday(this);
+		logNote.Initialize(this);
 	}
 
 	public void LoadNote(string path, TabButton tab, LogNote logNote)
@@ -263,7 +263,7 @@ public class TreeNote : Note
 		tabButton_.Text = tree_.TitleText;
 		targetScrollValue_ = 1.0f;
 		
-		logNote.LoadToday(this);
+		logNote.Initialize(this);
 	}
 
 	public void SaveNote()
@@ -294,7 +294,7 @@ public class TreeNote : Note
 			}
 
 			tree_.SaveFileAs(new FileInfo(saveFileDialog.FileName));
-			logNote_.LoadToday(this);
+			logNote_.Initialize(this);
 			logNote_.SaveLog();
 			GameContext.Window.AddRecentOpenedFiles(tree_.File.FullName);
 

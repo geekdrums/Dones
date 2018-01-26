@@ -18,7 +18,6 @@ public class DiaryNote : DiaryNoteBase
 	public GameObject LogTreePrefab;
 	public GameObject DateUIPrefab;
 	public GameObject TitleTextPrefab;
-	public DateUI EndDateUI;
 	
 	public override string TitleText { get { return "Diary"; } }
 
@@ -29,8 +28,7 @@ public class DiaryNote : DiaryNoteBase
 		tabButton_ = tab;
 		tabButton_.BindedNote = this;
 		tabButton_.Text = TitleText;
-
-		LoadUntil(today_.AddDays(-LoadDateCount));
+		LoadMore();
 	}
 
 	public override void OnTabSelected()
@@ -68,14 +66,16 @@ public class DiaryNote : DiaryNoteBase
 		foreach( DateUI dateUI in dateUIlist_ )
 		{
 			float datePreferredHeight = 0;
-			foreach( LogTree logTree in dateUI.GetComponentsInChildren<LogTree>(includeInactive:true) )
+			Transform parent = dateUI.GetComponentInChildren<VerticalLayoutGroup>().transform;
+			for( int i = 0; i < parent.childCount; ++i )
 			{
-				if( logTree.gameObject.activeInHierarchy )
+				LogTree logTree = parent.GetChild(i).GetComponent<LogTree>();
+				if( logTree != null && logTree.gameObject.activeInHierarchy )
 				{
 					logTree.UpdateLayoutElement(applyMinHeight: false);
-					datePreferredHeight += logTree.GetComponent<LayoutElement>().preferredHeight + 30;
+					datePreferredHeight += logTree.GetComponent<LayoutElement>().preferredHeight;
 				}
-				else
+				else if( parent.GetChild(i).GetComponent<LogTitleText>() != null )
 				{
 					datePreferredHeight += 30;
 				}
@@ -84,31 +84,39 @@ public class DiaryNote : DiaryNoteBase
 			dateUI.GetComponent<LayoutElement>().preferredHeight = datePreferredHeight;
 			preferredHeight += datePreferredHeight + 5;
 		}
-		preferredHeight += 120;
+		preferredHeight += 200;
 		layout_.preferredHeight = preferredHeight;
 		contentSizeFitter_.SetLayoutVertical();
 	}
 	
 	
-	public override void LoadUntil(DateTime endDate)
+	public override void LoadMore()
 	{
 		DateTime date = endDate_;
-		while( date > endDate )
+		int loadCount = GameContext.Config.LogLoadUnit;
+		while( loadCount > 0 )
 		{
-			DateUI dateUI = null;
+			DateUI dateUI = Instantiate(DateUIPrefab.gameObject, this.transform).GetComponent<DateUI>();
+			dateUI.Set(date, ToColor(date));
+			dateUI.SetEnableAddDateButtton(false);
+			dateUIlist_.Add(dateUI);
+			Transform parent = dateUI.GetComponentInChildren<VerticalLayoutGroup>().transform;
 			foreach( TreeNote treeNote in GameContext.Window.MainTabGroup.TreeNotes )
 			{
+				LogTitleText titleText = Instantiate(TitleTextPrefab.gameObject, dateUI.GetComponentInChildren<VerticalLayoutGroup>().transform).GetComponent<LogTitleText>();
 				string filename = ToFileName(treeNote, date);
+				LogTree logTree = null;
 				if( File.Exists(filename) )
 				{
-					logTrees_.Add(LoadDate(ref dateUI, date, filename, treeNote.Tree.TitleText));
+					logTree = LoadLogTree(parent, date, filename);
+					logTrees_.Add(logTree);
 				}
+				titleText.Intialize(this, filename, logTree, treeNote.Tree.TitleText);
 			}
 			date = date.AddDays(-1.0);
+			--loadCount;
 		}
-		endDate_ = endDate;
-		EndDateUI.Set(endDate.AddDays(-1), GameContext.Config.CommentTextColor);
-		EndDateUI.transform.parent.SetAsLastSibling();
+		endDate_ = date;
 		UpdateLayoutElement();
 	}
 
@@ -117,9 +125,9 @@ public class DiaryNote : DiaryNoteBase
 		DateTime date = DateTime.Now;
 		List<LogTree> cachedLogTrees = new List<LogTree>(logTrees_);
 		logTrees_.Clear();
-		while( date > endDate_ )
+		foreach( DateUI dateUI in dateUIlist_ )
 		{
-			DateUI dateUI = dateUIlist_.Find((DateUI dui) => dui.Date.Date == date.Date);
+			Transform parent = dateUI.GetComponentInChildren<VerticalLayoutGroup>().transform;
 			foreach( TreeNote treeNote in GameContext.Window.MainTabGroup.TreeNotes )
 			{
 				string filename = ToFileName(treeNote, date);
@@ -133,35 +141,78 @@ public class DiaryNote : DiaryNoteBase
 					}
 					else
 					{
-						logTrees_.Add(LoadDate(ref dateUI, date, filename, treeNote.Tree.TitleText));
+						Transform titleObj = parent.Find(Path.GetFileName(filename));
+						if( titleObj != null )
+						{
+							LogTree logTree = LoadLogTree(parent, date, filename);
+							logTree.gameObject.transform.SetSiblingIndex(titleObj.GetSiblingIndex() + 1);
+							logTrees_.Add(logTree);
+						}
 					}
 				}
 			}
-			date = date.AddDays(-1.0);
 		}
-		EndDateUI.transform.parent.SetAsLastSibling();
 		UpdateLayoutElement();
 	}
 
-	protected LogTree LoadDate(ref DateUI dateUI, DateTime date, string filename, string title)
+	public LogTree InsertLogTree(LogTitleText titleText, DateTime date, string filename)
 	{
-		if( dateUI == null )
+		LogTree logTree = LoadLogTree(titleText.transform.parent, date, filename);
+		logTree.gameObject.transform.SetSiblingIndex(titleText.transform.GetSiblingIndex() + 1);
+
+		// search insert index
+		int insertIndex = -1;
+		bool find = false;
+		// 同じDateUIの子供から探し始める
+		for( int i = 0; i < titleText.transform.parent.childCount; ++i )
 		{
-			dateUI = Instantiate(DateUIPrefab.gameObject, this.transform).GetComponent<DateUI>();
-			dateUI.Set(date, ToColor(date));
-			dateUI.SetEnableAddDateButtton(false);
-			dateUIlist_.Add(dateUI);
+			LogTree existLogTree = titleText.transform.parent.GetChild(i).GetComponent<LogTree>();
+			if( logTree == existLogTree )
+			{
+				find = true;
+				if( insertIndex >= 0 )
+				{
+					// 直前のLogTreeが見つかってるのでここでOK
+					break;
+				}
+			}
+			else if( existLogTree != null )
+			{
+				insertIndex = logTrees_.IndexOf(existLogTree) + 1;
+				if( find )
+				{
+					// ここが直後のLogTreeになるのでその前に差し込む
+					insertIndex -= 1;
+					break;
+				}
+			}
 		}
+		// DateUIに他のTreeが無いようなので、logTrees_で探索する
+		if( insertIndex < 0 )
+		{
+			for( int i = 0; i < logTrees_.Count; ++i )
+			{
+				if( logTrees_[i].Date < logTree.Date )
+				{
+					insertIndex = i;
+					break;
+				}
+			}
+		}
+		logTrees_.Insert(insertIndex, logTree);
 
-		LogTitleText titleText = Instantiate(TitleTextPrefab.gameObject, dateUI.GetComponentInChildren<VerticalLayoutGroup>().transform).GetComponent<LogTitleText>();
+		UpdateLayoutElement();
 
-		LogTree logTree = Instantiate(LogTreePrefab.gameObject, dateUI.GetComponentInChildren<VerticalLayoutGroup>().transform).GetComponent<LogTree>();
+		return logTree;
+	}
+
+	protected LogTree LoadLogTree(Transform parent, DateTime date, string filename)
+	{
+		LogTree logTree = Instantiate(LogTreePrefab.gameObject, parent).GetComponent<LogTree>();
 		logTree.Initialize(this, new ActionManagerProxy(actionManager_), heapFields_);
 		logTree.LoadLog(new FileInfo(filename), date);
 		logTree.SubscribeKeyInput();
 		logTree.OnEdited += this.OnEdited;
-
-		titleText.Intialize(logTree, title);
 
 		return logTree;
 	}
