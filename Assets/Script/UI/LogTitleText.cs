@@ -7,6 +7,7 @@ using UnityEngine.UI;
 public class LogTitleText : MonoBehaviour {
 
 	public bool IsExistFile { get { return logTree_ != null; } }
+	public string FilePath { get { return filepath_; } }
 
 	DiaryNote ownerNote_;
 	LogTree logTree_;
@@ -39,6 +40,12 @@ public class LogTitleText : MonoBehaviour {
 		}
 	}
 
+	public void OnLoad(LogTree logTree)
+	{
+		logTree_ = logTree;
+		graphic_.color = ColorManager.MakeAlpha(graphic_.color, 1.0f);
+	}
+
 	public void OnPush()
 	{
 		if( logTree_ != null )
@@ -49,8 +56,7 @@ public class LogTitleText : MonoBehaviour {
 		}
 		else
 		{
-			logTree_ = ownerNote_.InsertLogTree(this, GetComponentInParent<DateUI>().Date, filepath_);
-			graphic_.color = ColorManager.MakeAlpha(graphic_.color, 1.0f);
+			OnLoad(ownerNote_.InsertLogTree(this, GetComponentInParent<DateUI>().Date, filepath_));
 		}
 	}
 }

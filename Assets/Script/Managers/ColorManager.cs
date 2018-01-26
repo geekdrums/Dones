@@ -232,7 +232,7 @@ public class ColorManager : MonoBehaviour
 
     public static Color MakeAlpha( Color color, float alpha )
     {
-        return new Color( color.r, color.g, color.b, color.a * alpha );
+        return new Color( color.r, color.g, color.b, alpha );
     }
     public static float Distance( Color color1, Color color2 )
     {

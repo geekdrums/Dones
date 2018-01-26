@@ -21,6 +21,7 @@ public class DiaryNote : DiaryNoteBase
 	
 	public override string TitleText { get { return "Diary"; } }
 
+	List<LogTitleText> titleTextlist_ = new List<LogTitleText>();
 	List<DateUI> dateUIlist_ = new List<DateUI>();
 
 	public void LoadDiary(TabButton tab)
@@ -38,13 +39,26 @@ public class DiaryNote : DiaryNoteBase
 		SubscribeKeyInput();
 
 		GameContext.Window.LogTabButton.OwnerNote = null;
-		
-		foreach( LogTree logTree in logTrees_ )
+
+		List<string> filepathList = new List<string>(EditedLogTreeDict.Keys);
+		foreach( string filepath in filepathList )
 		{
-			if( EditedLogTreeDict.ContainsKey(logTree.File.FullName) )
+			string filename = Path.GetFileName(filepath);
+			LogTree logTree = logTrees_.Find((LogTree lt) => lt.File.Name == filename);
+			if( logTree != null )
 			{
 				logTree.ReloadFile();
 				EditedLogTreeDict.Remove(logTree.File.FullName);
+			}
+			else
+			{
+				LogTitleText titleText = titleTextlist_.Find((LogTitleText tt) => tt.name == filename);
+				if( titleText != null )
+				{
+					logTree = InsertLogTree(titleText, titleText.GetComponentInParent<DateUI>().Date, filepath);
+					titleText.OnLoad(logTree);
+					EditedLogTreeDict.Remove(titleText.FilePath);
+				}
 			}
 		}
 	}
@@ -104,6 +118,7 @@ public class DiaryNote : DiaryNoteBase
 			foreach( TreeNote treeNote in GameContext.Window.MainTabGroup.TreeNotes )
 			{
 				LogTitleText titleText = Instantiate(TitleTextPrefab.gameObject, dateUI.GetComponentInChildren<VerticalLayoutGroup>().transform).GetComponent<LogTitleText>();
+				titleTextlist_.Add(titleText);
 				string filename = ToFileName(treeNote, date);
 				LogTree logTree = null;
 				if( File.Exists(filename) )
@@ -147,6 +162,7 @@ public class DiaryNote : DiaryNoteBase
 							LogTree logTree = LoadLogTree(parent, date, filename);
 							logTree.gameObject.transform.SetSiblingIndex(titleObj.GetSiblingIndex() + 1);
 							logTrees_.Add(logTree);
+							titleObj.GetComponent<LogTitleText>().OnLoad(logTree);
 						}
 					}
 				}

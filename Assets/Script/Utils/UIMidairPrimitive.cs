@@ -202,8 +202,8 @@ public class UIMidairPrimitive : MaskableGraphic, IColoredObject
 			for( int i = 0; i < uiVertices_.Length; ++i )
 			{
 				uiVertices_[i].color = color;
-				growInVertices_[i].color = ColorManager.MakeAlpha(color, (i % 2 == 0 ? 0 : GrowAlpha));
-				growOutVertices_[i].color = ColorManager.MakeAlpha(color, (i % 2 == 0 ? GrowAlpha : 0));
+				growInVertices_[i].color = ColorManager.MakeAlpha(color, color.a * (i % 2 == 0 ? 0 : GrowAlpha));
+				growOutVertices_[i].color = ColorManager.MakeAlpha(color, color.a * (i % 2 == 0 ? GrowAlpha : 0));
 			}
 		}
 	}

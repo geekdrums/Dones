@@ -98,7 +98,7 @@ public class MidairPrimitive : MonoBehaviour
 		{
 			GrowChild.SetSize(Radius + GrowSize);
 			GrowChild.SetWidth(Width + GrowSize * 2);
-			GrowChild.SetColor(ColorManager.MakeAlpha(Color, GrowAlpha));
+			GrowChild.SetColor(ColorManager.MakeAlpha(Color, Color.a * GrowAlpha));
 			GrowChild.SetArc(ArcRate);
 		}
 	}
@@ -397,7 +397,7 @@ public class MidairPrimitive : MonoBehaviour
 		Color = newColor;
 		if( GrowChild != null )
 		{
-			GrowChild.SetColor(ColorManager.MakeAlpha(Color, GrowAlpha));
+			GrowChild.SetColor(ColorManager.MakeAlpha(Color, Color.a * GrowAlpha));
 		}
 
 #if UNITY_EDITOR
@@ -462,7 +462,7 @@ public class MidairPrimitive : MonoBehaviour
 		if( GrowChild != null )
 		{
 			GrowAlpha = newGrowAlpha;
-			GrowChild.SetColor(ColorManager.MakeAlpha(Color, GrowAlpha));
+			GrowChild.SetColor(ColorManager.MakeAlpha(Color, Color.a * GrowAlpha));
 		}
 	}
 
