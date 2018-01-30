@@ -12,16 +12,9 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
-// Tree structure of Lines.
+// Window > Note > [ Tree ] > Line
 public class Tree : MonoBehaviour
 {
-	#region editor params
-
-	public LineField FieldPrefab;
-	public int FieldCount = 100;
-
-	#endregion
-
 	#region params
 
 	protected Line rootLine_;
@@ -30,7 +23,7 @@ public class Tree : MonoBehaviour
 	protected SortedList<int, Line> selectedLines_ = new SortedList<int, Line>();
 	protected Vector3 cachedMousePosition_;
 
-	protected List<LineField> heapFields_ = new List<LineField>();
+	protected HeapManager<LineField> heapManager_;
 	protected ActionManagerProxy actionManager_;
 	public Note OwnerNote { get { return ownerNote_; } }
 	protected Note ownerNote_;
@@ -120,11 +113,11 @@ public class Tree : MonoBehaviour
 	#endregion
 
 
-	public void Initialize(Note ownerNote, ActionManagerProxy actionManager, List<LineField> heapFields)
+	public void Initialize(Note ownerNote, ActionManagerProxy actionManager, HeapManager<LineField> heapManager)
 	{
 		ownerNote_ = ownerNote;
 		actionManager_ = actionManager;
-		heapFields_ = heapFields;
+		heapManager_ = heapManager;
 
 		actionManager_.ChainStarted += this.actionManager__ChainStarted;
 		actionManager_.ChainEnded += this.actionManager__ChainEnded;
@@ -1227,30 +1220,30 @@ public class Tree : MonoBehaviour
 
 	protected virtual void OnCtrlDInput()
 	{
-		if( focusedLine_ == null ) return;
+		//if( focusedLine_ == null ) return;
 
-		actionManager_.StartChain();
-		foreach( Line line in GetSelectedOrFocusedLines() )
-		{
-			if( line.IsDone ) continue;
+		//actionManager_.StartChain();
+		//foreach( Line line in GetSelectedOrFocusedLines() )
+		//{
+		//	if( line.IsDone ) continue;
 
-			Line targetLine = line;
-			actionManager_.Execute(new Action(
-				execute: ()=>
-				{
-					targetLine.IsOnList = !targetLine.IsOnList;
-					ShortLineList lineList = GameContext.Window.LineList;
-					if( targetLine.IsOnList )
-					{
-						lineList.InstantiateShortLine(targetLine);
-					}
-					else
-					{
-						lineList.RemoveLine(targetLine);
-					}
-				}));
-		}
-		actionManager_.EndChain();
+		//	Line targetLine = line;
+		//	actionManager_.Execute(new Action(
+		//		execute: ()=>
+		//		{
+		//			targetLine.IsOnList = !targetLine.IsOnList;
+		//			TagParent lineList = GameContext.Window.LineList;
+		//			if( targetLine.IsOnList )
+		//			{
+		//				lineList.InstantiateShortLine(targetLine);
+		//			}
+		//			else
+		//			{
+		//				lineList.RemoveLine(targetLine);
+		//			}
+		//		}));
+		//}
+		//actionManager_.EndChain();
 	}
 
 	protected void OnCtrlBInput()
@@ -1514,23 +1507,12 @@ public class Tree : MonoBehaviour
 	
 	public void Bind(Line line)
 	{
-		LineField field = heapFields_.Count > 0 ? heapFields_[0] : null;
-		if( field == null )
-		{
-			for( int i = 0; i < FieldCount; ++i )
-			{
-				field = Instantiate(FieldPrefab.gameObject, this.transform).GetComponent<LineField>();
-				field.gameObject.SetActive(false);
-				field.Initialize();
-				heapFields_.Add(field);
-			}
-		}
-		heapFields_.Remove(field);
+		LineField field = heapManager_.Instantiate(this.transform);
+		field.Initialize();
 		if( field.BindedLine != null )
 		{
 			field.BindedLine.UnBind();
 		}
-		field.gameObject.SetActive(true);
 		line.Bind(field.gameObject);
 	}
 
@@ -1538,8 +1520,7 @@ public class Tree : MonoBehaviour
 	{
 		if( line.Field != null )
 		{
-			line.Field.gameObject.SetActive(true);
-			heapFields_.Remove(line.Field);
+			heapManager_.Revive(line.Field);
 		}
 	}
 
@@ -1547,8 +1528,7 @@ public class Tree : MonoBehaviour
 	{
 		if( line.Field != null )
 		{
-			line.Field.gameObject.SetActive(false);
-			heapFields_.Add(line.Field);
+			heapManager_.BackToHeap(line.Field);
 		}
 	}
 
@@ -1885,9 +1865,12 @@ public class Tree : MonoBehaviour
 			ClearSelection();
 			foreach( Line line in rootLine_.GetAllChildren() )
 			{
-				if( line.IsOnList )
+				if( this is LogTree == false )
 				{
-					GameContext.Window.LineList.RemoveLine(line);
+					foreach( string tag in line.Tags )
+					{
+						GameContext.TagList.GetTagParent(tag).RemoveLine(line);
+					}
 				}
 				line.BackToHeap();
 			}

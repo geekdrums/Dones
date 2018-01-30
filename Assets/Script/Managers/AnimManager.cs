@@ -533,7 +533,7 @@ public class ColorAnimInfo : AnimInfoBase
 		initialValue_ = coloredObj_.GetColor();
 		if( Param == ParamType.AlphaColor )
 		{
-			initialValue_ = baseColor_.a;
+			initialValue_ = coloredObj_.GetColor().a;
 		}
 	}
 

@@ -7,7 +7,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using UniRx;
 
-// Window - Tree - [ Line ]
+// Window > Note > Tree > [ Line ]
 public class Line : IEnumerable<Line>
 {
 	#region params
@@ -22,12 +22,19 @@ public class Line : IEnumerable<Line>
 			{
 				Field.SetTextDirectly(text_);
 			}
-			if( IsOnList )
+			if( Tree is LogTree == false )
 			{
-				ShortLine shortline = GameContext.Window.LineList.FindBindedLine(this);
-				if( shortline != null )
+				foreach( string tag in Tags )
 				{
-					shortline.Text = text_;
+					TagParent tagParent = GameContext.TagList.GetTagParent(tag);
+					if( tagParent != null )
+					{
+						TaggedLine taggedline = tagParent.FindBindedLine(this);
+						if( taggedline != null )
+						{
+							taggedline.Text = text_;
+						}
+					}
 				}
 			}
 		}
@@ -91,14 +98,17 @@ public class Line : IEnumerable<Line>
 				if( Field != null )
 				{
 					Field.SetIsDone(isDone_);
-					Field.SetIsOnList(isOnList_);
+					//Field.SetIsOnList(isOnList_);
 				}
-				if( IsOnList )
+				if( Tree is LogTree == false )
 				{
-					ShortLine bindedLine = GameContext.Window.LineList.FindBindedLine(this);
-					if( bindedLine != null )
+					foreach( string tag in Tags )
 					{
-						bindedLine.IsDone = isDone_;
+						TaggedLine bindedLine = GameContext.TagList.GetTagParent(tag).FindBindedLine(this);
+						if( bindedLine != null )
+						{
+							bindedLine.IsDone = isDone_;
+						}
 					}
 				}
 			}
@@ -106,24 +116,33 @@ public class Line : IEnumerable<Line>
 	}
 	protected bool isDone_ = false;
 
-	public bool IsOnList
+	public bool HasAnyTags { get { return tags_.Count > 0; } }
+	public IEnumerable<string> Tags
 	{
-		get { return isOnList_; }
-		set
+		get
 		{
-			if( isLinkText_ || isComment_ ) return;
-
-			if( isOnList_ != value )
+			foreach(string tag in tags_)
 			{
-				isOnList_ = value;
-				if( Field != null )
-				{
-					Field.SetIsOnList(isOnList_);
-				}
+				yield return tag;
 			}
 		}
 	}
-	protected bool isOnList_ = false;
+	protected List<string> tags_ = new List<string>();
+
+	public void AddTag(string tag)
+	{
+		tags_.Add(tag);
+		Text = String.Format("{0} #{1}", text_, tag);
+	}
+
+	public void RemoveTag(string tag)
+	{
+		if( tags_.Contains(tag) )
+		{
+			tags_.Remove(tag);
+			Text = text_.Remove(text_.LastIndexOf(tag) - 2, tag.Length + 2);
+		}
+	}
 
 	public bool IsLinkText { get { return isLinkText_; } }
 	protected bool isLinkText_ = false;
@@ -207,10 +226,6 @@ public class Line : IEnumerable<Line>
 			LoadTag(ref text);
 		}
 		text_ = text;
-		if( IsOnList )
-		{
-			GameContext.Window.LineList.InstantiateShortLine(this);
-		}
 		CheckIsLink();
 	}
 
@@ -220,7 +235,8 @@ public class Line : IEnumerable<Line>
 	public abstract class TextAction : ActionBase
 	{
 		public StringBuilder Text = new StringBuilder();
-		public int CaretPos;
+		public int CaretPos { get; set; }
+		public TagTextEditAction TagEdit { get; set; }
 
 		protected Line line_;
 
@@ -249,6 +265,11 @@ public class Line : IEnumerable<Line>
 			line_.Field.IsFocused = true;
 			line_.Field.CaretPosision = CaretPos;
 			line_.Text = line_.text_.Remove(CaretPos, Text.Length);
+
+			if( TagEdit != null )
+			{
+				TagEdit.Undo();
+			}
 		}
 
 		public override void Redo()
@@ -258,6 +279,11 @@ public class Line : IEnumerable<Line>
 			line_.Field.IsFocused = true;
 			line_.Text = line_.text_.Insert(CaretPos, Text.ToString());
 			line_.Field.CaretPosision = CaretPos + Text.Length;
+
+			if( TagEdit != null )
+			{
+				TagEdit.Redo();
+			}
 		}
 	}
 
@@ -277,6 +303,11 @@ public class Line : IEnumerable<Line>
 			line_.Field.IsFocused = true;
 			line_.Text = line_.text_.Insert(CaretPos, Text.ToString());
 			line_.Field.CaretPosision = CaretPos + Text.Length;
+
+			if( TagEdit != null )
+			{
+				TagEdit.Undo();
+			}
 		}
 
 		public override void Redo()
@@ -284,6 +315,99 @@ public class Line : IEnumerable<Line>
 			line_.Field.IsFocused = true;
 			line_.Field.CaretPosision = CaretPos;
 			line_.Text = line_.text_.Remove(CaretPos, Text.Length);
+
+			if( TagEdit != null )
+			{
+				TagEdit.Redo();
+			}
+		}
+	}
+
+	public class TagTextEditAction : ActionBase
+	{
+		Line line_;
+		List<string> newTags_;
+		List<string> oldTags_;
+
+		public TagTextEditAction(Line line, List<string> tags)
+		{
+			line_ = line;
+			oldTags_ = new List<string>(tags);
+		}
+
+		public override void Execute()
+		{
+
+		}
+
+		public override void Undo()
+		{
+			TagEditDiff diff = CheckTagChanged(oldTags_, newTags_);
+			UpdateTags(diff.RemoveTags, diff.AddTags);
+		}
+
+		public override void Redo()
+		{
+			TagEditDiff diff = CheckTagChanged(newTags_, oldTags_);
+			UpdateTags(diff.RemoveTags, diff.AddTags);
+		}
+
+		public void SetNewTag(List<string> tags)
+		{
+			newTags_ = tags;
+		}
+
+		public void UpdateTags(List<string> removeTags, List<string> addTags)
+		{
+			foreach( string removeTag in removeTags )
+			{
+				line_.tags_.Remove(removeTag);
+				TagParent tagParent = GameContext.TagList.GetTagParent(removeTag);
+				if( tagParent != null )
+				{
+					tagParent.RemoveLine(line_);
+				}
+			}
+			foreach( string addTag in addTags )
+			{
+				line_.tags_.Add(addTag);
+				TagParent tagParent = GameContext.TagList.GetOrInstantiateTagParent(addTag);
+				if( tagParent != null )
+				{
+					tagParent.InstantiateTaggedLine(line_);
+				}
+			}
+		}
+
+		public class TagEditDiff
+		{
+			public List<string> RemoveTags = new List<string>();
+			public List<string> AddTags = new List<string>();
+			public bool IsEdited { get { return RemoveTags.Count > 0 || AddTags.Count > 0; } }
+		}
+
+		static TagEditDiff SharedDiffObj = new TagTextEditAction.TagEditDiff();
+		public static TagEditDiff CheckTagChanged(List<string> newTags, List<string> oldTags)
+		{
+			SharedDiffObj.RemoveTags.Clear();
+			SharedDiffObj.AddTags.Clear();
+
+			foreach( string oldTag in oldTags )
+			{
+				if( newTags.Contains(oldTag) == false )
+				{
+					SharedDiffObj.RemoveTags.Add(oldTag);
+				}
+			}
+			foreach( string newTag in newTags )
+			{
+				if( oldTags.Contains(newTag) == false )
+				{
+					SharedDiffObj.AddTags.Add(newTag);
+				}
+			}
+
+			return SharedDiffObj;
 		}
 	}
 
@@ -305,6 +429,7 @@ public class Line : IEnumerable<Line>
 
 		if( oldCaretPos < currentCaretPos )
 		{
+			// キャレットが正方向に移動しているので入力
 			if( textAction_ == null || textAction_ is TextInputAction == false || Time.time - lastTextActionTime_ > GameContext.Config.TextInputFixIntervalTime )
 			{
 				FixTextInputAction();
@@ -313,13 +438,10 @@ public class Line : IEnumerable<Line>
 			}
 			string appendText = newText.Substring(oldCaretPos, currentCaretPos - oldCaretPos);
 			textAction_.Text.Append(appendText);
-			if( appendText == " " && (textAction_.CaretPos == 0 && textAction_.Text.ToString() == CommentTag) == false )
-			{
-				FixTextInputAction();
-			}
 		}
 		else
 		{
+			// キャレットが負方向に移動しているので削除
 			if( textAction_ == null || textAction_ is TextDeleteAction == false || Time.time - lastTextActionTime_ > GameContext.Config.TextInputFixIntervalTime )
 			{
 				FixTextInputAction();
@@ -341,6 +463,22 @@ public class Line : IEnumerable<Line>
 			textAction_.CaretPos = currentCaretPos;
 		}
 
+		if( Tree is LogTree == false )
+		{
+			// タグに変化があればそれもアクションに乗せる
+			List<string> newTags = GetHashTags(newText);
+			TagTextEditAction.TagEditDiff tagEditDiff = TagTextEditAction.CheckTagChanged(newTags, tags_);
+			if( tagEditDiff.IsEdited )
+			{
+				if( textAction_.TagEdit == null )
+				{
+					textAction_.TagEdit = new TagTextEditAction(this, tags_);
+				}
+				textAction_.TagEdit.SetNewTag(newTags);
+				textAction_.TagEdit.UpdateTags(tagEditDiff.RemoveTags, tagEditDiff.AddTags);
+			}
+		}
+
 		lastTextActionTime_ = Time.time;
 
 		text_ = newText;
@@ -353,16 +491,19 @@ public class Line : IEnumerable<Line>
 		}
 #endif
 
-		if( IsDone || IsOnList || IsLinkText )
+		if( IsDone || HasAnyTags || IsLinkText )
 		{
 			Field.OnTextLengthChanged();
 		}
-		if( IsOnList )
+		if( Tree is LogTree == false )
 		{
-			ShortLine shortline = GameContext.Window.LineList.FindBindedLine(this);
-			if( shortline != null )
+			foreach( string tag in Tags )
 			{
-				shortline.Text = text_;
+				TaggedLine shortline = GameContext.TagList.GetTagParent(tag).FindBindedLine(this);
+				if( shortline != null )
+				{
+					shortline.Text = text_;
+				}
 			}
 		}
 		CheckIsComment();
@@ -464,7 +605,7 @@ public class Line : IEnumerable<Line>
 		{
 			Field.SetIsClone(isClone_);
 			Field.SetIsDone(isDone_, withAnim: false);
-			Field.SetIsOnList(isOnList_, withAnim: false);
+			//Field.SetIsOnList(isOnList_, withAnim: false);
 			Field.textComponent.fontStyle = isBold_ ? FontStyle.Bold : FontStyle.Normal;
 			if( isLinkText_ )
 				Field.SetIsLinkText(isLinkText_);
@@ -520,12 +661,16 @@ public class Line : IEnumerable<Line>
 
 		child.OnFoundParent();
 
-		if( child.IsOnList )
+		if( child.Tree is LogTree == false )
 		{
-			ShortLine shortline = GameContext.Window.LineList.FindBindedLine(child);
-			if( shortline == null )
+			foreach( string tag in child.Tags )
 			{
-				GameContext.Window.LineList.InstantiateShortLine(child);
+				TagParent tagParent = GameContext.TagList.GetOrInstantiateTagParent(tag);
+				TaggedLine taggedline = tagParent.FindBindedLine(child);
+				if( taggedline == null )
+				{
+					tagParent.InstantiateTaggedLine(child);
+				}
 			}
 		}
 	}
@@ -590,12 +735,15 @@ public class Line : IEnumerable<Line>
 	protected void OnLostParent()
 	{
 		BackToHeap();
-		if( IsOnList )
+		if( Tree is LogTree == false )
 		{
-			ShortLine shortline = GameContext.Window.LineList.FindBindedLine(this);
-			if( shortline != null )
+			foreach( string tag in Tags )
 			{
-				GameContext.Window.LineList.RemoveShortLine(shortline);
+				TagParent tagParent = GameContext.TagList.GetTagParent(tag);
+				if( tagParent != null )
+				{
+					tagParent.RemoveLine(this);
+				}
 			}
 		}
 		foreach(Line child in this.GetAllChildren())
@@ -709,7 +857,7 @@ public class Line : IEnumerable<Line>
 
 	public void AdjustLayoutRecursive(int startIndex = 0, Predicate<Line> predToBreak = null)
 	{
-		if( startIndex < Count )
+		if( 0 <= startIndex && startIndex < Count )
 		{
 			Vector3 target = children_[startIndex].CalcTargetPosition();
 			float heightPerLine = GameContext.Config.HeightPerLine;
@@ -1024,10 +1172,47 @@ public class Line : IEnumerable<Line>
 	public static char TabChar = '	';
 	public static string FoldTag = "<f>";
 	public static string DoneTag = "<d>";
-	public static string OnListTag = "<o>";
 	public static string CloneTag = "<c>";
 	public static string BoldTag = "<b>";
 	public static string CommentTag = "> ";
+	public static char[] spaces = new char[] { ' ', '　' };
+
+	public static List<string> GetHashTags(string text)
+	{
+		List<string> tags = new List<string>();
+		string[] splitText = text.Split(spaces);
+		for( int i = 0; i < splitText.Length; ++i )
+		{
+			if( splitText[i].StartsWith("#") )
+			{
+				string tag = splitText[i].TrimStart('#');
+				// todo check validate
+				if( String.IsNullOrEmpty(tag) || tag.Contains('#') || tag.Contains('.') || tag.Contains(',') )
+				{
+					continue;
+				}
+				bool invaid = false;
+				foreach( char invalidChar in System.IO.Path.GetInvalidFileNameChars() )
+				{
+					if( tag.Contains(invalidChar) )
+					{
+						invaid = true;
+						break;
+					}
+				}
+				if( invaid )
+				{
+					continue;
+				}
+
+				if( tags.Contains(tag) == false )
+				{
+					tags.Add(tag);
+				}
+			}
+		}
+		return tags;
+	}
 
 	public void AppendStringTo(StringBuilder builder, bool appendTag = false, int ignoreLevel = 0)
 	{
@@ -1062,10 +1247,6 @@ public class Line : IEnumerable<Line>
 			{
 				builder.Append(DoneTag);
 			}
-			if( IsOnList )
-			{
-				builder.Append(OnListTag);
-			}
 		}
 		builder.AppendLine();
 	}
@@ -1089,25 +1270,11 @@ public class Line : IEnumerable<Line>
 		{
 			builder.Append(DoneTag);
 		}
-		if( IsOnList )
-		{
-			builder.Append(OnListTag);
-		}
 		return builder.ToString();
 	}
 
 	public void LoadTag(ref string text)
 	{
-		if( text.EndsWith(OnListTag) )
-		{
-			text = text.Remove(text.Length - OnListTag.Length);
-			IsOnList = true;
-		}
-		else
-		{
-			IsOnList = false;
-		}
-
 		if( text.EndsWith(DoneTag) )
 		{
 			text = text.Remove(text.Length - DoneTag.Length);
@@ -1157,6 +1324,8 @@ public class Line : IEnumerable<Line>
 		{
 			IsComment = false;
 		}
+
+		tags_ = GetHashTags(text);
 	}
 
 	public void CheckIsLink()
@@ -1208,7 +1377,7 @@ public class Line : IEnumerable<Line>
 		line.isFolded_ = isFolded_;
 		line.isLinkText_ = isLinkText_;
 		line.isComment_ = isComment_;
-		line.isOnList_ = false;
+		line.tags_ = new List<string>(tags_);
 		line.isClone_ = true;
 		return line;
 	}

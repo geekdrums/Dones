@@ -36,6 +36,7 @@ public class CustomInputField : InputField, IColoredObject
 	}
 	protected int cachedCaretPos_;
 	protected static int desiredCaretPos_;
+	protected static int desiredSelectionFocusPos_;
 	public int ActualCaretPosition { get { return m_CaretSelectPosition; } set { m_CaretSelectPosition = m_CaretPosition = value; } }
 	
 
@@ -174,6 +175,11 @@ public class CustomInputField : InputField, IColoredObject
 				cachedCaretPos_ = text.Length;
 			}
 			selectionAnchorPosition = selectionFocusPosition = cachedCaretPos_;
+			if( desiredSelectionFocusPos_ >= 0 )
+			{
+				selectionFocusPosition = desiredSelectionFocusPos_;
+				desiredSelectionFocusPos_ = -1;
+			}
 			OnFocused();
 		}
 	}

@@ -12,15 +12,24 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
+// Window > [ Note ] > Tree > Line
 public class Note : MonoBehaviour
 {
+	#region editor params
+
+	public LineField LinePrefab;
+	public int LineHeapCount = 30;
+
+	#endregion
+
+
 	public TabButton Tab { get { return tabButton_; } }
 	protected TabButton tabButton_;
 	public bool IsActive { get { return (tabButton_ != null ? tabButton_.IsOn : false); } set { if( tabButton_ != null ) tabButton_.IsOn = value; } }
 	public virtual string TitleText { get { return ""; } }
 
 	protected ActionManager actionManager_ = new ActionManager();
-	protected List<LineField> heapFields_ = new List<LineField>();
+	protected HeapManager<LineField> heapManager_ = new HeapManager<LineField>();
 	protected List<Tree> saveRequestedTrees_ = new List<Tree>();
 	
 	protected LayoutElement layout_;
@@ -35,6 +44,7 @@ public class Note : MonoBehaviour
 		layout_ = GetComponentInParent<LayoutElement>();
 		contentSizeFitter_ = GetComponentInParent<ContentSizeFitter>();
 		scrollRect_ = GetComponentInParent<ScrollRect>();
+		heapManager_.Initialize(LineHeapCount, LinePrefab, useFromFirst: true); // lastのほうにFoldされたLineとかが溜まっていくので、Reviveする可能性が高いため0番目のフリーな要素から使っていく
 	}
 
 

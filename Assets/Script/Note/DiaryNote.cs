@@ -225,7 +225,7 @@ public class DiaryNote : DiaryNoteBase
 	protected LogTree LoadLogTree(Transform parent, DateTime date, string filename)
 	{
 		LogTree logTree = Instantiate(LogTreePrefab.gameObject, parent).GetComponent<LogTree>();
-		logTree.Initialize(this, new ActionManagerProxy(actionManager_), heapFields_);
+		logTree.Initialize(this, new ActionManagerProxy(actionManager_), heapManager_);
 		logTree.LoadLog(new FileInfo(filename), date);
 		logTree.SubscribeKeyInput();
 		logTree.OnEdited += this.OnEdited;

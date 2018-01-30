@@ -6,7 +6,8 @@ using UnityEngine.UI;
 using UniRx;
 using UniRx.Triggers;
 
-public class ShortLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragHandler, IColoredObject
+// Window > TagList > TagParent > [ TaggedLine ]
+public class TaggedLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragHandler, IColoredObject
 {	
 	#region properties
 
@@ -43,6 +44,9 @@ public class ShortLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragHa
 		set
 		{
 			textComponent_.text = value;
+#if UNITY_EDITOR
+			name = value;
+#endif
 			if( shouldUpdateTextLength_ == false )
 			{
 				shouldUpdateTextLength_ = true;
@@ -51,6 +55,7 @@ public class ShortLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragHa
 		}
 	}
 	Text textComponent_;
+
 	public override string ToString()
 	{
 		return Text;
@@ -65,27 +70,27 @@ public class ShortLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragHa
 			image.color = value;
 		}
 	}
-	public Color GetColor() { return image.color; }
-	public void SetColor(Color color) { image.color = color; }
+	public Color GetColor() { return textComponent_.color; }
+	public void SetColor(Color color) { textComponent_.color = color; }
 	
-	public Color TargetColor
-	{
-		get
-		{
-			if( isSelected_ )
-			{
-				return IsDone ? GameContext.Config.ShortLineBackSelectionColor : GameContext.Config.ShortLineSelectionColor;
-			}
-			else if( IsDone )
-			{
-				return GameContext.Config.ShortLineBackColor;
-			}
-			else
-			{
-				return Color.Lerp(GameContext.Config.ShortLineColor, GameContext.Config.ShortLineBackColor, ownerList_.IndexOf(this) * ownerList_.Gradation);
-			}
-		}
-	}
+	//public Color TargetColor
+	//{
+	//	get
+	//	{
+	//		if( isSelected_ )
+	//		{
+	//			return IsDone ? GameContext.Config.ShortLineBackSelectionColor : GameContext.Config.ShortLineSelectionColor;
+	//		}
+	//		else if( IsDone )
+	//		{
+	//			return GameContext.Config.ShortLineBackColor;
+	//		}
+	//		else
+	//		{
+	//			return Color.Lerp(GameContext.Config.ShortLineColor, GameContext.Config.ShortLineBackColor, tagParent_.IndexOf(this) * tagParent_.Gradation);
+	//		}
+	//	}
+	//}
 
 	#endregion
 
@@ -97,7 +102,7 @@ public class ShortLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragHa
 	Button doneButton_;
 	UIMidairPrimitive listMark_;
 
-	ShortLineList ownerList_;
+	TagParent tagParent_;
 
 	bool shouldUpdateTextLength_;
 
@@ -113,20 +118,31 @@ public class ShortLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragHa
 		strikeLine_ = textComponent_.GetComponentInChildren<UIGaugeRenderer>(includeInactive: true);
 		checkMark_ = GetComponentInChildren<CheckMark>(includeInactive: true);
 		listMark_ = GetComponentInChildren<UIMidairPrimitive>(includeInactive: true);
-		ownerList_ = GetComponentInParent<ShortLineList>();
+		tagParent_ = GetComponentInParent<TagParent>();
 		doneButton_ = GetComponentInChildren<Button>();
 		this.OnPointerDownAsObservable()
-			.TimeInterval()
-			.Select(t => t.Interval.TotalSeconds)
-			.Buffer(2, 1)
-			.Where(list => list[0] > GameContext.Config.DoubleClickInterval)
-			.Where(list => list.Count > 1 ? list[1] <= GameContext.Config.DoubleClickInterval : false)
+			//.TimeInterval()
+			//.Select(t => t.Interval.TotalSeconds)
+			//.Buffer(2, 1)
+			//.Where(list => list[0] > GameContext.Config.DoubleClickInterval)
+			//.Where(list => list.Count > 1 ? list[1] <= GameContext.Config.DoubleClickInterval : false)
 			.Subscribe(_ => ShowBindedLine()).AddTo(this);
 	}
 
 	// Update is called once per frame
-	void Update () {
+	void Update() {
 
+	}
+
+	protected override void OnDisable()
+	{
+		base.OnDisable();
+		
+		if( BindedLine != null && tagParent_ != null )
+		{
+			tagParent_.OnLineDisabled(this);
+			shouldUpdateTextLength_ = false;
+		}
 	}
 
 	#endregion
@@ -140,7 +156,7 @@ public class ShortLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragHa
 		Text = line.Text;
 		IsDone = line.IsDone;
 	}
-	
+
 	public void ShowBindedLine()
 	{
 		if( BindedLine != null )
@@ -152,6 +168,11 @@ public class ShortLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragHa
 			BindedLine.Tree.OwnerNote.ScrollTo(BindedLine);
 			BindedLine.Field.Select();
 			BindedLine.Field.IsFocused = true;
+			int index = BindedLine.Text.IndexOf(tagParent_.Tag) - 1;
+			if( index >= 0 )
+			{
+				BindedLine.Field.SetSelection(index, tagParent_.Tag.Length + 1);
+			}
 		}
 	}
 
@@ -164,16 +185,16 @@ public class ShortLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragHa
 	{
 		base.OnSelect(eventData);
 		isSelected_ = true;
-		Background = TargetColor;
-		ownerList_.OnSelect(this);
+		//Background = TargetColor;
+		tagParent_.OnSelect(this);
 	}
 
 	public override void OnDeselect(BaseEventData eventData)
 	{
 		base.OnDeselect(eventData);
 		isSelected_ = false;
-		Background = TargetColor;
-		ownerList_.OnDeselect(this);
+		//Background = TargetColor;
+		tagParent_.OnDeselect(this);
 	}
 
 	#endregion
@@ -203,7 +224,7 @@ public class ShortLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragHa
 			strikeLine_.gameObject.SetActive(true);
 			checkMark_.gameObject.SetActive(true);
 			listMark_.gameObject.SetActive(false);
-			textComponent_.color = GameContext.Config.DoneTextColor;
+			SetColor(GameContext.Config.DoneTextColor);
 			UpdateStrikeLine();
 
 			if( withAnim )
@@ -218,10 +239,10 @@ public class ShortLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragHa
 			strikeLine_.gameObject.SetActive(false);
 			checkMark_.gameObject.SetActive(false);
 			listMark_.gameObject.SetActive(true);
-			textComponent_.color = Color.white;
+			SetColor(GameContext.Config.TextColor);
 		}
 
-		ownerList_.OnDoneChanged(this);
+		tagParent_.OnDoneChanged(this);
 	}
 
 	public void UpdateStrikeLine()
@@ -240,7 +261,7 @@ public class ShortLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragHa
 		TextGenerator gen = textComponent_.cachedTextGenerator;
 
 		float charLength = gen.characters[gen.characters.Count - 1].cursorPos.x - gen.characters[0].cursorPos.x;
-		float maxWidth = ownerList_.LineWidth - 58;
+		float maxWidth = GameContext.Config.TagListWidth - GameContext.Config.TagCommaInterval;
 		if( charLength > maxWidth )
 		{
 			int maxCharCount = 0;
@@ -260,20 +281,27 @@ public class ShortLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragHa
 		shouldUpdateTextLength_ = false;
 	}
 
-	public void Remove()
+	public void Remove(bool canUndo = true)
 	{
-		Line line = BindedLine;
-		BindedLine.Tree.ActionManager.Execute(new Action(
-			execute: () =>
-			{
-				line.IsOnList = false;
-				ownerList_.RemoveLine(line);
-			},
-			undo: () =>
-			{
-				line.IsOnList = true;
-				ownerList_.InstantiateShortLine(line);
-			}));
+		if( canUndo )
+		{
+			Line line = BindedLine;
+			BindedLine.Tree.ActionManager.Execute(new Action(
+				execute: () =>
+				{
+					line.RemoveTag(tagParent_.Tag);
+					tagParent_.RemoveLine(line);
+				},
+				undo: () =>
+				{
+					line.AddTag(tagParent_.Tag);
+					tagParent_.InstantiateTaggedLine(line);
+				}));
+		}
+		else
+		{
+			tagParent_.RemoveTaggedLine(this);
+		}
 	}
 
 	#endregion
@@ -285,7 +313,7 @@ public class ShortLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragHa
 	{
 		if( IsDone == false )
 		{
-			ownerList_.OnBeginDrag(this);
+			tagParent_.OnBeginDrag(this);
 		}
 	}
 
@@ -293,7 +321,7 @@ public class ShortLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragHa
 	{
 		if( IsDone == false )
 		{
-			ownerList_.OnDragging(this, eventData);
+			tagParent_.OnDragging(this, eventData);
 		}
 	}
 
@@ -301,7 +329,7 @@ public class ShortLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragHa
 	{
 		if( IsDone == false )
 		{
-			ownerList_.OnEndDrag(this);
+			tagParent_.OnEndDrag(this);
 		}
 	}
 

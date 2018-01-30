@@ -46,7 +46,7 @@ public class TreeNote : Note
 	{
 		base.Awake();
 		tree_ = GetComponent<Tree>();
-		tree_.Initialize(this, new ActionManagerProxy(actionManager_), heapFields_);
+		tree_.Initialize(this, new ActionManagerProxy(actionManager_), heapManager_);
 		tree_.OnEdited += this.OnEdited;
 		tree_.OnDoneChanged += this.OnDoneChanged;
 	}
@@ -104,17 +104,17 @@ public class TreeNote : Note
 
 	public override void OnTabClosed()
 	{
-		List<ShortLine> removeList = new List<ShortLine>();
-		foreach( ShortLine shortLine in GameContext.Window.LineList )
+		List<TaggedLine> removeList = new List<TaggedLine>();
+		foreach( TaggedLine taggedLine in GameContext.TagList.TaggedLines )
 		{
-			if( shortLine.BindedLine.Tree == this )
+			if( taggedLine.BindedLine.Tree == this )
 			{
-				removeList.Add(shortLine);
+				removeList.Add(taggedLine);
 			}
 		}
-		foreach( ShortLine shortLine in removeList )
+		foreach( TaggedLine shortLine in removeList )
 		{
-			GameContext.Window.LineList.RemoveShortLine(shortLine);
+			shortLine.Remove(canUndo: false);
 		}
 		
 		SaveNote();
@@ -137,7 +137,7 @@ public class TreeNote : Note
 	public void OnFontSizeChanged()
 	{
 		tree_.RootLine.AdjustFontSizeRecursive(GameContext.Config.FontSize, GameContext.Config.HeightPerLine);
-		foreach( LineField field in heapFields_ )
+		foreach( LineField field in heapManager_ )
 		{
 			field.textComponent.fontSize = GameContext.Config.FontSize;
 			field.RectHeight = GameContext.Config.HeightPerLine;

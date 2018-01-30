@@ -30,6 +30,11 @@ public class Config : MonoBehaviour
 	public float AutoSaveTime = 1.5f;
 	public int LogLoadUnit = 7;
 
+	public float TagListWidth = 200;
+	public float ClosedTagListWidth = 5;
+	public float TagCommaInterval = 58;
+	//public float TagListGradation = 0.05f;
+
 	public Color ThemeColor;
 	public Color AccentColor;
 	public Color DoneColor;

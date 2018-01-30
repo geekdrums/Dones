@@ -30,7 +30,7 @@ public class LineField : CustomInputField
 
 	protected UIGaugeRenderer strikeLine_;
 	protected CheckMark checkMark_;
-	protected UIMidairPrimitive listMark_;
+	//protected UIMidairPrimitive listMark_;
 
 	protected bool isPointerEntered_ = false;
 
@@ -43,7 +43,7 @@ public class LineField : CustomInputField
 	{
 		strikeLine_ = GetComponentInChildren<UIGaugeRenderer>(includeInactive: true);
 		checkMark_ = textComponent.transform.Find("Check").GetComponent<CheckMark>();
-		listMark_ = textComponent.transform.Find("Mark").GetComponent<UIMidairPrimitive>();
+		//listMark_ = textComponent.transform.Find("Mark").GetComponent<UIMidairPrimitive>();
 	}
 
 	public void DeleteSelection()
@@ -71,10 +71,11 @@ public class LineField : CustomInputField
 		BindedLine.CheckIsLink();
 	}
 
-	public void SetSelection(int start, int end)
+	public void SetSelection(int start, int length)
 	{
 		CaretPosision = start;
-		selectionFocusPosition = end;
+		selectionFocusPosition = start + length;
+		desiredSelectionFocusPos_ = selectionFocusPosition;
 	}
 
 	public void SetTextDirectly(string text)
@@ -89,7 +90,7 @@ public class LineField : CustomInputField
 #if UNITY_EDITOR
 		gameObject.name = text;
 #endif
-		if( BindedLine.IsDone || BindedLine.IsOnList || BindedLine.IsLinkText ) OnTextLengthChanged();
+		if( BindedLine.IsDone || BindedLine.HasAnyTags || BindedLine.IsLinkText ) OnTextLengthChanged();
 	}
 
 	#endregion
@@ -104,7 +105,7 @@ public class LineField : CustomInputField
 		Foreground = GetDesiredTextColor();
 		if( isDone )
 		{
-			listMark_.gameObject.SetActive(false);
+			//listMark_.gameObject.SetActive(false);
 			OnTextLengthChanged();
 
 			if( withAnim )
@@ -119,12 +120,13 @@ public class LineField : CustomInputField
 		}
 		else
 		{
-			listMark_.gameObject.SetActive(BindedLine.IsOnList);
+			//listMark_.gameObject.SetActive(BindedLine.HasAnyTags);
 		}
 	}
 
 	public void SetIsOnList(bool isOnList, bool withAnim = true)
 	{
+		/*
 		Foreground = GetDesiredTextColor();
 		if( isOnList )
 		{
@@ -160,6 +162,7 @@ public class LineField : CustomInputField
 				listMark_.gameObject.SetActive(false);
 			}
 		}
+		*/
 	}
 
 	public void SetIsLinkText(bool isLink)
@@ -241,10 +244,10 @@ public class LineField : CustomInputField
 			{
 				return GameContext.Config.DoneTextColor;
 			}
-			else if( BindedLine.IsOnList )
-			{
-				return GameContext.Config.ShortLineColor;
-			}
+			//else if( BindedLine.IsOnList )
+			//{
+			//	return GameContext.Config.ShortLineColor;
+			//}
 			else if( BindedLine.IsLinkText )
 			{
 				return GameContext.Config.ThemeColor;
@@ -270,7 +273,7 @@ public class LineField : CustomInputField
 
 		checkMark_.gameObject.SetActive(BindedLine.IsDone);
 		checkMark_.SetPositionX(charLength + 5);
-		listMark_.GetComponent<RectTransform>().anchoredPosition = new Vector2(charLength + 15, listMark_.transform.localPosition.y);
+		//listMark_.GetComponent<RectTransform>().anchoredPosition = new Vector2(charLength + 15, listMark_.transform.localPosition.y);
 	}
 
 	#endregion

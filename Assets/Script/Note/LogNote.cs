@@ -212,7 +212,7 @@ public class LogNote : DiaryNoteBase
 		LogTree logTree = Instantiate(LogTreePrefab.gameObject, dateUI.transform).GetComponent<LogTree>();
 		dateUI.Set(date, ToColor(date));
 		dateUI.SetEnableAddDateButtton(File.Exists(ToFileName(treeNote_, date.AddDays(-1.0))) == false);
-		logTree.Initialize(this, new ActionManagerProxy(actionManager_), heapFields_);
+		logTree.Initialize(this, new ActionManagerProxy(actionManager_), heapManager_);
 		logTree.LoadLog(new FileInfo(filename), date);
 		logTree.SubscribeKeyInput();
 		logTree.OnEdited += this.OnEdited;

@@ -39,7 +39,6 @@ public class Window : MonoBehaviour
 
 	public MenuButton FileMenu;
 	public GameObject RecentFilesSubMenu;
-	public ShortLineList LineList;
 	public ModalDialog ModalDialog;
 	public Text FontSizeText;
 	public SaveText SaveText;
@@ -50,7 +49,6 @@ public class Window : MonoBehaviour
 	#region params
 
 	FileInfo settingFile_;
-	FileInfo lineListFile_;
 
 	string initialDirectory_;
 
@@ -62,7 +60,7 @@ public class Window : MonoBehaviour
 	int numRecentFilesMenu = 0;
 	bool saveConfirmed_ = false;
 
-	public float HeaderWidth { get { return LineList.Width + 5.0f; } }
+	public float HeaderWidth { get { return 205; } }//LineList.Width + 5.0f; } }
 
 	#endregion
 
@@ -84,7 +82,6 @@ public class Window : MonoBehaviour
 	void Start ()
 	{
 		settingFile_ = new FileInfo(System.Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + "/Dones/settings.txt");
-		lineListFile_ = new FileInfo(System.Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + "/Dones/linelist.txt");
 		numRecentFilesMenu = RecentFilesSubMenu.GetComponentsInChildren<UnityEngine.UI.Button>().Length;
 		StartCoroutine(InitialLoadCoroutine());
 	}
@@ -94,7 +91,7 @@ public class Window : MonoBehaviour
 		// Editorではいいんだけど、アプリ版はこうしないとScrollがバグってその後一切操作できなくなる。。
 		yield return new WaitForEndOfFrame();
 		LoadSettings();
-		LoadLineList();
+		GameContext.TagList.LoadTaggedLines();
 		MainTabGroup.UpdateLayoutAll();
 		foreach( TreeNote treeNote in MainTabGroup.TreeNotes )
 		{
@@ -198,8 +195,8 @@ public class Window : MonoBehaviour
 			}
 		}
 
-		SaveSettings();
-		SaveLineList();
+		//SaveSettings();
+		//GameContext.TagList.SaveTaggedLines();
 
 #if HOOK_WNDPROC
 		TermWndProc();
@@ -494,8 +491,6 @@ public class Window : MonoBehaviour
 	#endregion
 
 
-
-
 	#region settings save / load
 
 	enum Settings
@@ -583,13 +578,13 @@ public class Window : MonoBehaviour
 					UnityEngine.Screen.SetResolution(int.Parse(size[0]), int.Parse(size[1]), size[2] == "true");
 					break;
 				case Settings.IsToDoListOpened:
-					if( text == "open" )
-					{
-					}
-					else if( text == "close" )
-					{
-						LineList.Close();
-					}
+					//if( text == "open" )
+					//{
+					//}
+					//else if( text == "close" )
+					//{
+					//	LineList.Close();
+					//}
 					break;
 				case Settings.IsDiaryOpened:
 					if( text == "open" )
@@ -602,6 +597,7 @@ public class Window : MonoBehaviour
 			catch(Exception e)
 			{
 				print(e.Message);
+				print(e.StackTrace);
 			}
 		}
 		reader.Close();
@@ -647,8 +643,8 @@ public class Window : MonoBehaviour
 		}
 		writer.WriteLine(SettingsTags[(int)Settings.ScreenSize]);
 		writer.WriteLine(String.Format("{0},{1},{2}", UnityEngine.Screen.width, UnityEngine.Screen.height, UnityEngine.Screen.fullScreen ? "true" : "false"));
-		writer.WriteLine(SettingsTags[(int)Settings.IsToDoListOpened]);
-		writer.WriteLine(LineList.IsOpened ? "open" : "close");
+		//writer.WriteLine(SettingsTags[(int)Settings.IsToDoListOpened]);
+		//writer.WriteLine(LineList.IsOpened ? "open" : "close");
 		writer.WriteLine(SettingsTags[(int)Settings.IsDiaryOpened]);
 		writer.WriteLine(MainTabGroup.ExistDiaryNote != null ? "open" : "close");
 
@@ -658,67 +654,6 @@ public class Window : MonoBehaviour
 
 	#endregion
 
-
-	#region todo list save/load
-
-	void LoadLineList()
-	{
-		if( lineListFile_.Exists == false )
-		{
-			return;
-		}
-
-		StreamReader reader = new StreamReader(lineListFile_.OpenRead());
-		string text = null;
-		int index = 0;
-		while( (text = reader.ReadLine()) != null )
-		{
-			ShortLine shortLine = null;
-			foreach( ShortLine line in LineList )
-			{
-				if( line.BindedLine.Text == text )
-				{
-					shortLine = line;
-					break;
-				}
-			}
-			if( shortLine != null )
-			{
-				LineList.SetLineIndex(shortLine, index);
-				++index;
-			}
-		}
-		reader.Close();
-	}
-
-	void SaveLineList()
-	{
-		if( lineListFile_.Exists == false )
-		{
-			if( Directory.Exists(lineListFile_.DirectoryName) == false )
-			{
-				Directory.CreateDirectory(lineListFile_.DirectoryName);
-			}
-		}
-
-		StreamWriter writer = new StreamWriter(lineListFile_.FullName, append: false);
-
-		foreach( ShortLine shortLine in LineList )
-		{
-			if( shortLine.IsDone )
-			{
-				break;
-			}
-			if( shortLine.BindedLine != null )
-			{
-				writer.WriteLine(shortLine.BindedLine.Text);
-			}
-		}
-		writer.Flush();
-		writer.Close();
-	}
-
-	#endregion
 
 
 	#region window title
