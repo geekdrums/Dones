@@ -9,7 +9,7 @@ using UniRx;
 using UniRx.Triggers;
 
 // Window > TagList > [ TagParent ] > TaggedLine
-public class TagParent : MonoBehaviour, IEnumerable<TaggedLine>
+public class TagParent : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDragHandler, IEnumerable<TaggedLine>
 {
 	#region editor params
 
@@ -22,14 +22,51 @@ public class TagParent : MonoBehaviour, IEnumerable<TaggedLine>
 
 	#region params
 
-	public float Height { get { return LineHeight * (lines_.Count + doneLines_.Count); } }
+	public float Height { get { return isFolded_ ? 30 : 30 + LineHeight * (lines_.Count + doneLines_.Count); } }
 
 	public string Tag { get { return tag_; } }
 	string tag_;
 
+	public bool IsFolded
+	{
+		get
+		{
+			return isFolded_;
+		}
+		set
+		{
+			if( isFolded_ != value )
+			{
+				isFolded_ = value;
+
+				if( isFolded_ )
+				{
+					foreach( TaggedLine line in this )
+					{
+						line.gameObject.SetActive(false);
+					}
+				}
+				else
+				{
+					foreach( TaggedLine line in this )
+					{
+						line.gameObject.SetActive(true);
+					}
+				}
+				if( tagToggle_ != null )
+				{
+					tagToggle_.SetFold(IsFolded);
+				}
+				GameContext.TagList.UpdateLayoutElement();
+			}
+		}
+	}
+	bool isFolded_ = false;
+
 	List<TaggedLine> lines_ = new List<TaggedLine>();
 	List<TaggedLine> doneLines_ = new List<TaggedLine>();
 	TaggedLine selectedLine_;
+	TagToggle tagToggle_;
 	int selectedIndex_ = -1;
 
 	HeapManager<TaggedLine> heapManager_ = new HeapManager<TaggedLine>();
@@ -57,6 +94,7 @@ public class TagParent : MonoBehaviour, IEnumerable<TaggedLine>
 	void Awake ()
 	{
 		heapManager_.Initialize(10, TaggedLinePrefab);
+		tagToggle_ = GetComponentInChildren<TagToggle>();
 	}
 	
 	void OnEnable()
@@ -68,8 +106,8 @@ public class TagParent : MonoBehaviour, IEnumerable<TaggedLine>
 	{
 		KeyCode[] throttleKeys = new KeyCode[]
 		{
-			KeyCode.UpArrow,
-			KeyCode.DownArrow,
+			//KeyCode.UpArrow,
+			//KeyCode.DownArrow,
 			KeyCode.Space,
 			KeyCode.Backspace,
 			KeyCode.Delete
@@ -108,7 +146,7 @@ public class TagParent : MonoBehaviour, IEnumerable<TaggedLine>
 		{
 		case KeyCode.Space:
 			selectedLine_.Done();
-			UpdateSelection(list, selectedIndex_);
+			UpdateSelection(list);
 			break;
 		case KeyCode.Backspace:
 		case KeyCode.Delete:
@@ -210,8 +248,9 @@ public class TagParent : MonoBehaviour, IEnumerable<TaggedLine>
 		}
 
 		taggedLine.Bind(line);
+		taggedLine.gameObject.SetActive(IsFolded == false);
 
-		if( withAnim )
+		if( withAnim && IsFolded == false )
 		{
 			AnimOnInstantiate(taggedLine);
 		}
@@ -279,7 +318,7 @@ public class TagParent : MonoBehaviour, IEnumerable<TaggedLine>
 			
 			if( needSelectionUpdate )
 			{
-				UpdateSelection(taggedLine.BindedLine.IsDone ? doneLines_ : lines_, selectedIndex_);
+				UpdateSelection(taggedLine.BindedLine.IsDone ? doneLines_ : lines_);
 			}
 		}
 		else
@@ -330,6 +369,13 @@ public class TagParent : MonoBehaviour, IEnumerable<TaggedLine>
 	public void OnSelect(TaggedLine taggedLine)
 	{
 		selectedLine_ = taggedLine;
+		foreach( TaggedLine line in this )
+		{
+			if( line != selectedLine_ )
+			{
+				line.OnDeselect(null);
+			}
+		}
 		if( lines_.Contains(taggedLine) )
 		{
 			selectedIndex_ = lines_.IndexOf(selectedLine_);
@@ -388,7 +434,7 @@ public class TagParent : MonoBehaviour, IEnumerable<TaggedLine>
 		}
 	}
 
-	public void OnBeginDrag(TaggedLine taggedLine)
+	public void OnBeginDragLine(TaggedLine taggedLine)
 	{
 		if( lines_.Contains(taggedLine) )
 		{
@@ -397,7 +443,7 @@ public class TagParent : MonoBehaviour, IEnumerable<TaggedLine>
 		}
 	}
 
-	public void OnDragging(TaggedLine taggedLine, PointerEventData eventData)
+	public void OnDraggingLine(TaggedLine taggedLine, PointerEventData eventData)
 	{
 		if( lines_.Contains(taggedLine) )
 		{
@@ -419,7 +465,7 @@ public class TagParent : MonoBehaviour, IEnumerable<TaggedLine>
 		}
 	}
 
-	public void OnEndDrag(TaggedLine taggedLine)
+	public void OnEndDragLine(TaggedLine taggedLine)
 	{
 		if( lines_.Contains(taggedLine) )
 		{
@@ -432,6 +478,26 @@ public class TagParent : MonoBehaviour, IEnumerable<TaggedLine>
 	public void OnLineDisabled(TaggedLine line)
 	{
 		heapManager_.BackToHeap(line);
+	}
+
+	#endregion
+
+
+	#region drag
+
+	public void OnBeginDrag(PointerEventData eventData)
+	{
+		GameContext.TagList.OnBeginDragTag(this);
+	}
+
+	public void OnDrag(PointerEventData eventData)
+	{
+		GameContext.TagList.OnDraggingTag(this, eventData);
+	}
+
+	public void OnEndDrag(PointerEventData eventData)
+	{
+		GameContext.TagList.OnEndDragTag(this);
 	}
 
 	#endregion
@@ -468,16 +534,47 @@ public class TagParent : MonoBehaviour, IEnumerable<TaggedLine>
 		}
 	}
 
-	void UpdateSelection(List<TaggedLine> list, int oldSelectIndex)
+	void UpdateSelection(List<TaggedLine> list)
 	{
-		if( oldSelectIndex < list.Count )
+		if( selectedIndex_ < list.Count )
 		{
-			list[oldSelectIndex].Select();
+			list[selectedIndex_].Select();
 		}
-		else
+		else if( lines_ == list )
 		{
-			selectedLine_ = null;
-			selectedIndex_ = -1;
+			if( lines_.Count > 0 )
+			{
+				lines_[lines_.Count - 1].Select();
+				selectedIndex_ = lines_.Count - 1;
+			}
+			else if( doneLines_.Count > 0 )
+			{
+				doneLines_[0].Select();
+				selectedIndex_ = 0;
+			}
+			else
+			{
+				selectedLine_ = null;
+				selectedIndex_ = -1;
+			}
+		}
+		else// if( lines_ == doneLines_ )
+		{
+			if( doneLines_.Count > 0 )
+			{
+				doneLines_[0].Select();
+				selectedIndex_ = 0;
+			}
+			else if( lines_.Count > 0 )
+			{
+				lines_[lines_.Count - 1].Select();
+				selectedIndex_ = lines_.Count - 1;
+			}
+			else
+			{
+				selectedLine_ = null;
+				selectedIndex_ = -1;
+			}
 		}
 	}
 

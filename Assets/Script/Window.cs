@@ -60,7 +60,7 @@ public class Window : MonoBehaviour
 	int numRecentFilesMenu = 0;
 	bool saveConfirmed_ = false;
 
-	public float HeaderWidth { get { return 205; } }//LineList.Width + 5.0f; } }
+	public float HeaderWidth { get { return GameContext.Config.TagListWidth + 5; } }
 
 	#endregion
 
@@ -195,8 +195,8 @@ public class Window : MonoBehaviour
 			}
 		}
 
-		//SaveSettings();
-		//GameContext.TagList.SaveTaggedLines();
+		SaveSettings();
+		GameContext.TagList.SaveTaggedLines();
 
 #if HOOK_WNDPROC
 		TermWndProc();

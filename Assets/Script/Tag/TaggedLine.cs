@@ -101,6 +101,7 @@ public class TaggedLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragH
 	UIGaugeRenderer strikeLine_;
 	Button doneButton_;
 	UIMidairPrimitive listMark_;
+	UIGaugeRenderer underLine_;
 
 	TagParent tagParent_;
 
@@ -116,17 +117,19 @@ public class TaggedLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragH
 		base.Awake();
 		textComponent_ = GetComponentInChildren<Text>();
 		strikeLine_ = textComponent_.GetComponentInChildren<UIGaugeRenderer>(includeInactive: true);
+		underLine_ = GetComponentInChildren<UIGaugeRenderer>();
 		checkMark_ = GetComponentInChildren<CheckMark>(includeInactive: true);
 		listMark_ = GetComponentInChildren<UIMidairPrimitive>(includeInactive: true);
 		tagParent_ = GetComponentInParent<TagParent>();
 		doneButton_ = GetComponentInChildren<Button>();
 		this.OnPointerDownAsObservable()
-			//.TimeInterval()
-			//.Select(t => t.Interval.TotalSeconds)
-			//.Buffer(2, 1)
-			//.Where(list => list[0] > GameContext.Config.DoubleClickInterval)
-			//.Where(list => list.Count > 1 ? list[1] <= GameContext.Config.DoubleClickInterval : false)
+			.TimeInterval()
+			.Select(t => t.Interval.TotalSeconds)
+			.Buffer(2, 1)
+			.Where(list => list[0] > GameContext.Config.DoubleClickInterval)
+			.Where(list => list.Count > 1 ? list[1] <= GameContext.Config.DoubleClickInterval : false)
 			.Subscribe(_ => ShowBindedLine()).AddTo(this);
+		this.OnPointerDownAsObservable().Subscribe(_ => Select()).AddTo(this);
 	}
 
 	// Update is called once per frame
@@ -168,11 +171,7 @@ public class TaggedLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragH
 			BindedLine.Tree.OwnerNote.ScrollTo(BindedLine);
 			BindedLine.Field.Select();
 			BindedLine.Field.IsFocused = true;
-			int index = BindedLine.Text.IndexOf(tagParent_.Tag) - 1;
-			if( index >= 0 )
-			{
-				BindedLine.Field.SetSelection(index, tagParent_.Tag.Length + 1);
-			}
+			BindedLine.Field.SetSelection(0, BindedLine.Text.Length);
 		}
 	}
 
@@ -185,7 +184,7 @@ public class TaggedLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragH
 	{
 		base.OnSelect(eventData);
 		isSelected_ = true;
-		//Background = TargetColor;
+		AnimManager.AddAnim(underLine_, 1.0f, ParamType.GaugeRate, AnimType.BounceIn);
 		tagParent_.OnSelect(this);
 	}
 
@@ -193,7 +192,8 @@ public class TaggedLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragH
 	{
 		base.OnDeselect(eventData);
 		isSelected_ = false;
-		//Background = TargetColor;
+		AnimManager.RemoveOtherAnim(underLine_);
+		underLine_.SetRate(0);
 		tagParent_.OnDeselect(this);
 	}
 
@@ -313,7 +313,7 @@ public class TaggedLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragH
 	{
 		if( IsDone == false )
 		{
-			tagParent_.OnBeginDrag(this);
+			tagParent_.OnBeginDragLine(this);
 		}
 	}
 
@@ -321,7 +321,7 @@ public class TaggedLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragH
 	{
 		if( IsDone == false )
 		{
-			tagParent_.OnDragging(this, eventData);
+			tagParent_.OnDraggingLine(this, eventData);
 		}
 	}
 
@@ -329,7 +329,7 @@ public class TaggedLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragH
 	{
 		if( IsDone == false )
 		{
-			tagParent_.OnEndDrag(this);
+			tagParent_.OnEndDragLine(this);
 		}
 	}
 

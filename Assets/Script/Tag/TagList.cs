@@ -13,6 +13,8 @@ using System.Text;
 public class TagList : MonoBehaviour
 {
 	public TagParent TagParentPrefab;
+	public float TopMargin = 60;
+	public float WidthMargin = 17;
 	public float Margin = 60;
 
 	List<TagParent> tagParents_ = new List<TagParent>();
@@ -92,10 +94,10 @@ public class TagList : MonoBehaviour
 
 	public void UpdateLayoutElement()
 	{
-		float sum = 0;
+		float sum = TopMargin;
 		for( int i = 0; i < tagParents_.Count; ++i )
 		{
-			AnimManager.AddAnim(tagParents_[i], Vector3.down * sum, ParamType.Position, AnimType.Time, GameContext.Config.AnimTime);
+			AnimManager.AddAnim(tagParents_[i], new Vector3(WidthMargin, -sum), ParamType.Position, AnimType.Time, GameContext.Config.AnimTime);
 			sum += tagParents_[i].Height;
 			sum += Margin;
 		}
@@ -103,21 +105,20 @@ public class TagList : MonoBehaviour
 		contentSizeFitter_.SetLayoutVertical();
 	}
 
-
 	Vector3 GetTargetPosition(TagParent tagParent)
 	{
-		float sum = 0;
+		float sum = TopMargin;
 		for( int i = 0; i < tagParents_.Count; ++i )
 		{
 			if( tagParents_[i] == tagParent )
 			{
-				return Vector3.down * sum;
+				return new Vector3(WidthMargin, -sum);
 			}
 			sum += tagParents_[i].Height;
 			sum += Margin;
 		}
 
-		return Vector3.down * sum;
+		return new Vector3(WidthMargin, -sum);
 	}
 
 
@@ -144,6 +145,60 @@ public class TagList : MonoBehaviour
 	*/
 
 
+	#region drag
+
+	public void OnBeginDragTag(TagParent tagParent)
+	{
+		if( tagParents_.Contains(tagParent) )
+		{
+			AnimManager.AddAnim(tagParent, WidthMargin + 5.0f, ParamType.PositionX, AnimType.Time, GameContext.Config.AnimTime);
+			tagParent.transform.SetAsLastSibling();
+		}
+	}
+
+
+	public void OnDraggingTag(TagParent tagParent, PointerEventData eventData)
+	{
+		if( tagParents_.Contains(tagParent) )
+		{
+			int index = tagParents_.IndexOf(tagParent);
+			tagParent.transform.localPosition += new Vector3(0, eventData.delta.y, 0);
+
+			int desiredIndex = index;
+			float currentY = tagParent.transform.localPosition.y;
+			for(int i=0;i<tagParents_.Count;++i)
+			{
+				if( currentY > GetTargetPosition(tagParents_[i]).y )
+				{
+					desiredIndex = i;
+					break;
+				}
+			}
+			
+			if( index != desiredIndex )
+			{
+				tagParents_.Remove(tagParent);
+				tagParents_.Insert(desiredIndex, tagParent);
+				int sign = (int)Mathf.Sign(desiredIndex - index);
+				for( int i = index; i != desiredIndex; i += sign )
+				{
+					AnimManager.AddAnim(tagParents_[i], GetTargetPosition(tagParents_[i]), ParamType.Position, AnimType.Time, GameContext.Config.AnimTime);
+				}
+			}
+		}
+	}
+
+	public void OnEndDragTag(TagParent tagParent)
+	{
+		if( tagParents_.Contains(tagParent) )
+		{
+			AnimManager.AddAnim(tagParent, GetTargetPosition(tagParent), ParamType.Position, AnimType.Time, GameContext.Config.AnimTime);
+		}
+	}
+
+	#endregion
+
+
 	#region save / load
 
 	public void LoadTaggedLines()
@@ -155,13 +210,29 @@ public class TagList : MonoBehaviour
 
 		StreamReader reader = new StreamReader(taggedLineFile_.OpenRead());
 		string text = null;
-		int index = 0;
+		int lineIndex = 0;
+		int tagIndex = 0;
 		TagParent tagParent = null;
 		while( (text = reader.ReadLine()) != null )
 		{
-			if( text.StartsWith("#") )
+			if( text.StartsWith("##") )
 			{
+				text = text.Remove(0, 2);
+				bool isFolded = false;
+				if( text.EndsWith(Line.FoldTag) )
+				{
+					text = text.Remove(text.Length - Line.FoldTag.Length);
+					isFolded = true;
+				}
 				tagParent = GetTagParent(text);
+				tagParent.IsFolded = isFolded;
+				lineIndex = 0;
+				if( tagParents_.IndexOf(tagParent) != tagIndex )
+				{
+					tagParents_.Remove(tagParent);
+					tagParents_.Insert(tagIndex, tagParent);
+				}
+				++tagIndex;
 			}
 			else if( tagParent != null )
 			{
@@ -176,11 +247,12 @@ public class TagList : MonoBehaviour
 				}
 				if( taggedLine != null )
 				{
-					tagParent.SetLineIndex(taggedLine, index);
-					++index;
+					tagParent.SetLineIndex(taggedLine, lineIndex);
+					++lineIndex;
 				}
 			}
 		}
+		UpdateLayoutElement();
 		reader.Close();
 	}
 
@@ -198,7 +270,7 @@ public class TagList : MonoBehaviour
 
 		foreach( TagParent tagParent in tagParents_ )
 		{
-			writer.WriteLine(tagParent.Tag);
+			writer.WriteLine(String.Format("##{0}{1}", tagParent.Tag, (tagParent.IsFolded ? Line.FoldTag : "")));
 			foreach( TaggedLine taggedLine in tagParent )
 			{
 				if( taggedLine.IsDone )

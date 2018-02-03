@@ -661,7 +661,7 @@ public class Line : IEnumerable<Line>
 
 		child.OnFoundParent();
 
-		if( child.Tree is LogTree == false )
+		if( child.IsDone == false && child.Tree is LogTree == false )
 		{
 			foreach( string tag in child.Tags )
 			{

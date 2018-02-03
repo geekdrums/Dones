@@ -45,6 +45,13 @@ public class UIGaugeRenderer : MaskableGraphic, IColoredObject
 			rect_.xMin = -Width / 2;
 			rect_.xMax = Width / 2;
 		}
+		else if( Direction.x == 0 )
+		{
+			rect_.xMin = -Length * Rate / 2;
+			rect_.xMax = Length * Rate / 2;
+			rect_.yMin = -Width / 2;
+			rect_.yMax = Width / 2;
+		}
 		else return;
 		
 		// 左上
