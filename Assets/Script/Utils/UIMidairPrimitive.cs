@@ -12,6 +12,7 @@ public class UIMidairPrimitive : MaskableGraphic, IColoredObject
 	public float ArcRate = 1.0f;
 	public float Width = 1;
 	public float Radius = 1;
+	public float ScaleX = 1;
 	public float Angle;
 	public float GrowSize;
 	public float GrowAlpha;
@@ -165,7 +166,9 @@ public class UIMidairPrimitive : MaskableGraphic, IColoredObject
 				growOutVertices_[2 * i + 1].position = normalizedVertices_[i] * growOutR;
 			}
 		}
-		
+
+		RecalculateScaleX();
+
 		SetVerticesDirty();
 	}
 
@@ -187,7 +190,9 @@ public class UIMidairPrimitive : MaskableGraphic, IColoredObject
 				growInVertices_[2 * i + 1].position = normalizedVertices_[i] * inR;
 			}
 		}
-		
+
+		RecalculateScaleX();
+
 		SetVerticesDirty();
 	}
 
@@ -207,12 +212,49 @@ public class UIMidairPrimitive : MaskableGraphic, IColoredObject
 			}
 		}
 	}
+	
+	void RecalculateScaleX()
+	{
+		if( ScaleX != 1.0f )
+		{
+			for( int i = 0; i <= ArcN; ++i )
+			{
+				Vector3 oldPos = uiVertices_[2 * i + 1].position;
+				uiVertices_[2 * i + 1].position = new Vector3(oldPos.x * ScaleX, oldPos.y, oldPos.z);
+				float diffX = uiVertices_[2 * i + 1].position.x - oldPos.x;
 
-	void RecalculatePolygon()
+				oldPos = uiVertices_[2 * i].position;
+				float newX = Math.Sign(oldPos.x * (oldPos.x + diffX)) <= 0 ? 0 : oldPos.x + diffX;
+				uiVertices_[2 * i].position = new Vector3(newX, oldPos.y, oldPos.z);
+
+				oldPos = growInVertices_[2 * i].position;
+				newX = Math.Sign(oldPos.x * (oldPos.x + diffX)) <= 0 ? 0 : oldPos.x + diffX;
+				growInVertices_[2 * i].position = new Vector3(newX, oldPos.y, oldPos.z);
+
+				oldPos = growInVertices_[2 * i + 1].position;
+				newX = Math.Sign(oldPos.x * (oldPos.x + diffX)) <= 0 ? 0 : oldPos.x + diffX;
+				growInVertices_[2 * i + 1].position = new Vector3(newX, oldPos.y, oldPos.z);
+
+				oldPos = growOutVertices_[2 * i].position;
+				newX = Math.Sign(oldPos.x * (oldPos.x + diffX)) <= 0 ? 0 : oldPos.x + diffX;
+				growOutVertices_[2 * i].position = new Vector3(newX, oldPos.y, oldPos.z);
+
+				oldPos = growOutVertices_[2 * i + 1].position;
+				newX = Math.Sign(oldPos.x * (oldPos.x + diffX)) <= 0 ? 0 : oldPos.x + diffX;
+				growOutVertices_[2 * i + 1].position = new Vector3(newX, oldPos.y, oldPos.z);
+			}
+		}
+	}
+
+	public void RecalculatePolygon()
 	{
 		if( Num < 3 )
 		{
 			Num = 3;
+		}
+		if( Width > Radius )
+		{
+			Width = Radius;
 		}
 
 		int vertexCount = ArcN * 2 + 2;
@@ -284,10 +326,8 @@ public class UIMidairPrimitive : MaskableGraphic, IColoredObject
 		normalizedVertices_[ArcN] = normalVertex;
 		currentArcRate_ = ArcRate;
 
-		//int indicesCount = 6 * ArcN;
-		//if( vertexIndices_.Count < vertexCount )
-		//{
-		//}
+		RecalculateScaleX();
+
 		vertexIndices_ = new List<int>();
 		for( int i = 0; i < ArcN; ++i )
 		{

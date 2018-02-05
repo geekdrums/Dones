@@ -170,7 +170,7 @@ public class TreeNote : Note
 		logNoteTransform.sizeDelta = new Vector2(logNoteTransform.sizeDelta.x, logNoteTransform.anchoredPosition.y + height);
 		logNote_.OpenRatio = logNoteTransform.sizeDelta.y / height;
 
-		treeNoteTransform.sizeDelta = new Vector2(treeNoteTransform.sizeDelta.x, height * (1.0f - logNote_.OpenRatio) - 10.0f);
+		treeNoteTransform.sizeDelta = new Vector2(treeNoteTransform.sizeDelta.x, height * (1.0f - logNote_.OpenRatio) - GameContext.Config.LogNoteHeaderMargin);
 
 		CheckScrollbarEnabled();
 		logNote_.CheckScrollbarEnabled();

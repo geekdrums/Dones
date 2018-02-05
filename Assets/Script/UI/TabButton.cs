@@ -150,7 +150,7 @@ public class TabButton : UnityEngine.UI.Button, IDragHandler, IBeginDragHandler,
 			Background = isOn_ ? (treeNote.LogNote.IsFullArea ? GameContext.Config.DoneColor : GameContext.Config.ThemeColor) : Color.white;
 			if( isOn_ )
 			{
-				OwnerTabGroup.UnderBar.color = treeNote.LogNote.IsFullArea ? GameContext.Config.DoneColor : GameContext.Config.ThemeColor;
+				OwnerTabGroup.SplitBar.SetColor(treeNote.LogNote.IsFullArea ? GameContext.Config.DoneColor : GameContext.Config.ThemeColor);
 			}
 		}
 		if( BindedNote is DiaryNote )
@@ -158,7 +158,7 @@ public class TabButton : UnityEngine.UI.Button, IDragHandler, IBeginDragHandler,
 			Background = isOn_ ? GameContext.Config.DiaryColor : Color.white;
 			if( isOn_ )
 			{
-				OwnerTabGroup.UnderBar.color = GameContext.Config.DiaryColor;
+				OwnerTabGroup.SplitBar.SetColor(GameContext.Config.DiaryColor);
 			}
 		}
 		if( textComponent_ != null )

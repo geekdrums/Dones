@@ -29,11 +29,11 @@ public class Config : MonoBehaviour
 	public float MinLogTreeHeight = 100.0f;
 	public float AutoSaveTime = 1.5f;
 	public int LogLoadUnit = 7;
+	public int NumRecentFilesMenu = 9;
 
 	public float TagListWidth = 200;
-	public float ClosedTagListWidth = 5;
 	public float TagCommaInterval = 58;
-	//public float TagListGradation = 0.05f;
+	public float LogNoteHeaderMargin = 30;
 
 	public Color ThemeColor;
 	public Color AccentColor;

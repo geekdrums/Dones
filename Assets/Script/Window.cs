@@ -37,8 +37,7 @@ public class Window : MonoBehaviour
 	public GameObject OpenLogNoteButton;
 	public GameObject CloseLogNoteButton;
 
-	public MenuButton FileMenu;
-	public GameObject RecentFilesSubMenu;
+	public FileMenuButton FileMenu;
 	public ModalDialog ModalDialog;
 	public Text FontSizeText;
 	public SaveText SaveText;
@@ -57,10 +56,11 @@ public class Window : MonoBehaviour
 	
 	List<string> recentOpenedFiles_ = new List<string>();
 	Stack<string> recentClosedFiles_ = new Stack<string>();
-	int numRecentFilesMenu = 0;
 	bool saveConfirmed_ = false;
 
-	public float HeaderWidth { get { return GameContext.Config.TagListWidth + 5; } }
+	public float TagListWidth { get { return GameContext.Config.TagListWidth + 10; } }
+
+	public List<string> RecentOpenedFiles { get { return recentOpenedFiles_; } }
 
 	#endregion
 
@@ -82,7 +82,6 @@ public class Window : MonoBehaviour
 	void Start ()
 	{
 		settingFile_ = new FileInfo(System.Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + "/Dones/settings.txt");
-		numRecentFilesMenu = RecentFilesSubMenu.GetComponentsInChildren<UnityEngine.UI.Button>().Length;
 		StartCoroutine(InitialLoadCoroutine());
 	}
 
@@ -174,7 +173,7 @@ public class Window : MonoBehaviour
 
 		if(	currentScreenWidth_ != UnityEngine.Screen.width )
 		{
-			MainTabGroup.UpdateHorizontalLayout();
+			MainTabGroup.UpdateTabLayout();
 			currentScreenWidth_ = UnityEngine.Screen.width;
 		}
 		if( currentScreenHeight_ != UnityEngine.Screen.height )
@@ -327,27 +326,6 @@ public class Window : MonoBehaviour
 		FileMenu.Close();
 	}
 
-	public void RecentFiles()
-	{
-		if( recentOpenedFiles_.Count > 0 )
-		{
-			RecentFilesSubMenu.SetActive(true);
-			UnityEngine.UI.Button[] buttons = RecentFilesSubMenu.GetComponentsInChildren<UnityEngine.UI.Button>(includeInactive: true);
-			for( int i = 0; i < buttons.Length; ++i )
-			{
-				if( i < recentOpenedFiles_.Count )
-				{
-					buttons[i].gameObject.SetActive(true);
-					buttons[i].GetComponentInChildren<Text>().text = recentOpenedFiles_[i];
-				}
-				else
-				{
-					buttons[i].gameObject.SetActive(false);
-				}
-			}
-		}
-	}
-
 	public void LoadRecentFile(int index)
 	{
 		LoadNote(recentOpenedFiles_[index], true);
@@ -362,7 +340,7 @@ public class Window : MonoBehaviour
 	public void AddRecentOpenedFiles(string path)
 	{
 		path = path.Replace('\\', '/');
-		if( recentOpenedFiles_.Count < numRecentFilesMenu && recentOpenedFiles_.Contains(path) == false && File.Exists(path) )
+		if( recentOpenedFiles_.Count < GameContext.Config.NumRecentFilesMenu && recentOpenedFiles_.Contains(path) == false && File.Exists(path) )
 		{
 			recentOpenedFiles_.Add(path);
 		}
@@ -420,7 +398,7 @@ public class Window : MonoBehaviour
 
 	public void OnHeaderWidthChanged()
 	{
-		MainTabGroup.UpdateHorizontalLayout();
+		MainTabGroup.UpdateTabLayout();
 	}
 
 	public void OpenLogNote()
@@ -477,7 +455,7 @@ public class Window : MonoBehaviour
 			LogTabButton.transform.parent.gameObject.SetActive(false);
 		}
 
-		TreeNoteTransform.sizeDelta = new Vector2(TreeNoteTransform.sizeDelta.x, height * (1.0f - logNoteRatio) - (logNoteRatio > 0.0f ? 40.0f : 0.0f));
+		TreeNoteTransform.sizeDelta = new Vector2(TreeNoteTransform.sizeDelta.x, height * (1.0f - logNoteRatio) - (logNoteRatio > 0.0f ? GameContext.Config.LogNoteHeaderMargin : 0.0f));
 		LogNoteTransform.sizeDelta = new Vector2(LogNoteTransform.sizeDelta.x, height * logNoteRatio);
 		LogNoteTransform.anchoredPosition = new Vector2(LogNoteTransform.anchoredPosition.x, -height + LogNoteTransform.sizeDelta.y);
 

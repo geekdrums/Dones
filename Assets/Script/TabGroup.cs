@@ -13,10 +13,13 @@ public class TabGroup : MonoBehaviour, IEnumerable<TabButton>
 {
 	#region editor params
 
-	public Image UnderBar;
+	public UIGaugeRenderer SplitBar;
 	public RectTransform NoteAreaTransform;
+	public FileMenuButton FileMenu;
+	public GameObject Split;
 
 	public float DesiredTabWidth = 200.0f;
+	public float DesiredTabHeight = 30.0f;
 
 	#endregion
 
@@ -39,8 +42,8 @@ public class TabGroup : MonoBehaviour, IEnumerable<TabButton>
 	TabButton activeTab_;
 	List<TabButton> tabButtons_ = new List<TabButton>();
 
-	float desiredTabGroupWidth_;
-	float currentTabWidth_;
+	//float desiredTabGroupWidth_;
+	//float currentTabWidth_;
 
 	public IEnumerable<TreeNote> TreeNotes
 	{
@@ -63,8 +66,8 @@ public class TabGroup : MonoBehaviour, IEnumerable<TabButton>
 
 	void Start()
 	{
-		desiredTabGroupWidth_ = UnityEngine.Screen.width - GameContext.Window.HeaderWidth;
-		currentTabWidth_ = DesiredTabWidth;
+		//desiredTabGroupWidth_ = UnityEngine.Screen.width - GameContext.Window.TagListWidth;
+		//currentTabWidth_ = DesiredTabWidth;
 	}
 
 	// Update is called once per frame
@@ -108,7 +111,7 @@ public class TabGroup : MonoBehaviour, IEnumerable<TabButton>
 	{
 		newTab.OwnerTabGroup = this;
 		tabButtons_.Add(newTab);
-		UpdateHorizontalLayout();
+		UpdateTabLayout();
 	}
 
 	public void OnTabActivated(TabButton tab)
@@ -136,7 +139,7 @@ public class TabGroup : MonoBehaviour, IEnumerable<TabButton>
 			tabButtons_[index].IsOn = true;
 		}
 
-		UpdateHorizontalLayout();
+		UpdateTabLayout();
 	}
 
 	#endregion
@@ -146,7 +149,7 @@ public class TabGroup : MonoBehaviour, IEnumerable<TabButton>
 
 	public void UpdateLayoutAll()
 	{
-		UpdateHorizontalLayout();
+		UpdateTabLayout();
 		GameContext.Window.UpdateVerticalLayout();
 		if( ActiveTreeNote != null )
 		{
@@ -155,26 +158,28 @@ public class TabGroup : MonoBehaviour, IEnumerable<TabButton>
 		}
 	}
 
-	public void UpdateHorizontalLayout()
+	public void UpdateTabLayout()
 	{
-		desiredTabGroupWidth_ = UnityEngine.Screen.width - GameContext.Window.HeaderWidth;
-		NoteAreaTransform.offsetMin = new Vector3(GameContext.Window.HeaderWidth, NoteAreaTransform.offsetMin.y);
+		//desiredTabGroupWidth_ = UnityEngine.Screen.width - GameContext.Window.TagListWidth;
+		NoteAreaTransform.offsetMax = new Vector3(-GameContext.Window.TagListWidth, NoteAreaTransform.offsetMax.y);
 
-		currentTabWidth_ = DesiredTabWidth;
-		if( DesiredTabWidth * tabButtons_.Count > desiredTabGroupWidth_ )
-		{
-			currentTabWidth_ = desiredTabGroupWidth_ / tabButtons_.Count;
-		}
+		//currentTabWidth_ = DesiredTabWidth;
+		//if( DesiredTabWidth * tabButtons_.Count > desiredTabGroupWidth_ )
+		//{
+		//	currentTabWidth_ = desiredTabGroupWidth_ / tabButtons_.Count;
+		//}
 		foreach( TabButton tab in tabButtons_ )
 		{
-			tab.Width = currentTabWidth_;
+			tab.Width = DesiredTabWidth;
 			tab.TargetPosition = GetTabPosition(tab);
 		}
+		FileMenu.TargetPosition = Vector3.down * DesiredTabHeight * tabButtons_.Count;
+		Split.transform.SetAsLastSibling();
 	}
 
 	Vector3 GetTabPosition(TabButton tab)
 	{
-		return Vector3.right * currentTabWidth_ * (tabButtons_.IndexOf(tab));
+		return Vector3.down * DesiredTabHeight * (tabButtons_.IndexOf(tab));
 	}
 
 	#endregion
@@ -195,17 +200,17 @@ public class TabGroup : MonoBehaviour, IEnumerable<TabButton>
 	public void OnTabDragging(TabButton tab, PointerEventData eventData)
 	{
 		int index = tabButtons_.IndexOf(tab);
-		tab.transform.localPosition += new Vector3(eventData.delta.x, 0);
-		if( tab.transform.localPosition.x < 0 )
+		tab.transform.localPosition += new Vector3(0, eventData.delta.y);
+		if( tab.transform.localPosition.y > 0 )
 		{
-			tab.transform.localPosition = new Vector3(0, tab.transform.localPosition.y);
+			tab.transform.localPosition = new Vector3(tab.transform.localPosition.x, 0);
 		}
-		float tabmax = desiredTabGroupWidth_ - currentTabWidth_;
-		if( tab.transform.localPosition.x > tabmax )
+		float tabmax = -(tabButtons_.Count * DesiredTabHeight);
+		if( tab.transform.localPosition.y < tabmax )
 		{
-			tab.transform.localPosition = new Vector3(tabmax, tab.transform.localPosition.y);
+			tab.transform.localPosition = new Vector3(tab.transform.localPosition.x, tabmax);
 		}
-		int desiredIndex = Mathf.Clamp((int)(tab.transform.localPosition.x / currentTabWidth_), 0, tabButtons_.Count - 1);
+		int desiredIndex = Mathf.Clamp((int)(-tab.transform.localPosition.y / DesiredTabHeight), 0, tabButtons_.Count - 1);
 		if( index != desiredIndex )
 		{
 			tabButtons_.Remove(tab);
@@ -221,6 +226,7 @@ public class TabGroup : MonoBehaviour, IEnumerable<TabButton>
 	public void OnEndTabDrag(TabButton tab)
 	{
 		AnimManager.AddAnim(tab, GetTabPosition(tab), ParamType.Position, AnimType.Time, GameContext.Config.AnimTime);
+		Split.transform.SetAsLastSibling();
 	}
 
 	#endregion
