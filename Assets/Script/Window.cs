@@ -41,6 +41,8 @@ public class Window : MonoBehaviour
 	public ModalDialog ModalDialog;
 	public Text FontSizeText;
 	public SaveText SaveText;
+	public Text TitleText;
+	public Text DayText;
 
 	#endregion
 
@@ -96,6 +98,9 @@ public class Window : MonoBehaviour
 		{
 			treeNote.OnFontSizeChanged();
 		}
+
+		DayText.text = String.Format("<size=14>{0}/ </size>{1}/{2}<size=14> ({3})</size>",
+			DateTime.Now.ToString("yyyy"), DateTime.Now.ToString("MM").TrimStart('0'), DateTime.Now.ToString("dd").TrimStart('0'), DateTime.Now.ToString("ddd"));
 	}
 
 	// Update is called once per frame

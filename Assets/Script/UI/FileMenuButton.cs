@@ -45,7 +45,7 @@ public class FileMenuButton : MonoBehaviour
 	{
 		if( isOpening_ && Input.GetMouseButtonDown(0) )
 		{
-			if( UnityEngine.EventSystems.EventSystem.current.currentSelectedGameObject != this.gameObject )
+			if( EventSystem.current.currentSelectedGameObject == null || EventSystem.current.currentSelectedGameObject.transform.IsChildOf(transform) == false )
 			{
 				Close();
 			}

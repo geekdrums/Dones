@@ -225,14 +225,17 @@ public class TagList : MonoBehaviour
 					isFolded = true;
 				}
 				tagParent = GetTagParent(text);
-				tagParent.IsFolded = isFolded;
-				lineIndex = 0;
-				if( tagParents_.IndexOf(tagParent) != tagIndex )
+				if( tagParent != null )
 				{
-					tagParents_.Remove(tagParent);
-					tagParents_.Insert(tagIndex, tagParent);
+					tagParent.IsFolded = isFolded;
+					lineIndex = 0;
+					if( tagParents_.IndexOf(tagParent) != tagIndex )
+					{
+						tagParents_.Remove(tagParent);
+						tagParents_.Insert(tagIndex, tagParent);
+					}
+					++tagIndex;
 				}
-				++tagIndex;
 			}
 			else if( tagParent != null )
 			{
