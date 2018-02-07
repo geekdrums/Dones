@@ -46,6 +46,7 @@ public class SaveText : MonoBehaviour {
 		if( isSaving_ == false )
 		{
 			isSaving_ = true;
+			this.gameObject.SetActive(true);
 			Text = "saving...";
 			AnimManager.RemoveOtherAnim(textComponent_);
 			AnimManager.AddAnim(textComponent_, 1.0f, ParamType.TextAlphaColor, AnimType.Time, 0.0f);

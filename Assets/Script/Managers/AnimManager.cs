@@ -23,6 +23,12 @@ public enum ParamType
 	PositionY,
 	PositionZ,
 
+	//RectTransform
+	SizeDeltaX,
+	SizeDeltaY,
+	AnchoredPositionX,
+	AnchoredPositionY,
+
 	//MidairPrimitive
 	PrimitiveRadius,
 	PrimitiveWidth,
@@ -318,6 +324,64 @@ public class TransformAnimInfo : AnimInfoBase
 			break;
 		case ParamType.RotationZ:
 			transform_.localRotation = Quaternion.AngleAxis(currentValueFloat, Vector3.forward);
+			break;
+		}
+	}
+}
+
+public class RectTransformAnimInfo : AnimInfoBase
+{
+	protected RectTransform rect_;
+
+	public RectTransformAnimInfo(GameObject obj, object target, ParamType paramType, AnimType animType, float factor = 0.1f, float delay = 0.0f, AnimEndOption endOption = AnimEndOption.None, object initValue = null)
+		: base(obj, target, paramType, animType, factor, delay, endOption, initValue)
+	{
+		if( paramType < ParamType.SizeDeltaX || ParamType.AnchoredPositionY < paramType )
+		{
+			throw new System.Exception("RectTransformAnimInfo: wrong param type! paramType = " + paramType.ToString());
+		}
+	}
+
+	protected override void InitValue()
+	{
+		rect_ = Object.GetComponent<RectTransform>();
+		if( initialValue_ != null )
+		{
+			UpdateAnimValue();
+			return;
+		}
+		switch( Param )
+		{
+		case ParamType.SizeDeltaX:
+			initialValue_ = (float)rect_.sizeDelta.x;
+			break;
+		case ParamType.SizeDeltaY:
+			initialValue_ = (float)rect_.sizeDelta.y;
+			break;
+		case ParamType.AnchoredPositionX:
+			initialValue_ = (float)rect_.anchoredPosition.x;
+			break;
+		case ParamType.AnchoredPositionY:
+			initialValue_ = (float)rect_.anchoredPosition.y;
+			break;
+		}
+	}
+
+	protected override void UpdateAnimValue()
+	{
+		switch( Param )
+		{
+		case ParamType.SizeDeltaX:
+			rect_.sizeDelta = new Vector2(currentValueFloat, rect_.sizeDelta.y);
+			break;
+		case ParamType.SizeDeltaY:
+			rect_.sizeDelta = new Vector2(rect_.sizeDelta.x, currentValueFloat);
+			break;
+		case ParamType.AnchoredPositionX:
+			rect_.anchoredPosition = new Vector2(currentValueFloat, rect_.anchoredPosition.y);
+			break;
+		case ParamType.AnchoredPositionY:
+			rect_.anchoredPosition = new Vector2(rect_.anchoredPosition.x, currentValueFloat);
 			break;
 		}
 	}
@@ -751,6 +815,12 @@ public class AnimManager : MonoBehaviour
 		case ParamType.PositionZ:
 			Instance.Animations.Add(new TransformAnimInfo(gameObject, target, paramType, animType, timeFactor, delay, endOption, initValue));
 			break;
+		case ParamType.SizeDeltaX:
+		case ParamType.SizeDeltaY:
+		case ParamType.AnchoredPositionX:
+		case ParamType.AnchoredPositionY:
+			Instance.Animations.Add(new RectTransformAnimInfo(gameObject, target, paramType, animType, timeFactor, delay, endOption, initValue));
+			break;
 		case ParamType.PrimitiveRadius:
 		case ParamType.PrimitiveWidth:
 		case ParamType.PrimitiveArc:
@@ -771,6 +841,9 @@ public class AnimManager : MonoBehaviour
 			Instance.Animations.Add(new TextAnimInfo(gameObject, target, paramType, animType, timeFactor, delay, endOption, initValue));
 			break;
 		case ParamType.Any:
+			break;
+		default:
+			print("unknown anim type!");
 			break;
 		}
 	}

@@ -15,6 +15,7 @@ public class TabGroup : MonoBehaviour, IEnumerable<TabButton>
 
 	public UIGaugeRenderer SplitBar;
 	public RectTransform NoteAreaTransform;
+	public RectTransform NoteTitleAreaTransform;
 	public FileMenuButton FileMenu;
 	public GameObject Split;
 
@@ -162,7 +163,8 @@ public class TabGroup : MonoBehaviour, IEnumerable<TabButton>
 	public void UpdateTabLayout()
 	{
 		//desiredTabGroupWidth_ = UnityEngine.Screen.width - GameContext.Window.TagListWidth;
-		NoteAreaTransform.offsetMax = new Vector3(-GameContext.Window.TagListWidth, NoteAreaTransform.offsetMax.y);
+		NoteAreaTransform.offsetMax = new Vector3(-GameContext.TagList.Width - 10, NoteAreaTransform.offsetMax.y);
+		NoteTitleAreaTransform.offsetMax = new Vector3(-GameContext.TagList.Width - 10, NoteTitleAreaTransform.offsetMax.y);
 
 		//currentTabWidth_ = DesiredTabWidth;
 		//if( DesiredTabWidth * tabButtons_.Count > desiredTabGroupWidth_ )

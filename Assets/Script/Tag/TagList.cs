@@ -16,6 +16,13 @@ public class TagList : MonoBehaviour
 	public float TopMargin = 60;
 	public float WidthMargin = 17;
 	public float Margin = 60;
+	public GameObject OpenButton;
+	public GameObject CloseButton;
+
+	public float Width { get { return isOpened_ ? GameContext.Config.TagListWidth : 0; } }
+
+	public bool IsOpened { get { return isOpened_; } }
+	bool isOpened_ = true;
 
 	List<TagParent> tagParents_ = new List<TagParent>();
 	FileInfo taggedLineFile_;
@@ -121,13 +128,14 @@ public class TagList : MonoBehaviour
 		return new Vector3(WidthMargin, -sum);
 	}
 
-
-	/*
+	
 	public void Open()
 	{
 		isOpened_ = true;
-		OpenButton.gameObject.SetActive(false);
-		scrollRect_.GetComponent<RectTransform>().anchoredPosition = new Vector3(0, scrollRect_.GetComponent<RectTransform>().anchoredPosition.y);
+		OpenButton.transform.parent.gameObject.SetActive(false);
+		CloseButton.transform.parent.gameObject.SetActive(true);
+		AnimManager.RemoveOtherAnim(scrollRect_);
+		AnimManager.AddAnim(scrollRect_, GameContext.Config.TagListWidth, ParamType.SizeDeltaX, AnimType.Time, 0.1f);
 		GameContext.Window.OnHeaderWidthChanged();
 
 		RemoveAllDones();
@@ -136,14 +144,22 @@ public class TagList : MonoBehaviour
 	public void Close()
 	{
 		isOpened_ = false;
-		OpenButton.gameObject.SetActive(true);
-		scrollRect_.GetComponent<RectTransform>().anchoredPosition = new Vector3(-LineWidth + ClosedLineWidth, scrollRect_.GetComponent<RectTransform>().anchoredPosition.y);
+		OpenButton.transform.parent.gameObject.SetActive(true);
+		CloseButton.transform.parent.gameObject.SetActive(false);
+		AnimManager.RemoveOtherAnim(scrollRect_);
+		AnimManager.AddAnim(scrollRect_, -1, ParamType.SizeDeltaX, AnimType.BounceOut, 0.2f);
 		GameContext.Window.OnHeaderWidthChanged();
 
 		RemoveAllDones();
 	}
-	*/
 
+	void RemoveAllDones()
+	{
+		foreach(TagParent parent in tagParents_)
+		{
+			parent.RemoveAllDones();
+		}
+	}
 
 	#region drag
 

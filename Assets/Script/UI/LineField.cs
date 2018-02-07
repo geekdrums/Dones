@@ -425,7 +425,6 @@ public class LineField : CustomInputField
 						KeyPressed(processingEvent);
 					}
 					break;
-				case KeyCode.T:
 				case KeyCode.Semicolon:
 					if( ctrlOnly && BindedLine.Tree.HasSelection == false )
 					{
@@ -443,7 +442,6 @@ public class LineField : CustomInputField
 							));
 					}
 					break;
-				case KeyCode.H:
 				case KeyCode.Colon:
 				case KeyCode.Equals://日本語キーボードだとこっちになってるらしい。どうしたものか。Configにするか。
 					if( ctrlOnly && BindedLine.Tree.HasSelection == false )

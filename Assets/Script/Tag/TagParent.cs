@@ -634,7 +634,7 @@ public class TagParent : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDra
 		}
 	}
 
-	void RemoveAllDones()
+	public void RemoveAllDones()
 	{
 		List<Line> doneLines = new List<Line>(from taggedLine in doneLines_ select taggedLine.BindedLine);
 

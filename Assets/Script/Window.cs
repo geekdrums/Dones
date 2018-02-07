@@ -60,8 +60,6 @@ public class Window : MonoBehaviour
 	Stack<string> recentClosedFiles_ = new Stack<string>();
 	bool saveConfirmed_ = false;
 
-	public float TagListWidth { get { return GameContext.Config.TagListWidth + 10; } }
-
 	public List<string> RecentOpenedFiles { get { return recentOpenedFiles_; } }
 
 	#endregion
@@ -120,6 +118,17 @@ public class Window : MonoBehaviour
 			else if( Input.GetKeyDown(KeyCode.N) )
 			{
 				NewFile();
+			}
+			else if( Input.GetKeyDown(KeyCode.T) )
+			{
+				if( GameContext.TagList.IsOpened )
+				{
+					GameContext.TagList.Close();
+				}
+				else
+				{
+					GameContext.TagList.Open();
+				}
 			}
 
 			if( Input.mouseScrollDelta.y > 0 )
@@ -483,7 +492,7 @@ public class Window : MonoBehaviour
 		RecentFiles,
 		InitialDirectory,
 		ScreenSize,
-		IsToDoListOpened,
+		IsTagListOpened,
 		IsDiaryOpened,
 		Count
 	}
@@ -494,7 +503,7 @@ public class Window : MonoBehaviour
 		"[recent files]",
 		"[initial directory]",
 		"[screen]",
-		"[todo list]",
+		"[tag list]",
 		"[open diary]"
 	};
 
@@ -560,14 +569,14 @@ public class Window : MonoBehaviour
 					string[] size = text.Split(',');
 					UnityEngine.Screen.SetResolution(int.Parse(size[0]), int.Parse(size[1]), size[2] == "true");
 					break;
-				case Settings.IsToDoListOpened:
-					//if( text == "open" )
-					//{
-					//}
-					//else if( text == "close" )
-					//{
-					//	LineList.Close();
-					//}
+				case Settings.IsTagListOpened:
+					if( text == "open" )
+					{
+					}
+					else if( text == "close" )
+					{
+						GameContext.TagList.Close();
+					}
 					break;
 				case Settings.IsDiaryOpened:
 					if( text == "open" )
@@ -626,8 +635,8 @@ public class Window : MonoBehaviour
 		}
 		writer.WriteLine(SettingsTags[(int)Settings.ScreenSize]);
 		writer.WriteLine(String.Format("{0},{1},{2}", UnityEngine.Screen.width, UnityEngine.Screen.height, UnityEngine.Screen.fullScreen ? "true" : "false"));
-		//writer.WriteLine(SettingsTags[(int)Settings.IsToDoListOpened]);
-		//writer.WriteLine(LineList.IsOpened ? "open" : "close");
+		writer.WriteLine(SettingsTags[(int)Settings.IsTagListOpened]);
+		writer.WriteLine(GameContext.TagList.IsOpened ? "open" : "close");
 		writer.WriteLine(SettingsTags[(int)Settings.IsDiaryOpened]);
 		writer.WriteLine(MainTabGroup.ExistDiaryNote != null ? "open" : "close");
 
