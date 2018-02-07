@@ -22,7 +22,7 @@ public class TagList : MonoBehaviour
 	public float Width { get { return isOpened_ ? GameContext.Config.TagListWidth : 0; } }
 
 	public bool IsOpened { get { return isOpened_; } }
-	bool isOpened_ = true;
+	bool isOpened_ = false;
 
 	List<TagParent> tagParents_ = new List<TagParent>();
 	FileInfo taggedLineFile_;

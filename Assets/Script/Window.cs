@@ -81,6 +81,7 @@ public class Window : MonoBehaviour
 	// Use this for initialization
 	void Start ()
 	{
+		TitleText.text = "";
 		settingFile_ = new FileInfo(System.Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + "/Dones/settings.txt");
 		StartCoroutine(InitialLoadCoroutine());
 	}
@@ -91,6 +92,12 @@ public class Window : MonoBehaviour
 		yield return new WaitForEndOfFrame();
 		LoadSettings();
 		GameContext.TagList.LoadTaggedLines();
+
+		if( MainTabGroup.Count == 0 )
+		{
+			NewFile();
+		}
+
 		MainTabGroup.UpdateLayoutAll();
 		foreach( TreeNote treeNote in MainTabGroup.TreeNotes )
 		{
@@ -202,10 +209,10 @@ public class Window : MonoBehaviour
 		foreach( TreeNote tree in MainTabGroup.TreeNotes )
 		{
 			tree.SaveNote();
-			if( GameContext.Config.DoBackUp )
-			{
-				tree.DeleteBackup();
-			}
+			//if( GameContext.Config.DoBackUp )
+			//{
+			//	tree.DeleteBackup();
+			//}
 		}
 
 		SaveSettings();
@@ -325,6 +332,12 @@ public class Window : MonoBehaviour
 
 	public void OpenDiary(bool isActive = true)
 	{
+		// ノートを開いていなければできない
+		if( MainTabGroup.Count == 0 )
+		{
+			return;
+		}
+
 		DiaryNote diaryNote = MainTabGroup.ExistDiaryNote;
 		if( diaryNote == null )
 		{
@@ -572,10 +585,10 @@ public class Window : MonoBehaviour
 				case Settings.IsTagListOpened:
 					if( text == "open" )
 					{
+						GameContext.TagList.Open();
 					}
 					else if( text == "close" )
 					{
-						GameContext.TagList.Close();
 					}
 					break;
 				case Settings.IsDiaryOpened:

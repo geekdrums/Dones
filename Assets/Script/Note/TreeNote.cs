@@ -118,10 +118,10 @@ public class TreeNote : Note
 		}
 		
 		SaveNote();
-		if( GameContext.Config.DoBackUp )
-		{
-			DeleteBackup();
-		}
+		//if( GameContext.Config.DoBackUp )
+		//{
+		//	DeleteBackup();
+		//}
 		Destroy(this.gameObject);
 		Destroy(logNote_.gameObject);
 	}
@@ -254,10 +254,10 @@ public class TreeNote : Note
 		logNote_ = logNote;
 
 		tree_.LoadFile(new FileInfo(path));
-		if( GameContext.Config.DoBackUp && tree_.File.Exists )
-		{
-			tree_.File.CopyTo(tree_.File.FullName + ".bak", overwrite: true);
-		}
+		//if( GameContext.Config.DoBackUp && tree_.File.Exists )
+		//{
+		//	tree_.File.CopyTo(tree_.File.FullName + ".bak", overwrite: true);
+		//}
 
 		tabButton_.BindedNote = this;
 		tabButton_.Text = tree_.TitleText;
@@ -288,10 +288,10 @@ public class TreeNote : Note
 		DialogResult dialogResult = saveFileDialog.ShowDialog();
 		if( dialogResult == DialogResult.OK )
 		{
-			if( GameContext.Config.DoBackUp )
-			{
-				DeleteBackup();
-			}
+			//if( GameContext.Config.DoBackUp )
+			//{
+			//	DeleteBackup();
+			//}
 
 			tree_.SaveFileAs(new FileInfo(saveFileDialog.FileName));
 			logNote_.Initialize(this);

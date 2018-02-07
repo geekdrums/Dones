@@ -157,8 +157,13 @@ public class LogNote : DiaryNoteBase
 	{
 		treeNote_ = treeNote;
 
+		string directoryName = ToDirectoryName(treeNote_);
+		if( Directory.Exists(directoryName) == false )
+		{
+			Directory.CreateDirectory(directoryName);
+		}
 		string header = treeNote_.File.Name.Replace(".dtml", "");
-		foreach( string path in Directory.GetFiles(ToDirectoryName(treeNote_)) )
+		foreach( string path in Directory.GetFiles(directoryName) )
 		{
 			// path would be like "dones-2017-01-01.dtml"
 			if( Path.GetExtension(path) == ".dtml" )

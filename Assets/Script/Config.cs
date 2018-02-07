@@ -13,7 +13,7 @@ public class Config : MonoBehaviour
 	public float DefaultWidthPerLevel = 27;
 	public float DefaultHeightPerLine = 27.0f;
 	
-	public bool DoBackUp = true;
+	//public bool DoBackUp = true;
 
 	public int FontSize = 14;
 	public float WidthFactor = 1.0f;
@@ -47,11 +47,6 @@ public class Config : MonoBehaviour
 	public Color CloneTextColor;
 	public Color CommentLineColor;
 	public Color CommentTextColor;
-
-	public Color ShortLineColor;
-	public Color ShortLineSelectionColor;
-	public Color ShortLineBackColor;
-	public Color ShortLineBackSelectionColor;
 
 	public Color ToggleColor;
 	public Color ToggleOpenedColor;
@@ -90,16 +85,12 @@ public class Config : MonoBehaviour
 
 	enum ConfigParams
 	{
-		IsAutoSave,
-		DoBackUp,
 		TimeFormat,
 		DateFormat,
 		FontSize,
 		Count
 	}
 	static string[] ConfigTags = new string[(int)ConfigParams.Count] {
-		"[IsAutoSave]",
-		"[DoBackUp]",
 		"[TimeFormat]",
 		"[DateFormat]",
 		"[FontSize]",
@@ -114,7 +105,7 @@ public class Config : MonoBehaviour
 		StreamReader reader = new StreamReader(configFile_.OpenRead());
 		string text = null;
 
-		ConfigParams configParam = ConfigParams.IsAutoSave;
+		ConfigParams configParam = ConfigParams.TimeFormat;
 		while( (text = reader.ReadLine()) != null )
 		{
 			foreach( ConfigParams param in (ConfigParams[])Enum.GetValues(typeof(ConfigParams)) )
@@ -133,9 +124,6 @@ public class Config : MonoBehaviour
 			}
 			switch( configParam )
 			{
-			case ConfigParams.DoBackUp:
-				Boolean.TryParse(text, out DoBackUp);
-				break;
 			case ConfigParams.TimeFormat:
 				TimeFormat = text;
 				break;
@@ -163,8 +151,6 @@ public class Config : MonoBehaviour
 
 		StreamWriter writer = new StreamWriter(configFile_.FullName);
 		
-		writer.WriteLine(ConfigTags[(int)ConfigParams.DoBackUp]);
-		writer.WriteLine(DoBackUp.ToString());
 		writer.WriteLine(ConfigTags[(int)ConfigParams.TimeFormat]);
 		writer.WriteLine(TimeFormat);
 		writer.WriteLine(ConfigTags[(int)ConfigParams.DateFormat]);

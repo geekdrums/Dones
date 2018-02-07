@@ -977,13 +977,18 @@ public class Line : IEnumerable<Line>
 			{
 				Tree.ActionManager.StartChain();
 				Line parent = parent_;
+				List<Line> foldedLines = new List<Line>();
 				while( parent != null )
 				{
 					if( parent.IsFolded )
 					{
-						Tree.OnFoldUpdated(parent, false);
+						foldedLines.Insert(0, parent);
 					}
 					parent = parent.parent_;
+				}
+				foreach( Line line in foldedLines )
+				{
+					Tree.OnFoldUpdated(line, false);
 				}
 				Tree.ActionManager.EndChain();
 			}

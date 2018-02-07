@@ -388,12 +388,7 @@ public class LogTree : Tree
 		if( file_ == null )
 		{
 			if( OwnerLogNote != null )
-			{ 
-				string folderName = OwnerLogNote.TreeNote.File.FullName.Replace(".dtml", ".dones");
-				if( Directory.Exists(folderName) == false )
-				{
-					Directory.CreateDirectory(folderName);
-				}
+			{
 				file_ = new FileInfo(DiaryNoteBase.ToFileName(OwnerLogNote.TreeNote, date_));
 			}
 			else

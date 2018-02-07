@@ -686,7 +686,7 @@ public class Tree : MonoBehaviour
 						if( newParent.IsFolded )
 						{
 							newParent.IsFolded = false;
-							newParent.AdjustLayoutRecursive();
+							newParent.AdjustLayoutRecursive(line.Index);
 						}
 					},
 					undo: () =>
