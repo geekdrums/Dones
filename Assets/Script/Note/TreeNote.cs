@@ -107,21 +107,17 @@ public class TreeNote : Note
 		List<TaggedLine> removeList = new List<TaggedLine>();
 		foreach( TaggedLine taggedLine in GameContext.TagList.TaggedLines )
 		{
-			if( taggedLine.BindedLine.Tree == this )
+			if( taggedLine.BindedLine.Tree == this.Tree )
 			{
 				removeList.Add(taggedLine);
 			}
 		}
-		foreach( TaggedLine shortLine in removeList )
+		foreach( TaggedLine taggledLine in removeList )
 		{
-			shortLine.Remove(canUndo: false);
+			taggledLine.Remove();
 		}
 		
 		SaveNote();
-		//if( GameContext.Config.DoBackUp )
-		//{
-		//	DeleteBackup();
-		//}
 		Destroy(this.gameObject);
 		Destroy(logNote_.gameObject);
 	}

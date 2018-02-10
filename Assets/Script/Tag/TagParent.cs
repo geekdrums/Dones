@@ -150,7 +150,18 @@ public class TagParent : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDra
 			break;
 		case KeyCode.Backspace:
 		case KeyCode.Delete:
-			selectedLine_.Remove();
+			Line line = selectedLine_.BindedLine;
+			selectedLine_.BindedLine.Tree.ActionManager.Execute(new Action(
+				execute: () =>
+				{
+					line.RemoveTag(Tag);
+					RemoveLine(line);
+				},
+				undo: () =>
+				{
+					line.AddTag(Tag);
+					InstantiateTaggedLine(line);
+				}));
 			break;
 		case KeyCode.DownArrow:
 			{
@@ -636,34 +647,9 @@ public class TagParent : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDra
 
 	public void RemoveAllDones()
 	{
-		List<Line> doneLines = new List<Line>(from taggedLine in doneLines_ select taggedLine.BindedLine);
-
-		if( doneLines.Count == 0 )
+		foreach( TaggedLine taggedline in doneLines_ )
 		{
-			return;
-		}
-
-		foreach( TreeNote treeNote in GameContext.Window.MainTabGroup.TreeNotes )
-		{
-			treeNote.Tree.ActionManager.StartChain();
-		}
-		foreach( Line line in doneLines )
-		{
-			line.Tree.ActionManager.Execute(new Action(
-				execute: () =>
-				{
-					line.RemoveTag(Tag);
-					RemoveLine(line);
-				},
-				undo: () =>
-				{
-					line.AddTag(Tag);
-					InstantiateTaggedLine(line);
-				}));
-		}
-		foreach( TreeNote treeNote in GameContext.Window.MainTabGroup.TreeNotes )
-		{
-			treeNote.Tree.ActionManager.EndChain();
+			RemoveTaggedLine(taggedline);
 		}
 	}
 

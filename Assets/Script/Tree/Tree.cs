@@ -1360,7 +1360,7 @@ public class Tree : MonoBehaviour
 					if( loadTag )
 					{
 						string beforeRefText = pasteText;
-						pasteStart.LoadTag(ref pasteText);
+						pasteStart.LoadLineTag(ref pasteText);
 						pasteStart.Field.Paste(pasteText);
 						pasteStart.UpdateBindingField();
 						pasteText = beforeRefText;
@@ -1376,11 +1376,13 @@ public class Tree : MonoBehaviour
 					if( loadTag )
 					{
 						string refTag = oldTag;
-						pasteStart.LoadTag(ref refTag);
+						pasteStart.LoadLineTag(ref refTag);
 					}
 					pasteStart.Text = oldText;
 				}
 				));
+
+			pasteStart.CheckHashTags();
 		}
 		else
 		{
@@ -1411,7 +1413,7 @@ public class Tree : MonoBehaviour
 				execute: () =>
 				{
 					string beforeRefText = pasteText;
-					pasteStart.LoadTag(ref pasteText);
+					pasteStart.LoadLineTag(ref pasteText);
 					pasteStart.Field.Paste(pasteText);
 					pasteStart.UpdateBindingField();
 					pasteText = beforeRefText;
@@ -1422,11 +1424,13 @@ public class Tree : MonoBehaviour
 					pasteStart.Field.CaretPosision = 0;
 					pasteStart.Text = "";
 					string noTag = "";
-					pasteStart.LoadTag(ref noTag);
+					pasteStart.LoadLineTag(ref noTag);
 					pasteStart.UpdateBindingField();
 					RequestLayout(layoutStart);
 				}
 				));
+
+			pasteStart.CheckHashTags();
 		}
 
 		int oldLevel = currentLevel;

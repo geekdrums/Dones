@@ -139,7 +139,7 @@ public class LogTree : Tree
 			found = false;
 			foreach( Line child in searchParent )
 			{
-				if( child.IsClone && child.Text == searchChild.Text )
+				if( child.IsClone && child.Text == searchChild.TextWithoutHashTags )
 				{
 					found = true;
 					searchParent = child;

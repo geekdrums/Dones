@@ -144,6 +144,20 @@ public class Line : IEnumerable<Line>
 		}
 	}
 
+	public string TextWithoutHashTags
+	{
+		get
+		{
+			string text = text_;
+			foreach( string tag in tags_ )
+			{
+				text = text.Remove(text.LastIndexOf(tag) - 1, tag.Length + 1);
+			}
+			text.TrimEnd(spaces);
+			return text;
+		}
+	}
+
 	public bool IsLinkText { get { return isLinkText_; } }
 	protected bool isLinkText_ = false;
 
@@ -223,9 +237,10 @@ public class Line : IEnumerable<Line>
 		BindState = EBindState.Unbind;
 		if( loadTag )
 		{
-			LoadTag(ref text);
+			LoadLineTag(ref text);
 		}
 		text_ = text;
+		tags_ = GetHashTags(text);
 		CheckIsLink();
 	}
 
@@ -1180,13 +1195,13 @@ public class Line : IEnumerable<Line>
 	public static string CloneTag = "<c>";
 	public static string BoldTag = "<b>";
 	public static string CommentTag = "> ";
-	public static char[] spaces = new char[] { ' ', '　' };
+	public static char[] spaces = new char[] { ' ' };
 
 	public static List<string> GetHashTags(string text)
 	{
 		List<string> tags = new List<string>();
 		string[] splitText = text.Split(spaces);
-		for( int i = 0; i < splitText.Length; ++i )
+		for( int i = splitText.Length - 1; i >= 0; --i )
 		{
 			if( splitText[i].StartsWith("#") )
 			{
@@ -1194,7 +1209,7 @@ public class Line : IEnumerable<Line>
 				// todo check validate
 				if( String.IsNullOrEmpty(tag) || tag.Contains('#') || tag.Contains('.') || tag.Contains(',') )
 				{
-					continue;
+					break;
 				}
 				bool invaid = false;
 				foreach( char invalidChar in System.IO.Path.GetInvalidFileNameChars() )
@@ -1207,13 +1222,17 @@ public class Line : IEnumerable<Line>
 				}
 				if( invaid )
 				{
-					continue;
+					break;
 				}
 
 				if( tags.Contains(tag) == false )
 				{
 					tags.Add(tag);
 				}
+			}
+			else
+			{
+				break;
 			}
 		}
 		return tags;
@@ -1278,7 +1297,7 @@ public class Line : IEnumerable<Line>
 		return builder.ToString();
 	}
 
-	public void LoadTag(ref string text)
+	public void LoadLineTag(ref string text)
 	{
 		if( text.EndsWith(DoneTag) )
 		{
@@ -1329,8 +1348,6 @@ public class Line : IEnumerable<Line>
 		{
 			IsComment = false;
 		}
-
-		tags_ = GetHashTags(text);
 	}
 
 	public void CheckIsLink()
@@ -1370,19 +1387,39 @@ public class Line : IEnumerable<Line>
 		}
 	}
 
+	public void CheckHashTags()
+	{
+		List<string> newTags = GetHashTags(text_);
+		Line.TagTextEditAction.TagEditDiff tagEditDiff = Line.TagTextEditAction.CheckTagChanged(newTags, tags_);
+		if( tagEditDiff.IsEdited )
+		{
+			Line.TagTextEditAction tagEdit = new Line.TagTextEditAction(this, tags_);
+			tagEdit.SetNewTag(newTags);
+			tagEdit.UpdateTags(tagEditDiff.RemoveTags, tagEditDiff.AddTags);
+			Tree.ActionManager.Execute(tagEdit);
+		}
+	}
+
 	public bool NeedFixInput()
 	{
 		return textAction_ != null && Time.time - lastTextActionTime_ > GameContext.Config.TextInputFixIntervalTime;
 	}
 
-	public Line Clone()
+	public Line Clone(bool removeHashTags = true)
 	{
 		Line line = new Line(text_);
 		line.isDone_ = isDone_;
 		line.isFolded_ = isFolded_;
 		line.isLinkText_ = isLinkText_;
 		line.isComment_ = isComment_;
-		line.tags_ = new List<string>(tags_);
+		if( removeHashTags )
+		{
+			line.text_ = TextWithoutHashTags;
+		}
+		else
+		{
+			line.tags_ = new List<string>(tags_);
+		}
 		line.isClone_ = true;
 		return line;
 	}

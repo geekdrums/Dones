@@ -281,27 +281,9 @@ public class TaggedLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragH
 		shouldUpdateTextLength_ = false;
 	}
 
-	public void Remove(bool canUndo = true)
+	public void Remove()
 	{
-		if( canUndo )
-		{
-			Line line = BindedLine;
-			BindedLine.Tree.ActionManager.Execute(new Action(
-				execute: () =>
-				{
-					line.RemoveTag(tagParent_.Tag);
-					tagParent_.RemoveLine(line);
-				},
-				undo: () =>
-				{
-					line.AddTag(tagParent_.Tag);
-					tagParent_.InstantiateTaggedLine(line);
-				}));
-		}
-		else
-		{
-			tagParent_.RemoveTaggedLine(this);
-		}
+		tagParent_.RemoveTaggedLine(this);
 	}
 
 	#endregion
