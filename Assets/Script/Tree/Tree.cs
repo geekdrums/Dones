@@ -27,6 +27,8 @@ public class Tree : MonoBehaviour
 	protected ActionManagerProxy actionManager_;
 	public Note OwnerNote { get { return ownerNote_; } }
 	protected Note ownerNote_;
+	public HeapManager<TagText> TagHeapManager { get { return tagHeapManager_; } }
+	protected HeapManager<TagText> tagHeapManager_;
 
 	// input states
 	protected bool wasDeleteKeyConsumed_ = false;
@@ -113,11 +115,12 @@ public class Tree : MonoBehaviour
 	#endregion
 
 
-	public void Initialize(Note ownerNote, ActionManagerProxy actionManager, HeapManager<LineField> heapManager)
+	public void Initialize(Note ownerNote, ActionManagerProxy actionManager, HeapManager<LineField> heapManager, HeapManager<TagText> tagHeapManager = null)
 	{
 		ownerNote_ = ownerNote;
 		actionManager_ = actionManager;
 		heapManager_ = heapManager;
+		tagHeapManager_ = tagHeapManager;
 
 		actionManager_.ChainStarted += this.actionManager__ChainStarted;
 		actionManager_.ChainEnded += this.actionManager__ChainEnded;
@@ -310,13 +313,13 @@ public class Tree : MonoBehaviour
 				}
 
 				rect = selectionStartLine_.Field.Rect;
-				if( selectedLines_.Count == 1 && rect.Contains(Input.mousePosition) && Input.mousePosition.x - rect.x < selectionStartLine_.Field.GetTextRectLength() )
+				if( selectedLines_.Count == 1 && rect.Contains(Input.mousePosition) && Input.mousePosition.x - rect.x < selectionStartLine_.Field.GetFullTextRectLength() )
 				{
 					UpdateSelection(selectionStartLine_, false);
 				}
 				else if( selectedLines_.Count == 0 && rect.Contains(Input.mousePosition)
 					&& selectionStartLine_.Field.selectionFocusPosition != selectionStartLine_.Field.selectionAnchorPosition
-					&& Input.mousePosition.x - rect.x > selectionStartLine_.Field.GetTextRectLength() )
+					&& Input.mousePosition.x - rect.x > selectionStartLine_.Field.GetFullTextRectLength() )
 				{
 					UpdateSelection(selectionStartLine_, true);
 				}
@@ -760,10 +763,10 @@ public class Tree : MonoBehaviour
 		Line target = focusedLine_;
 		Line parent = focusedLine_.Parent;
 		int index = focusedLine_.Index;
-		Line line = new Line();
+		Line newline = new Line();
 		if( focusedLine_.IsComment )
 		{
-			line.IsComment = true;
+			newline.IsComment = true;
 		}
 
 		if( caretPos == 0 && target.TextLength > 0 )
@@ -772,14 +775,14 @@ public class Tree : MonoBehaviour
 			actionManager_.Execute(new Action(
 				execute: () =>
 				{
-					parent.Insert(index, line);
+					parent.Insert(index, newline);
 					parent.AdjustLayoutRecursive(index + 1);
-					line.Field.CaretPosision = 0;
+					newline.Field.CaretPosision = 0;
 					ownerNote_.ScrollTo(target);
 				},
 				undo: () =>
 				{
-					parent.Remove(line);
+					parent.Remove(newline);
 					parent.AdjustLayoutRecursive(index);
 					target.Field.CaretPosision = caretPos;
 					ownerNote_.ScrollTo(target);
@@ -807,20 +810,23 @@ public class Tree : MonoBehaviour
 				execute: () =>
 				{
 					target.Text = subString;
-					line.Text += newString;
-					insertParent.Insert(insertIndex, line);
+					newline.Text += newString;
+					insertParent.Insert(insertIndex, newline);
 					insertParent.AdjustLayoutRecursive(insertIndex + 1);
 					target.CheckIsLink();
-					line.CheckIsLink();
-					line.Field.CaretPosision = 0;
-					line.Field.IsFocused = true;
+					target.CheckHashTags();
+					newline.CheckIsLink();
+					newline.CheckHashTags();
+					newline.Field.CaretPosision = 0;
+					newline.Field.IsFocused = true;
 				},
 				undo: () =>
 				{
 					target.Text = oldString;
-					insertParent.Remove(line);
+					insertParent.Remove(newline);
 					insertParent.AdjustLayoutRecursive(insertIndex);
 					target.CheckIsLink();
+					target.CheckHashTags();
 					target.Field.CaretPosision = caretPos;
 					target.Field.IsFocused = true;
 				}

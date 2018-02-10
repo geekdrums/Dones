@@ -40,13 +40,19 @@ public class TreeNote : Note
 		}
 	}
 
+	public TagText TagTextPrefab;
+
+	protected HeapManager<TagText> tagHeapManager_;
+
 	#endregion
 
 	protected override void Awake()
 	{
 		base.Awake();
+		tagHeapManager_ = new HeapManager<TagText>();
+		tagHeapManager_.Initialize(1, TagTextPrefab);
 		tree_ = GetComponent<Tree>();
-		tree_.Initialize(this, new ActionManagerProxy(actionManager_), heapManager_);
+		tree_.Initialize(this, new ActionManagerProxy(actionManager_), heapManager_, tagHeapManager_);
 		tree_.OnEdited += this.OnEdited;
 		tree_.OnDoneChanged += this.OnDoneChanged;
 	}

@@ -323,8 +323,6 @@ public class TagParent : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDra
 		if( lines_.Count > 0 || doneLines_.Count > 0 )
 		{
 			float animTime = 0.2f;
-			//AnimManager.AddAnim(taggedLine, GameContext.Config.AccentColor, ParamType.Color, AnimType.Time, 0.15f);
-			//AnimManager.AddAnim(shortLine, GameContext.Config.ShortLineBackColor, ParamType.Color, AnimType.Time, 0.1f, 0.15f, AnimEndOption.Destroy);
 			AnimManager.AddAnim(taggedLine, 0.0f, ParamType.AlphaColor, AnimType.Time, animTime, endOption: AnimEndOption.Deactivate);
 			
 			if( needSelectionUpdate )
@@ -647,7 +645,8 @@ public class TagParent : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDra
 
 	public void RemoveAllDones()
 	{
-		foreach( TaggedLine taggedline in doneLines_ )
+		List<TaggedLine> removeLines = new List<TaggedLine>(doneLines_);
+		foreach( TaggedLine taggedline in removeLines )
 		{
 			RemoveTaggedLine(taggedline);
 		}

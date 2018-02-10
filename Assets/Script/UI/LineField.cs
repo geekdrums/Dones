@@ -30,9 +30,10 @@ public class LineField : CustomInputField
 
 	protected UIGaugeRenderer strikeLine_;
 	protected CheckMark checkMark_;
-	//protected UIMidairPrimitive listMark_;
 
 	protected bool isPointerEntered_ = false;
+
+	protected List<TagText> tagTexts_ = new List<TagText>();
 
 	#endregion
 
@@ -117,52 +118,48 @@ public class LineField : CustomInputField
 				}
 				checkMark_.Check();
 			}
+
+			foreach( TagText tagText in tagTexts_ )
+			{
+				BindedLine.Tree.TagHeapManager.BackToHeap(tagText);
+			}
+			tagTexts_.Clear();
 		}
 		else
 		{
-			//listMark_.gameObject.SetActive(BindedLine.HasAnyTags);
+			SetHashTags(BindedLine.Tags);
 		}
 	}
 
-	public void SetIsOnList(bool isOnList, bool withAnim = true)
+	public void SetHashTags(List<string> tags)
 	{
-		/*
-		Foreground = GetDesiredTextColor();
-		if( isOnList )
+		if( BindedLine.IsDone || BindedLine.Tree == null || BindedLine.Tree.TagHeapManager == null ) return;
+
+		List<TagText> removeList = new List<TagText>();
+		foreach( TagText tagText in tagTexts_ )
 		{
-			if( BindedLine.IsDone )
+			if( tags.Find((string t) => "#" + t == tagText.Text) == null )
 			{
-				return;
-			}
-
-			if( listMark_.gameObject.activeInHierarchy )
-			{
-				AnimManager.RemoveOtherAnim(listMark_.gameObject);
-			}
-			checkMark_.gameObject.SetActive(false);
-			listMark_.gameObject.SetActive(true);
-			listMark_.Width = 1;
-			listMark_.ArcRate = 1.0f;
-			OnTextLengthChanged();
-
-			if( withAnim )
-			{
-				AnimManager.AddAnim(listMark_, 8.0f, ParamType.PrimitiveWidth, AnimType.Time, 0.05f);
-				AnimManager.AddAnim(listMark_, 1.0f, ParamType.PrimitiveWidth, AnimType.Time, 0.2f, 0.05f);
+				removeList.Add(tagText);
 			}
 		}
-		else
+		foreach( TagText removeText in removeList )
 		{
-			if( withAnim )
+			tagTexts_.Remove(removeText);
+			BindedLine.Tree.TagHeapManager.BackToHeap(removeText);
+		}
+		foreach( string tag in tags )
+		{
+			if( tagTexts_.Find((TagText t) => t.Text == "#" + tag) == null )
 			{
-				AnimManager.AddAnim(listMark_, 0.0f, ParamType.PrimitiveArc, AnimType.Time, 0.15f, endOption: AnimEndOption.Deactivate);
-			}
-			else
-			{
-				listMark_.gameObject.SetActive(false);
+				TagText tagText = BindedLine.Tree.TagHeapManager.Instantiate(this.transform);
+				tagText.Text = "#" + tag;
+				tagText.Rect.anchoredPosition = Vector2.zero;
+				tagText.gameObject.SetActive(isFocused == false);
+				tagTexts_.Add(tagText);
+				OnTextLengthChanged();
 			}
 		}
-		*/
 	}
 
 	public void SetIsLinkText(bool isLink)
@@ -266,14 +263,23 @@ public class LineField : CustomInputField
 
 	protected override void OnUpdatedTextRectLength()
 	{
-		float charLength = GetTextRectLength();
+		float charLength = GetFullTextRectLength();
 
-		if( BindedLine.IsComment == false )
-			strikeLine_.SetLength(charLength + 10);
+		if( BindedLine.IsComment == false && strikeLine_.gameObject.activeInHierarchy )
+			strikeLine_.SetLength(charLength + 5);
 
 		checkMark_.gameObject.SetActive(BindedLine.IsDone);
-		checkMark_.SetPositionX(charLength + 5);
-		//listMark_.GetComponent<RectTransform>().anchoredPosition = new Vector2(charLength + 15, listMark_.transform.localPosition.y);
+		if( checkMark_.gameObject.activeSelf )
+			checkMark_.SetPositionX(charLength);
+
+		foreach( TagText tagText in tagTexts_ )
+		{
+			int index = text.LastIndexOf(tagText.Text);
+			float x = GetTextRectLength(index - 1);
+			tagText.Rect.anchoredPosition = new Vector2(x + textComponent.rectTransform.offsetMin.x, 0);
+			float width = GetTextRectLength(index + tagText.Text.Length - 1) - x;
+			tagText.Rect.sizeDelta = new Vector2(width, tagText.Rect.sizeDelta.y);
+		}
 	}
 
 	#endregion
@@ -284,7 +290,9 @@ public class LineField : CustomInputField
 	protected override void OnDestroy()
 	{
 		if( BindedLine != null && BindedLine.Tree != null )
+		{
 			BindedLine.Tree.OnTextFieldDestroy(this);
+		}
 	}
 
 
@@ -293,6 +301,10 @@ public class LineField : CustomInputField
 		if( BindedLine != null && BindedLine.Tree != null )
 		{
 			BindedLine.Tree.OnFocused(BindedLine);
+			foreach( TagText tagText in tagTexts_ )
+			{
+				tagText.gameObject.SetActive(false);
+			}
 		}
 	}
 
@@ -319,6 +331,10 @@ public class LineField : CustomInputField
 		if( BindedLine != null && BindedLine.Tree != null )
 		{
 			BindedLine.Tree.OnFocusEnded(BindedLine);
+			foreach( TagText tagText in tagTexts_ )
+			{
+				tagText.gameObject.SetActive(true);
+			}
 		}
 	}
 

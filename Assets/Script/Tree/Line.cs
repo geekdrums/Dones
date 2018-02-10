@@ -98,16 +98,40 @@ public class Line : IEnumerable<Line>
 				if( Field != null )
 				{
 					Field.SetIsDone(isDone_);
-					//Field.SetIsOnList(isOnList_);
 				}
 				if( Tree is LogTree == false )
 				{
-					foreach( string tag in Tags )
+					if( isDone_ )
 					{
-						TaggedLine bindedLine = GameContext.TagList.GetTagParent(tag).FindBindedLine(this);
-						if( bindedLine != null )
+						// doneされたのでタグリストに既にある場合はDone状態にする
+						foreach( string tag in Tags )
 						{
-							bindedLine.IsDone = isDone_;
+							TagParent tagParent = GameContext.TagList.GetTagParent(tag);
+							if( tagParent != null )
+							{
+								TaggedLine bindedLine = tagParent.FindBindedLine(this);
+								if( bindedLine != null )
+								{
+									bindedLine.IsDone = isDone_;
+								}
+							}
+						}
+					}
+					else
+					{
+						// done解除されたのでタグ登録されてなければしにいく。
+						foreach( string tag in Tags )
+						{
+							TagParent tagParent = GameContext.TagList.GetOrInstantiateTagParent(tag);
+							TaggedLine bindedLine = tagParent.FindBindedLine(this);
+							if( bindedLine != null )
+							{
+								bindedLine.IsDone = isDone_;
+							}
+							else
+							{
+								tagParent.InstantiateTaggedLine(this);
+							}
 						}
 					}
 				}
@@ -117,22 +141,17 @@ public class Line : IEnumerable<Line>
 	protected bool isDone_ = false;
 
 	public bool HasAnyTags { get { return tags_.Count > 0; } }
-	public IEnumerable<string> Tags
-	{
-		get
-		{
-			foreach(string tag in tags_)
-			{
-				yield return tag;
-			}
-		}
-	}
+	public List<string> Tags { get { return tags_; } }
 	protected List<string> tags_ = new List<string>();
 
 	public void AddTag(string tag)
 	{
 		tags_.Add(tag);
 		Text = String.Format("{0} #{1}", text_, tag);
+		if( Field != null )
+		{
+			Field.SetHashTags(tags_);
+		}
 	}
 
 	public void RemoveTag(string tag)
@@ -141,6 +160,10 @@ public class Line : IEnumerable<Line>
 		{
 			tags_.Remove(tag);
 			Text = text_.Remove(text_.LastIndexOf(tag) - 2, tag.Length + 2);
+			if( Field != null )
+			{
+				Field.SetHashTags(tags_);
+			}
 		}
 	}
 
@@ -491,6 +514,8 @@ public class Line : IEnumerable<Line>
 				}
 				textAction_.TagEdit.SetNewTag(newTags);
 				textAction_.TagEdit.UpdateTags(tagEditDiff.RemoveTags, tagEditDiff.AddTags);
+
+				Field.SetHashTags(tags_);
 			}
 		}
 
@@ -620,7 +645,7 @@ public class Line : IEnumerable<Line>
 		{
 			Field.SetIsClone(isClone_);
 			Field.SetIsDone(isDone_, withAnim: false);
-			//Field.SetIsOnList(isOnList_, withAnim: false);
+			Field.SetHashTags(tags_);
 			Field.textComponent.fontStyle = isBold_ ? FontStyle.Bold : FontStyle.Normal;
 			if( isLinkText_ )
 				Field.SetIsLinkText(isLinkText_);
@@ -686,6 +711,11 @@ public class Line : IEnumerable<Line>
 				{
 					tagParent.InstantiateTaggedLine(child);
 				}
+			}
+
+			if( child.Field != null )
+			{
+				child.Field.SetHashTags(child.tags_);
 			}
 		}
 	}
@@ -1200,7 +1230,7 @@ public class Line : IEnumerable<Line>
 	public static List<string> GetHashTags(string text)
 	{
 		List<string> tags = new List<string>();
-		string[] splitText = text.Split(spaces);
+		string[] splitText = text.Split(spaces, StringSplitOptions.RemoveEmptyEntries);
 		for( int i = splitText.Length - 1; i >= 0; --i )
 		{
 			if( splitText[i].StartsWith("#") )
@@ -1209,7 +1239,7 @@ public class Line : IEnumerable<Line>
 				// todo check validate
 				if( String.IsNullOrEmpty(tag) || tag.Contains('#') || tag.Contains('.') || tag.Contains(',') )
 				{
-					break;
+					continue;
 				}
 				bool invaid = false;
 				foreach( char invalidChar in System.IO.Path.GetInvalidFileNameChars() )
@@ -1222,7 +1252,7 @@ public class Line : IEnumerable<Line>
 				}
 				if( invaid )
 				{
-					break;
+					continue;
 				}
 
 				if( tags.Contains(tag) == false )
@@ -1397,6 +1427,10 @@ public class Line : IEnumerable<Line>
 			tagEdit.SetNewTag(newTags);
 			tagEdit.UpdateTags(tagEditDiff.RemoveTags, tagEditDiff.AddTags);
 			Tree.ActionManager.Execute(tagEdit);
+			if( Field != null )
+			{
+				Field.SetHashTags(tags_);
+			}
 		}
 	}
 

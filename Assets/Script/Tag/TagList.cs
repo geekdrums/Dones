@@ -155,7 +155,8 @@ public class TagList : MonoBehaviour
 
 	void RemoveAllDones()
 	{
-		foreach(TagParent parent in tagParents_)
+		List<TagParent> removeList = new List<TagParent>(tagParents_);
+		foreach( TagParent parent in removeList )
 		{
 			parent.RemoveAllDones();
 		}

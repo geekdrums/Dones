@@ -24,7 +24,17 @@ public class HeapManager<C> : IEnumerable<C> where C : MonoBehaviour
 	// 新しいCを要求
 	public C Instantiate(Transform parent)
 	{
-		C heapObj = heap_.Count > 0 ? heap_[useFromFirst_ ? 0 : heap_.Count - 1] : null;
+		C heapObj = null;
+		if( heap_.Count > 0 )
+		{
+			heapObj = heap_[useFromFirst_ ? 0 : heap_.Count - 1];
+			if( heapObj == null )
+			{
+				heap_.RemoveAll((C c) => c == null);
+				if( heap_.Count > 0 ) heapObj = heap_[useFromFirst_ ? 0 : heap_.Count - 1];
+			}
+		}
+
 		if( heapObj == null )
 		{
 			for( int i = 0; i < heapUnitCount_; ++i )
@@ -35,6 +45,10 @@ public class HeapManager<C> : IEnumerable<C> where C : MonoBehaviour
 			}
 		}
 		heap_.Remove(heapObj);
+		if( heapObj.transform.parent != parent )
+		{
+			heapObj.transform.parent = parent;
+		}
 		heapObj.gameObject.SetActive(true);
 		return heapObj;
 	}

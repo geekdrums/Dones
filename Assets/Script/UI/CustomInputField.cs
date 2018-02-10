@@ -118,10 +118,15 @@ public class CustomInputField : InputField, IColoredObject
 		shouldUpdateTextLength_ = false;
 	}
 
-	public float GetTextRectLength()
+	public float GetTextRectLength(int index)
 	{
 		TextGenerator gen = m_TextComponent.cachedTextGenerator;
-		return gen.characters[gen.characters.Count - 1].cursorPos.x - gen.characters[0].cursorPos.x;
+		return gen.characters[index].cursorPos.x + gen.characters[index].charWidth - gen.characters[0].cursorPos.x;
+	}
+
+	public float GetFullTextRectLength()
+	{
+		return GetTextRectLength(Math.Max(0, text.Length - 1));
 	}
 
 	protected virtual void OnUpdatedTextRectLength()
