@@ -155,12 +155,10 @@ public class TagParent : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDra
 				execute: () =>
 				{
 					line.RemoveTag(Tag);
-					RemoveLine(line);
 				},
 				undo: () =>
 				{
 					line.AddTag(Tag);
-					InstantiateTaggedLine(line);
 				}));
 			break;
 		case KeyCode.DownArrow:

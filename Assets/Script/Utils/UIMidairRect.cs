@@ -48,6 +48,13 @@ public class UIMidairRect : MonoBehaviour, IColoredObject
 			Initialize();
 		}
 
+		RecalculatePolygon();
+	}
+
+#endif
+
+	public void RecalculatePolygon()
+	{
 		rect_.sizeDelta = new Vector2(Width, Height);
 		primitive_.rectTransform.anchoredPosition = new Vector2(Width / 2, -Height / 2);
 		float scaleX = Width / Height;
@@ -57,8 +64,6 @@ public class UIMidairRect : MonoBehaviour, IColoredObject
 		primitive_.RecalculatePolygon();
 		primitive_.SetVerticesDirty();
 	}
-
-#endif
 
 	//IColoredObject
 	public void SetColor(Color newColor)

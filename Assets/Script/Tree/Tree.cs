@@ -578,6 +578,11 @@ public class Tree : MonoBehaviour
 			focusedLine_.FixTextInputAction();
 		}
 
+		if( GameContext.Window.TagIncrementalDialog.IsActive && e.Action is Line.TextAction == false )
+		{
+			GameContext.Window.TagIncrementalDialog.Close();
+		}
+
 		if( suspendLayoutCount_ <= 0 )
 		{
 			AdjustRequestedLayouts();
@@ -759,6 +764,35 @@ public class Tree : MonoBehaviour
 
 	protected void OnEnterInput()
 	{
+		if( focusedLine_ != null && GameContext.Window.TagIncrementalDialog.IsActive )
+		{
+			string selectedTag = GameContext.Window.TagIncrementalDialog.GetSelectedTag();
+			if( selectedTag != null )
+			{
+				Line line = focusedLine_;
+				string caretTag = Line.GetTagInCaretPosition(line.Text, line.Field.CaretPosision);
+				int oldCaretPos = line.Field.CaretPosision;
+				actionManager_.Execute(new Action(
+					execute: () =>
+					{
+						line.Field.CaretPosision = 0;
+						line.RemoveTag(caretTag);
+						line.AddTag(selectedTag);
+						line.Field.CaretPosision = line.Text.Length;
+					},
+					undo: () =>
+					{
+						line.Field.CaretPosision = 0;
+						line.RemoveTag(selectedTag);
+						line.AddTag(caretTag);
+						line.Field.CaretPosision = oldCaretPos;
+					}
+					));
+				GameContext.Window.TagIncrementalDialog.Close();
+				return;
+			}
+		}
+
 		int caretPos = focusedLine_.Field.CaretPosision;
 		Line target = focusedLine_;
 		Line parent = focusedLine_.Parent;
@@ -1076,6 +1110,15 @@ public class Tree : MonoBehaviour
 
 	protected void OnArrowInput(KeyCode key)
 	{
+		if( GameContext.Window.TagIncrementalDialog.IsActive )
+		{
+			if( key == KeyCode.UpArrow || key == KeyCode.DownArrow )
+			{
+				GameContext.Window.TagIncrementalDialog.OnArrowInput(key);
+				return;
+			}
+		}
+
 		// 選択があれば解除
 		if( HasSelection )
 		{
@@ -1151,6 +1194,10 @@ public class Tree : MonoBehaviour
 				{
 					OnOverflowArrowInput(key);
 				}
+				if( GameContext.Window.TagIncrementalDialog.IsActive )
+				{
+					GameContext.Window.TagIncrementalDialog.Close();
+				}
 			}
 			break;
 		case KeyCode.LeftArrow:
@@ -1167,6 +1214,10 @@ public class Tree : MonoBehaviour
 				else
 				{
 					OnOverflowArrowInput(key);
+				}
+				if( GameContext.Window.TagIncrementalDialog.IsActive )
+				{
+					GameContext.Window.TagIncrementalDialog.Close();
 				}
 			}
 			break;
@@ -1185,6 +1236,11 @@ public class Tree : MonoBehaviour
 		{
 			selectionStartLine_ = focusedLine_;
 			selectionEndLine_ = focusedLine_;
+		}
+
+		if( GameContext.Window.TagIncrementalDialog.IsActive )
+		{
+			GameContext.Window.TagIncrementalDialog.Close();
 		}
 
 		switch( key )

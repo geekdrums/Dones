@@ -120,13 +120,18 @@ public class CustomInputField : InputField, IColoredObject
 
 	public float GetTextRectLength(int index)
 	{
-		TextGenerator gen = m_TextComponent.cachedTextGenerator;
-		return gen.characters[index].cursorPos.x + gen.characters[index].charWidth - gen.characters[0].cursorPos.x;
+		return CalcTextRectLength(m_TextComponent.cachedTextGenerator, index);
 	}
 
 	public float GetFullTextRectLength()
 	{
-		return GetTextRectLength(Math.Max(0, text.Length - 1));
+		return GetTextRectLength(text.Length - 1);
+	}
+
+	public static float CalcTextRectLength(TextGenerator textGen, int index)
+	{
+		index = Math.Min(textGen.characters.Count - 1, Math.Max(0, index));
+		return textGen.characters[index].cursorPos.x + textGen.characters[index].charWidth - textGen.characters[0].cursorPos.x;
 	}
 
 	protected virtual void OnUpdatedTextRectLength()

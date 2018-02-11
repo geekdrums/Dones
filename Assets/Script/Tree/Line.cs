@@ -5,6 +5,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
 using UniRx;
 
 // Window > Note > Tree > [ Line ]
@@ -148,6 +149,8 @@ public class Line : IEnumerable<Line>
 	{
 		tags_.Add(tag);
 		Text = String.Format("{0} #{1}", text_, tag);
+		TagParent tagParent = GameContext.TagList.GetOrInstantiateTagParent(tag);
+		tagParent.InstantiateTaggedLine(this);
 		if( Field != null )
 		{
 			Field.SetHashTags(tags_);
@@ -159,11 +162,20 @@ public class Line : IEnumerable<Line>
 		if( tags_.Contains(tag) )
 		{
 			tags_.Remove(tag);
-			Text = text_.Remove(text_.LastIndexOf(tag) - 2, tag.Length + 2);
+			Text = text_.Remove(text_.LastIndexOf("#" + tag) - 1, tag.Length + 2);
+			TagParent tagParent = GameContext.TagList.GetTagParent(tag);
+			if( tagParent != null )
+			{
+				tagParent.RemoveLine(this);
+			}
 			if( Field != null )
 			{
 				Field.SetHashTags(tags_);
 			}
+		}
+		else if( tag == "" )
+		{
+			Text = text_.Remove(text_.LastIndexOf(" #"), 2);
 		}
 	}
 
@@ -476,6 +488,11 @@ public class Line : IEnumerable<Line>
 			}
 			string appendText = newText.Substring(oldCaretPos, currentCaretPos - oldCaretPos);
 			textAction_.Text.Append(appendText);
+			if( currentCaretPos == newText.Length && appendText == "#" && text_.EndsWith(" ") )
+			{
+				Rect rect = Field.Rect;
+				GameContext.Window.TagIncrementalDialog.Show(new Vector2(rect.xMin + Field.GetTextRectLength(text_.Length - 1), rect.yMin));
+			}
 		}
 		else
 		{
@@ -516,6 +533,27 @@ public class Line : IEnumerable<Line>
 				textAction_.TagEdit.UpdateTags(tagEditDiff.RemoveTags, tagEditDiff.AddTags);
 
 				Field.SetHashTags(tags_);
+
+				string caretTag = GetTagInCaretPosition(newText, currentCaretPos);
+				if( GameContext.Window.TagIncrementalDialog.IsActive )
+				{
+					if( string.IsNullOrEmpty(caretTag) )
+					{
+						GameContext.Window.TagIncrementalDialog.Close();
+					}
+					else
+					{
+						GameContext.Window.TagIncrementalDialog.IncrementalSearch(caretTag);
+					}
+				}
+				else
+				{
+					if( caretTag != null )
+					{
+						Rect rect = Field.Rect;
+						GameContext.Window.TagIncrementalDialog.Show(new Vector2(rect.xMin + Field.GetTextRectLength(newText.LastIndexOf(" #" + caretTag)), rect.yMin), caretTag);
+					}
+				}
 			}
 		}
 
@@ -1216,27 +1254,17 @@ public class Line : IEnumerable<Line>
 	#endregion
 
 
-	#region save & load
-
-	public static string TabString = "	";
-	public static char TabChar = '	';
-	public static string FoldTag = "<f>";
-	public static string DoneTag = "<d>";
-	public static string CloneTag = "<c>";
-	public static string BoldTag = "<b>";
-	public static string CommentTag = "> ";
-	public static char[] spaces = new char[] { ' ' };
-
+	#region tags
+	
 	public static List<string> GetHashTags(string text)
 	{
 		List<string> tags = new List<string>();
 		string[] splitText = text.Split(spaces, StringSplitOptions.RemoveEmptyEntries);
-		for( int i = splitText.Length - 1; i >= 0; --i )
+		for( int i = splitText.Length - 1; i >= 1; --i )
 		{
 			if( splitText[i].StartsWith("#") )
 			{
 				string tag = splitText[i].TrimStart('#');
-				// todo check validate
 				if( String.IsNullOrEmpty(tag) || tag.Contains('#') || tag.Contains('.') || tag.Contains(',') )
 				{
 					continue;
@@ -1267,6 +1295,38 @@ public class Line : IEnumerable<Line>
 		}
 		return tags;
 	}
+
+	public static string GetTagInCaretPosition(string text, int caretPos)
+	{
+		int index = text.LastIndexOf(" #");
+		while( index > 0 )
+		{
+			if( index < caretPos )
+			{
+				return text.Substring(index + 2);
+			}
+			else
+			{
+				text = text.Substring(0, index);
+			}
+			index = text.LastIndexOf(" #");
+		}
+		return null;
+	}
+
+	#endregion
+
+
+	#region save & load
+
+	public static string TabString = "	";
+	public static char TabChar = '	';
+	public static string FoldTag = "<f>";
+	public static string DoneTag = "<d>";
+	public static string CloneTag = "<c>";
+	public static string BoldTag = "<b>";
+	public static string CommentTag = "> ";
+	public static char[] spaces = new char[] { ' ' };
 
 	public void AppendStringTo(StringBuilder builder, bool appendTag = false, int ignoreLevel = 0)
 	{

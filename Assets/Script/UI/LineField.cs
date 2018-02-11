@@ -23,6 +23,10 @@ public class LineField : CustomInputField
 				isSelected_ = value;
 				transition = isSelected_ ? Transition.None : Transition.ColorTint;
 				Background = isSelected_ ? GameContext.Config.SelectionColor : colors.normalColor;
+				foreach( TagText tagText in tagTexts_ )
+				{
+					tagText.gameObject.SetActive(isSelected_ == false && isFocused == false);
+				}
 			}
 		}
 	}
@@ -534,6 +538,13 @@ public class LineField : CustomInputField
 						KeyPressed(processingEvent);
 						desiredCaretPos_ = m_CaretSelectPosition;
 						BindedLine.FixTextInputAction();
+						if( GameContext.Window.TagIncrementalDialog.IsActive )
+						{
+							if( Line.GetTagInCaretPosition(BindedLine.Text, desiredCaretPos_) == null )
+							{
+								GameContext.Window.TagIncrementalDialog.Close();
+							}
+						}
 					}
 					break;
 				case KeyCode.Home:

@@ -10,7 +10,7 @@ using System.Windows.Forms;
 using System.Text;
 
 // Window > [ TagList ] > TagParent > TaggedLine
-public class TagList : MonoBehaviour
+public class TagList : MonoBehaviour, IEnumerable<TagParent>
 {
 	public TagParent TagParentPrefab;
 	public float TopMargin = 60;
@@ -47,6 +47,18 @@ public class TagList : MonoBehaviour
 		taggedLineFile_ = new FileInfo(System.Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + "/Dones/taglist.txt");
 	}
 
+	// IEnumerable<TagParent>
+	public IEnumerator<TagParent> GetEnumerator()
+	{
+		foreach( TagParent tagParent in tagParents_ )
+		{
+			yield return tagParent;
+		}
+	}
+	IEnumerator IEnumerable.GetEnumerator()
+	{
+		return this.GetEnumerator();
+	}
 	public IEnumerable<TaggedLine> TaggedLines
 	{
 		get

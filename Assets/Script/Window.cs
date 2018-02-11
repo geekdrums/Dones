@@ -39,6 +39,7 @@ public class Window : MonoBehaviour
 
 	public FileMenuButton FileMenu;
 	public ModalDialog ModalDialog;
+	public TagIncrementalDialog TagIncrementalDialog;
 	public Text FontSizeText;
 	public SaveText SaveText;
 	public Text TitleText;
