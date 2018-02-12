@@ -509,6 +509,10 @@ public class Line : IEnumerable<Line>
 			{
 				string deletedText = text_.Substring(currentCaretPos, deletedCount);
 				textAction_.Text.Insert(0, deletedText);
+				if( GameContext.Window.TagIncrementalDialog.IsActive && deletedText == "#" && newText.EndsWith(" ") )
+				{
+					GameContext.Window.TagIncrementalDialog.Close();
+				}
 			}
 			else // if( oldCaretPos == currentCaretPos ) delete
 			{
@@ -537,13 +541,13 @@ public class Line : IEnumerable<Line>
 				string caretTag = GetTagInCaretPosition(newText, currentCaretPos);
 				if( GameContext.Window.TagIncrementalDialog.IsActive )
 				{
-					if( string.IsNullOrEmpty(caretTag) )
+					if( caretTag != null )
 					{
-						GameContext.Window.TagIncrementalDialog.Close();
+						GameContext.Window.TagIncrementalDialog.IncrementalSearch(caretTag);
 					}
 					else
 					{
-						GameContext.Window.TagIncrementalDialog.IncrementalSearch(caretTag);
+						GameContext.Window.TagIncrementalDialog.Close();
 					}
 				}
 				else

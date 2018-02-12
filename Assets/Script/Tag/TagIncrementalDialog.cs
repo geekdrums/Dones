@@ -179,7 +179,6 @@ public class TagIncrementalDialog : MonoBehaviour {
 			selectedIndex_ += 1;
 		}
 		selectedIndex_ = Math.Min(searchResults_.Count - 1, Math.Max(-1, selectedIndex_));
-		SelectionImage.gameObject.SetActive(selectedIndex_ >= 0);
 		UpdateLayout();
 	}
 
@@ -194,6 +193,7 @@ public class TagIncrementalDialog : MonoBehaviour {
 
 	void UpdateLayout()
 	{
+		SelectionImage.gameObject.SetActive(selectedIndex_ >= 0);
 		LayoutParent.transform.parent.GetComponent<RectTransform>().anchoredPosition = new Vector2(BaseXOffset, (selectedIndex_ + 1) * TagTextHeight);
 	}
 
