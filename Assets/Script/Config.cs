@@ -53,6 +53,7 @@ public class Config : MonoBehaviour
 
 	public string TimeFormat = "HH:mm";
 	public string DateFormat = "yyyy/M/d (ddd)";
+	public string DefaultTag = "todo";
 
 	FileInfo configFile_;
 

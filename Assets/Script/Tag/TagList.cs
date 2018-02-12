@@ -59,6 +59,10 @@ public class TagList : MonoBehaviour, IEnumerable<TagParent>
 	{
 		return this.GetEnumerator();
 	}
+
+	public int Count { get { return tagParents_.Count; } }
+	public TagParent this[int i] { get { return tagParents_[i]; } }
+
 	public IEnumerable<TaggedLine> TaggedLines
 	{
 		get

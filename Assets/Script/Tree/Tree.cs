@@ -1282,30 +1282,28 @@ public class Tree : MonoBehaviour
 
 	protected virtual void OnCtrlDInput()
 	{
-		//if( focusedLine_ == null ) return;
+		if( focusedLine_ == null ) return;
 
-		//actionManager_.StartChain();
-		//foreach( Line line in GetSelectedOrFocusedLines() )
-		//{
-		//	if( line.IsDone ) continue;
+		string newtag = GameContext.TagList.Count > 0 ? GameContext.TagList[0].Tag : GameContext.Config.DefaultTag;
 
-		//	Line targetLine = line;
-		//	actionManager_.Execute(new Action(
-		//		execute: ()=>
-		//		{
-		//			targetLine.IsOnList = !targetLine.IsOnList;
-		//			TagParent lineList = GameContext.Window.LineList;
-		//			if( targetLine.IsOnList )
-		//			{
-		//				lineList.InstantiateShortLine(targetLine);
-		//			}
-		//			else
-		//			{
-		//				lineList.RemoveLine(targetLine);
-		//			}
-		//		}));
-		//}
-		//actionManager_.EndChain();
+		actionManager_.StartChain();
+		foreach( Line line in GetSelectedOrFocusedLines() )
+		{
+			if( line.IsDone || line.Tags.Contains(newtag) ) continue;
+			
+			Line targetLine = line;
+			actionManager_.Execute(new Action(
+				execute: () =>
+				{
+					targetLine.AddTag(newtag);
+				},
+				undo: () =>
+				{
+					targetLine.RemoveTag(newtag);
+				}
+				));
+		}
+		actionManager_.EndChain();
 	}
 
 	protected void OnCtrlBInput()
