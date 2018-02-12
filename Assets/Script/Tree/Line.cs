@@ -33,7 +33,7 @@ public class Line : IEnumerable<Line>
 						TaggedLine taggedline = tagParent.FindBindedLine(this);
 						if( taggedline != null )
 						{
-							taggedline.Text = text_;
+							taggedline.Text = TextWithoutHashTags;
 						}
 					}
 				}
@@ -522,6 +522,10 @@ public class Line : IEnumerable<Line>
 			textAction_.CaretPos = currentCaretPos;
 		}
 
+		lastTextActionTime_ = Time.time;
+
+		text_ = newText;
+
 		if( Tree is LogTree == false )
 		{
 			// タグに変化があればそれもアクションに乗せる
@@ -561,9 +565,6 @@ public class Line : IEnumerable<Line>
 			}
 		}
 
-		lastTextActionTime_ = Time.time;
-
-		text_ = newText;
 		Tree.IsEdited = true;
 
 #if UNITY_EDITOR
@@ -584,7 +585,7 @@ public class Line : IEnumerable<Line>
 				TaggedLine shortline = GameContext.TagList.GetTagParent(tag).FindBindedLine(this);
 				if( shortline != null )
 				{
-					shortline.Text = text_;
+					shortline.Text = TextWithoutHashTags;
 				}
 			}
 		}

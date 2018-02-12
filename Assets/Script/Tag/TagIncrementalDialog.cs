@@ -20,7 +20,7 @@ public class TagIncrementalDialog : MonoBehaviour {
 	List<TagText> searchResults_ = new List<TagText>();
 
 	public int SelectedIndex { get { return selectedIndex_; } }
-	int selectedIndex_ = -1;
+	int selectedIndex_ = 0;
 
 	
 	void Initialize () {
@@ -45,7 +45,7 @@ public class TagIncrementalDialog : MonoBehaviour {
 		}
 		rect_.anchoredPosition = position;
 		this.gameObject.SetActive(true);
-		selectedIndex_ = -1;
+		selectedIndex_ = 0;
 		UpdateLayout();
 
 		searchResults_.Clear();
@@ -78,8 +78,7 @@ public class TagIncrementalDialog : MonoBehaviour {
 			tagTextHeapManager_.BackToHeap(tagText);
 		}
 		searchResults_.Clear();
-		selectedIndex_ = -1;
-		SelectionImage.gameObject.SetActive(false);
+		selectedIndex_ = 0;
 	}
 
 	bool shouldUpdateTextLength_ = false;
@@ -162,7 +161,7 @@ public class TagIncrementalDialog : MonoBehaviour {
 		}
 		else
 		{
-			selectedIndex_ = -1;
+			selectedIndex_ = 0;
 			UpdateLayout();
 			OnTextLengthChanged();
 		}
@@ -178,7 +177,7 @@ public class TagIncrementalDialog : MonoBehaviour {
 		{
 			selectedIndex_ += 1;
 		}
-		selectedIndex_ = Math.Min(searchResults_.Count - 1, Math.Max(-1, selectedIndex_));
+		selectedIndex_ = Math.Min(searchResults_.Count - 1, Math.Max(0, selectedIndex_));
 		UpdateLayout();
 	}
 
@@ -194,7 +193,8 @@ public class TagIncrementalDialog : MonoBehaviour {
 	void UpdateLayout()
 	{
 		SelectionImage.gameObject.SetActive(selectedIndex_ >= 0);
-		LayoutParent.transform.parent.GetComponent<RectTransform>().anchoredPosition = new Vector2(BaseXOffset, (selectedIndex_ + 1) * TagTextHeight);
+		SelectionImage.rectTransform.anchoredPosition = new Vector2(BaseXOffset, -selectedIndex_ * TagTextHeight);
+		//LayoutParent.transform.parent.GetComponent<RectTransform>().anchoredPosition = new Vector2(BaseXOffset, (selectedIndex_ + 1) * TagTextHeight);
 	}
 
 	void SortSeachResult()

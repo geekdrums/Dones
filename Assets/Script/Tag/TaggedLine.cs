@@ -156,7 +156,7 @@ public class TaggedLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragH
 	public void Bind(Line line)
 	{
 		BindedLine = line;
-		Text = line.Text;
+		Text = line.TextWithoutHashTags;
 		IsDone = line.IsDone;
 	}
 
