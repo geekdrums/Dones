@@ -18,6 +18,7 @@ public class TagList : MonoBehaviour, IEnumerable<TagParent>
 	public float Margin = 60;
 	public GameObject OpenButton;
 	public GameObject CloseButton;
+	public GameObject TagMoveOverlay;
 
 	public float Width { get { return isOpened_ ? GameContext.Config.TagListWidth : 0; } }
 
@@ -32,6 +33,8 @@ public class TagList : MonoBehaviour, IEnumerable<TagParent>
 	RectTransform scrollRect_;
 
 	HeapManager<TagParent> heapManager_ = new HeapManager<TagParent>();
+
+	int tagOvelayDesiredIndex_ = -1;
 
 	void Awake()
 	{
@@ -122,8 +125,16 @@ public class TagList : MonoBehaviour, IEnumerable<TagParent>
 		{
 			AnimManager.AddAnim(tagParents_[i], new Vector3(WidthMargin, -sum), ParamType.Position, AnimType.Time, GameContext.Config.AnimTime);
 			sum += tagParents_[i].Height;
+
+			if( i == tagOvelayDesiredIndex_ )
+			{
+				TagMoveOverlay.transform.localPosition = new Vector3(0, -sum - GameContext.Config.TagLineHeight / 2);
+				sum += GameContext.Config.TagLineHeight;
+			}
+
 			sum += Margin;
 		}
+		TagMoveOverlay.SetActive(tagOvelayDesiredIndex_ >= 0);
 		layout_.preferredHeight = sum;
 		contentSizeFitter_.SetLayoutVertical();
 	}
@@ -138,6 +149,10 @@ public class TagList : MonoBehaviour, IEnumerable<TagParent>
 				return new Vector3(WidthMargin, -sum);
 			}
 			sum += tagParents_[i].Height;
+			if( i == tagOvelayDesiredIndex_ )
+			{
+				sum += GameContext.Config.TagLineHeight;
+			}
 			sum += Margin;
 		}
 
@@ -197,17 +212,8 @@ public class TagList : MonoBehaviour, IEnumerable<TagParent>
 			int index = tagParents_.IndexOf(tagParent);
 			tagParent.transform.localPosition += new Vector3(0, eventData.delta.y, 0);
 
-			int desiredIndex = index;
-			float currentY = tagParent.transform.localPosition.y;
-			for(int i=0;i<tagParents_.Count;++i)
-			{
-				if( currentY > GetTargetPosition(tagParents_[i]).y )
-				{
-					desiredIndex = i;
-					break;
-				}
-			}
-			
+			int desiredIndex = GetDesiredTagIndex(tagParent.transform.localPosition.y);
+
 			if( index != desiredIndex )
 			{
 				tagParents_.Remove(tagParent);
@@ -227,6 +233,71 @@ public class TagList : MonoBehaviour, IEnumerable<TagParent>
 		{
 			AnimManager.AddAnim(tagParent, GetTargetPosition(tagParent), ParamType.Position, AnimType.Time, GameContext.Config.AnimTime);
 		}
+	}
+
+
+	public void OnOverDraggingLine(TaggedLine taggedLine, PointerEventData eventData, bool overed)
+	{
+		tagOvelayDesiredIndex_ = -1;
+		if( overed )
+		{
+			int desiredIndex = GetDesiredTagIndex(taggedLine.transform.localPosition.y) - 1;
+
+			if( tagParents_.IndexOf(taggedLine.Parent) != desiredIndex )
+			{
+				tagOvelayDesiredIndex_ = desiredIndex;
+			}
+		}
+		UpdateLayoutElement();
+	}
+
+	public void OnEndOverDragLine(TaggedLine taggedLine, bool overed)
+	{
+		tagOvelayDesiredIndex_ = -1;
+		if( overed )
+		{
+			int desiredIndex = GetDesiredTagIndex(taggedLine.transform.localPosition.y) - 1;
+
+			if( 0 <= desiredIndex && tagParents_.IndexOf(taggedLine.Parent) != desiredIndex )
+			{
+				if( tagParents_[desiredIndex].IsFolded )
+				{
+					tagParents_[desiredIndex].IsFolded = false;
+				}
+
+				Line line = taggedLine.BindedLine;
+				string oldTag = taggedLine.Parent.Tag;
+				string newTag = tagParents_[desiredIndex].Tag;
+				line.Tree.ActionManager.Execute(new Action(
+					execute: () =>
+					{
+						line.RemoveTag(oldTag);
+						line.AddTag(newTag);
+					},
+					undo: () =>
+					{
+						line.RemoveTag(newTag);
+						line.AddTag(oldTag);
+					}));
+				taggedLine.ShowBindedLine();
+			}
+		}
+
+		UpdateLayoutElement();
+	}
+
+	private int GetDesiredTagIndex(float currentY)
+	{
+		int desiredIndex = 0;
+		for( int i = 0; i < tagParents_.Count; ++i )
+		{
+			if( currentY > GetTargetPosition(tagParents_[i]).y )
+			{
+				desiredIndex = i;
+				break;
+			}
+		}
+		return desiredIndex;
 	}
 
 	#endregion

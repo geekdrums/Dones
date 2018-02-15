@@ -15,14 +15,13 @@ public class TagParent : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDra
 
 	public TaggedLine TaggedLinePrefab;
 	public GameObject LineParent;
-	public float LineHeight = 30;
 
 	#endregion
 
 
 	#region params
 
-	public float Height { get { return isFolded_ ? 30 : 30 + LineHeight * (lines_.Count + doneLines_.Count); } }
+	public float Height { get { return isFolded_ ? 30 : 30 + GameContext.Config.TagLineHeight * (lines_.Count + doneLines_.Count); } }
 
 	public string Tag { get { return tag_; } }
 	string tag_;
@@ -41,17 +40,19 @@ public class TagParent : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDra
 
 				if( isFolded_ )
 				{
-					foreach( TaggedLine line in this )
-					{
-						line.gameObject.SetActive(false);
-					}
+					LineParent.SetActive(false);
+					//foreach( TaggedLine line in this )
+					//{
+					//	line.gameObject.SetActive(false);
+					//}
 				}
 				else
 				{
-					foreach( TaggedLine line in this )
-					{
-						line.gameObject.SetActive(true);
-					}
+					LineParent.SetActive(true);
+					//foreach( TaggedLine line in this )
+					//{
+					//	line.gameObject.SetActive(true);
+					//}
 				}
 				if( tagToggle_ != null )
 				{
@@ -257,7 +258,6 @@ public class TagParent : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDra
 		}
 
 		taggedLine.Bind(line);
-		taggedLine.gameObject.SetActive(IsFolded == false);
 
 		if( withAnim && IsFolded == false )
 		{
@@ -420,8 +420,6 @@ public class TagParent : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDra
 
 				AnimLinesToTargetPosition(index, lines_.Count - 1);
 				AnimManager.AddAnim(taggedLine, GetTargetPosition(taggedLine), ParamType.Position, AnimType.Time, GameContext.Config.AnimTime);
-				//AnimManager.AddAnim(taggedLine, GameContext.Config.AccentColor, ParamType.Color, AnimType.Time, 0.15f);
-				//AnimManager.AddAnim(taggedLine, GameContext.Config.ShortLineBackColor, ParamType.Color, AnimType.Time, 0.1f, 0.15f);
 				taggedLine.transform.SetAsLastSibling();
 			}
 		}
@@ -435,7 +433,6 @@ public class TagParent : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDra
 
 				AnimDoneLinesToTargetPosition(0, index - 1);
 				AnimManager.AddAnim(taggedLine, GetTargetPosition(taggedLine), ParamType.Position, AnimType.Time, GameContext.Config.AnimTime);
-				//AnimManager.AddAnim(shortLine, shortLine.TargetColor, ParamType.Color, AnimType.Time, 0.1f);
 				taggedLine.transform.SetAsLastSibling();
 			}
 		}
@@ -445,7 +442,7 @@ public class TagParent : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDra
 	{
 		if( lines_.Contains(taggedLine) )
 		{
-			AnimManager.AddAnim(taggedLine, 5.0f, ParamType.PositionX, AnimType.Time, GameContext.Config.AnimTime);
+			taggedLine.transform.parent = GameContext.TagList.transform;
 			taggedLine.transform.SetAsLastSibling();
 		}
 	}
@@ -457,16 +454,21 @@ public class TagParent : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDra
 			int index = lines_.IndexOf(taggedLine);
 			taggedLine.transform.localPosition += new Vector3(0, eventData.delta.y, 0);
 
-			int desiredIndex = Mathf.Clamp((int)(-taggedLine.transform.localPosition.y / LineHeight), 0, lines_.Count - 1);
-			if( index != desiredIndex )
+			float currentY = -(taggedLine.transform.localPosition.y - this.transform.localPosition.y);
+			bool overed = currentY < -GameContext.TagList.Margin || Height + GameContext.TagList.Margin < currentY;
+			GameContext.TagList.OnOverDraggingLine(taggedLine, eventData, overed);
+			if( -GameContext.TagList.Margin < currentY && currentY < Height + GameContext.TagList.Margin )
 			{
-				lines_.Remove(taggedLine);
-				lines_.Insert(desiredIndex, taggedLine);
-				int sign = (int)Mathf.Sign(desiredIndex - index);
-				for( int i = index; i != desiredIndex; i += sign )
+				int desiredIndex = Mathf.Clamp((int)(currentY / GameContext.Config.TagLineHeight), 0, lines_.Count - 1);
+				if( index != desiredIndex )
 				{
-					AnimManager.AddAnim(lines_[i], GetTargetPosition(lines_[i]), ParamType.Position, AnimType.Time, GameContext.Config.AnimTime);
-					//lines_[i].Background = lines_[i].TargetColor;
+					lines_.Remove(taggedLine);
+					lines_.Insert(desiredIndex, taggedLine);
+					int sign = (int)Mathf.Sign(desiredIndex - index);
+					for( int i = index; i != desiredIndex; i += sign )
+					{
+						AnimManager.AddAnim(lines_[i], GetTargetPosition(lines_[i]), ParamType.Position, AnimType.Time, GameContext.Config.AnimTime);
+					}
 				}
 			}
 		}
@@ -476,9 +478,20 @@ public class TagParent : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDra
 	{
 		if( lines_.Contains(taggedLine) )
 		{
-			selectedIndex_ = lines_.IndexOf(taggedLine);
-			AnimManager.AddAnim(taggedLine, GetTargetPosition(taggedLine), ParamType.Position, AnimType.Time, GameContext.Config.AnimTime);
-			//shortLine.Background = shortLine.TargetColor;
+			float currentY = -(taggedLine.transform.localPosition.y - this.transform.localPosition.y);
+			bool overed = currentY  < - GameContext.TagList.Margin || Height + GameContext.TagList.Margin < currentY;
+			if( overed )
+			{
+				selectedLine_ = null;
+				selectedIndex_ = -1;
+			}
+			else
+			{
+				taggedLine.transform.parent = LineParent.transform;
+				selectedIndex_ = lines_.IndexOf(taggedLine);
+				AnimManager.AddAnim(taggedLine, GetTargetPosition(taggedLine), ParamType.Position, AnimType.Time, GameContext.Config.AnimTime);
+			}
+			GameContext.TagList.OnEndOverDragLine(taggedLine, overed);
 		}
 	}
 
@@ -533,11 +546,11 @@ public class TagParent : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDra
 	{
 		if( taggedLine.IsDone )
 		{
-			return Vector3.down * LineHeight * (lines_.Count + doneLines_.IndexOf(taggedLine));
+			return Vector3.down * GameContext.Config.TagLineHeight * (lines_.Count + doneLines_.IndexOf(taggedLine));
 		}
 		else
 		{
-			return Vector3.down * LineHeight * lines_.IndexOf(taggedLine);
+			return Vector3.down * GameContext.Config.TagLineHeight * lines_.IndexOf(taggedLine);
 		}
 	}
 
@@ -589,17 +602,6 @@ public class TagParent : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDra
 	{
 		taggedLine.transform.localPosition = Vector3.zero;
 		AnimManager.AddAnim(taggedLine, GetTargetPosition(taggedLine), ParamType.Position, AnimType.BounceIn, 0.25f);
-		//taggedLine.SetColor(ColorManager.MakeAlpha(GameContext.Config.TextColor, 0.0f));
-		//AnimManager.AddAnim(taggedLine, 1.0f, ParamType.AlphaColor, AnimType.Time, 0.2f);
-		//shortLine.Background = shortLine.TargetColor;
-		//if( taggedLine.IsDone == false )
-		//{
-		//	AnimManager.AddAnim(taggedLine, GameContext.Config.DoneTextColor, ParamType.Color, AnimType.Time, 0.15f);
-		//	AnimManager.AddAnim(shortLine, shortLine.TargetColor, ParamType.Color, AnimType.Time, 0.1f, 0.15f);
-		//}
-		//UIMidairPrimitive primitive = taggedLine.GetComponentInChildren<UIMidairPrimitive>(includeInactive: true);
-		//AnimManager.AddAnim(primitive, 8.0f, ParamType.PrimitiveWidth, AnimType.Time, 0.05f, 0.25f);
-		//AnimManager.AddAnim(primitive, 1.0f, ParamType.PrimitiveWidth, AnimType.Time, 0.2f, 0.3f);
 	}
 
 	void AnimLinesToTargetPosition(int startIndex, int endIndex)
@@ -618,7 +620,6 @@ public class TagParent : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDra
 		{
 			AnimManager.RemoveOtherAnim(lines_[i], ParamType.Position);
 			AnimManager.AddAnim(lines_[i], GetTargetPosition(lines_[i]), ParamType.Position, AnimType.Time, GameContext.Config.AnimTime);
-			//lines_[i].Background = lines_[i].TargetColor;
 		}
 	}
 

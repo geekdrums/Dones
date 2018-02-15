@@ -47,7 +47,7 @@ public class HeapManager<C> : IEnumerable<C> where C : MonoBehaviour
 		heap_.Remove(heapObj);
 		if( heapObj.transform.parent != parent )
 		{
-			heapObj.transform.parent = parent;
+			heapObj.transform.SetParent(parent, worldPositionStays: false);
 		}
 		heapObj.gameObject.SetActive(true);
 		return heapObj;

@@ -50,7 +50,10 @@ public class TaggedLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragH
 			if( shouldUpdateTextLength_ == false )
 			{
 				shouldUpdateTextLength_ = true;
-				StartCoroutine(UpdateTextLengthCoroutine());
+				if( this.gameObject.activeInHierarchy )
+				{
+					StartCoroutine(UpdateTextLengthCoroutine());
+				}
 			}
 		}
 	}
@@ -72,25 +75,6 @@ public class TaggedLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragH
 	}
 	public Color GetColor() { return textComponent_.color; }
 	public void SetColor(Color color) { textComponent_.color = color; }
-	
-	//public Color TargetColor
-	//{
-	//	get
-	//	{
-	//		if( isSelected_ )
-	//		{
-	//			return IsDone ? GameContext.Config.ShortLineBackSelectionColor : GameContext.Config.ShortLineSelectionColor;
-	//		}
-	//		else if( IsDone )
-	//		{
-	//			return GameContext.Config.ShortLineBackColor;
-	//		}
-	//		else
-	//		{
-	//			return Color.Lerp(GameContext.Config.ShortLineColor, GameContext.Config.ShortLineBackColor, tagParent_.IndexOf(this) * tagParent_.Gradation);
-	//		}
-	//	}
-	//}
 
 	#endregion
 
@@ -99,10 +83,9 @@ public class TaggedLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragH
 
 	CheckMark checkMark_;
 	UIGaugeRenderer strikeLine_;
-	Button doneButton_;
 	UIMidairPrimitive listMark_;
-	UIGaugeRenderer underLine_;
 
+	public TagParent Parent { get { return tagParent_; } }
 	TagParent tagParent_;
 
 	bool shouldUpdateTextLength_;
@@ -117,11 +100,9 @@ public class TaggedLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragH
 		base.Awake();
 		textComponent_ = GetComponentInChildren<Text>();
 		strikeLine_ = textComponent_.GetComponentInChildren<UIGaugeRenderer>(includeInactive: true);
-		underLine_ = GetComponentInChildren<UIGaugeRenderer>();
 		checkMark_ = GetComponentInChildren<CheckMark>(includeInactive: true);
-		listMark_ = GetComponentInChildren<UIMidairPrimitive>(includeInactive: true);
+		listMark_ = GetComponentInChildren<Button>().GetComponentInChildren<UIMidairPrimitive>();
 		tagParent_ = GetComponentInParent<TagParent>();
-		doneButton_ = GetComponentInChildren<Button>();
 		this.OnPointerDownAsObservable()
 			.TimeInterval()
 			.Select(t => t.Interval.TotalSeconds)
@@ -137,15 +118,25 @@ public class TaggedLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragH
 
 	}
 
+
+	protected override void OnEnable()
+	{
+		base.OnEnable();
+		if( this.gameObject.activeInHierarchy && shouldUpdateTextLength_ )
+		{
+			StartCoroutine(UpdateTextLengthCoroutine());
+		}
+	}
+
 	protected override void OnDisable()
 	{
 		base.OnDisable();
 		
-		if( BindedLine != null && tagParent_ != null )
+		if( BindedLine != null && tagParent_ != null && this.gameObject.activeSelf == false )
 		{
 			tagParent_.OnLineDisabled(this);
-			shouldUpdateTextLength_ = false;
 		}
+		shouldUpdateTextLength_ = false;
 	}
 
 	#endregion
@@ -184,7 +175,7 @@ public class TaggedLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragH
 	{
 		base.OnSelect(eventData);
 		isSelected_ = true;
-		AnimManager.AddAnim(underLine_, 1.0f, ParamType.GaugeRate, AnimType.BounceIn);
+		image.color = GameContext.Config.TagSelectionColor;
 		tagParent_.OnSelect(this);
 	}
 
@@ -192,8 +183,7 @@ public class TaggedLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragH
 	{
 		base.OnDeselect(eventData);
 		isSelected_ = false;
-		AnimManager.RemoveOtherAnim(underLine_);
-		underLine_.SetRate(0);
+		image.color = Color.white;
 		tagParent_.OnDeselect(this);
 	}
 
@@ -223,7 +213,7 @@ public class TaggedLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragH
 		{
 			strikeLine_.gameObject.SetActive(true);
 			checkMark_.gameObject.SetActive(true);
-			listMark_.gameObject.SetActive(false);
+			listMark_.SetColor(Color.clear);//.SetActive(false);
 			SetColor(GameContext.Config.DoneTextColor);
 			UpdateStrikeLine();
 
@@ -238,7 +228,8 @@ public class TaggedLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragH
 		{
 			strikeLine_.gameObject.SetActive(false);
 			checkMark_.gameObject.SetActive(false);
-			listMark_.gameObject.SetActive(true);
+			//listMark_.gameObject.SetActive(true);
+			listMark_.SetColor(Color.black);
 			SetColor(GameContext.Config.TextColor);
 		}
 

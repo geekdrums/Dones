@@ -31,13 +31,11 @@ public class FileMenuButton : MonoBehaviour
 	bool updateTransform_ = false;
 
 	RectTransform rect_;
-	Button button_;
 
 	// Use this for initialization
 	void Start ()
 	{
 		rect_ = GetComponent<RectTransform>();
-		button_ = GetComponent<Button>();
 	}
 	
 	// Update is called once per frame

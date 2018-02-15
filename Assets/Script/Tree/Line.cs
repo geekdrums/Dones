@@ -141,57 +141,8 @@ public class Line : IEnumerable<Line>
 	}
 	protected bool isDone_ = false;
 
-	public bool HasAnyTags { get { return tags_.Count > 0; } }
 	public List<string> Tags { get { return tags_; } }
 	protected List<string> tags_ = new List<string>();
-
-	public void AddTag(string tag)
-	{
-		tags_.Add(tag);
-		Text = String.Format("{0} #{1}", text_, tag);
-		TagParent tagParent = GameContext.TagList.GetOrInstantiateTagParent(tag);
-		tagParent.InstantiateTaggedLine(this);
-		if( Field != null )
-		{
-			Field.SetHashTags(tags_);
-		}
-	}
-
-	public void RemoveTag(string tag)
-	{
-		if( tags_.Contains(tag) )
-		{
-			tags_.Remove(tag);
-			Text = text_.Remove(text_.LastIndexOf("#" + tag) - 1, tag.Length + 2);
-			TagParent tagParent = GameContext.TagList.GetTagParent(tag);
-			if( tagParent != null )
-			{
-				tagParent.RemoveLine(this);
-			}
-			if( Field != null )
-			{
-				Field.SetHashTags(tags_);
-			}
-		}
-		else if( tag == "" )
-		{
-			Text = text_.Remove(text_.LastIndexOf(" #"), 2);
-		}
-	}
-
-	public string TextWithoutHashTags
-	{
-		get
-		{
-			string text = text_;
-			foreach( string tag in tags_ )
-			{
-				text = text.Remove(text.LastIndexOf(tag) - 1, tag.Length + 1);
-			}
-			text.TrimEnd(spaces);
-			return text;
-		}
-	}
 
 	public bool IsLinkText { get { return isLinkText_; } }
 	protected bool isLinkText_ = false;
@@ -312,28 +263,28 @@ public class Line : IEnumerable<Line>
 		{
 			if( Text.Length == 0 ) return;
 
-			line_.Field.IsFocused = true;
-			line_.Field.CaretPosision = CaretPos;
-			line_.Text = line_.text_.Remove(CaretPos, Text.Length);
-
 			if( TagEdit != null )
 			{
 				TagEdit.Undo();
 			}
+
+			line_.Field.IsFocused = true;
+			line_.Field.CaretPosision = CaretPos;
+			line_.Text = line_.text_.Remove(CaretPos, Text.Length);
 		}
 
 		public override void Redo()
 		{
 			if( Text.Length == 0 ) return;
 
-			line_.Field.IsFocused = true;
-			line_.Text = line_.text_.Insert(CaretPos, Text.ToString());
-			line_.Field.CaretPosision = CaretPos + Text.Length;
-
 			if( TagEdit != null )
 			{
 				TagEdit.Redo();
 			}
+
+			line_.Field.IsFocused = true;
+			line_.Text = line_.text_.Insert(CaretPos, Text.ToString());
+			line_.Field.CaretPosision = CaretPos + Text.Length;
 		}
 	}
 
@@ -350,26 +301,26 @@ public class Line : IEnumerable<Line>
 
 		public override void Undo()
 		{
-			line_.Field.IsFocused = true;
-			line_.Text = line_.text_.Insert(CaretPos, Text.ToString());
-			line_.Field.CaretPosision = CaretPos + Text.Length;
-
 			if( TagEdit != null )
 			{
 				TagEdit.Undo();
 			}
+
+			line_.Field.IsFocused = true;
+			line_.Text = line_.text_.Insert(CaretPos, Text.ToString());
+			line_.Field.CaretPosision = CaretPos + Text.Length;
 		}
 
 		public override void Redo()
 		{
-			line_.Field.IsFocused = true;
-			line_.Field.CaretPosision = CaretPos;
-			line_.Text = line_.text_.Remove(CaretPos, Text.Length);
-
 			if( TagEdit != null )
 			{
 				TagEdit.Redo();
 			}
+
+			line_.Field.IsFocused = true;
+			line_.Field.CaretPosision = CaretPos;
+			line_.Text = line_.text_.Remove(CaretPos, Text.Length);
 		}
 	}
 
@@ -1260,7 +1211,61 @@ public class Line : IEnumerable<Line>
 
 
 	#region tags
-	
+
+	public bool HasAnyTags { get { return tags_.Count > 0; } }
+
+	public void AddTag(string tag)
+	{
+		tags_.Add(tag);
+		Text = String.Format("{0} #{1}", text_, tag);
+		TagParent tagParent = GameContext.TagList.GetOrInstantiateTagParent(tag);
+		tagParent.InstantiateTaggedLine(this);
+		if( Field != null )
+		{
+			Field.SetHashTags(tags_);
+		}
+	}
+
+	public void RemoveTag(string tag)
+	{
+		if( tags_.Contains(tag) )
+		{
+			tags_.Remove(tag);
+			if( Field != null )
+			{
+				Field.CaretPosision = 0;
+			}
+			Text = text_.Remove(text_.LastIndexOf("#" + tag) - 1, tag.Length + 2);
+			TagParent tagParent = GameContext.TagList.GetTagParent(tag);
+			if( tagParent != null )
+			{
+				tagParent.RemoveLine(this);
+			}
+			if( Field != null )
+			{
+				Field.SetHashTags(tags_);
+			}
+		}
+		else if( tag == "" )
+		{
+			Text = text_.Remove(text_.LastIndexOf(" #"), 2);
+		}
+	}
+
+	public string TextWithoutHashTags
+	{
+		get
+		{
+			string text = text_;
+			foreach( string tag in tags_ )
+			{
+				text = text.Remove(text.LastIndexOf(tag) - 1, tag.Length + 1);
+			}
+			text.TrimEnd(spaces);
+			return text;
+		}
+	}
+
 	public static List<string> GetHashTags(string text)
 	{
 		List<string> tags = new List<string>();

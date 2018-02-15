@@ -31,6 +31,7 @@ public class Config : MonoBehaviour
 	public int LogLoadUnit = 7;
 	public int NumRecentFilesMenu = 9;
 
+	public float TagLineHeight = 30;
 	public float TagListWidth = 200;
 	public float TagCommaInterval = 58;
 	public float LogNoteHeaderMargin = 30;
@@ -47,6 +48,7 @@ public class Config : MonoBehaviour
 	public Color CloneTextColor;
 	public Color CommentLineColor;
 	public Color CommentTextColor;
+	public Color TagSelectionColor;
 
 	public Color ToggleColor;
 	public Color ToggleOpenedColor;

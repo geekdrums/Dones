@@ -196,7 +196,7 @@ public class LogNote : DiaryNoteBase
 		while( logFileList_.Count > 0 && loadCount > 0 )
 		{
 			DateTime date = logFileList_.Last().Key;
-			LogTree logTree = LoadLogTree(date, logFileList_[date]);
+			LoadLogTree(date, logFileList_[date]);
 			--loadCount;
 			logFileList_.Remove(date);
 			endDate_ = date;
