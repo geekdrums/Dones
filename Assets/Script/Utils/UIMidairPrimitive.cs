@@ -41,68 +41,135 @@ public class UIMidairPrimitive : MaskableGraphic, IColoredObject
 	Vector3[] normalizedVertices_;
 	List<int> vertexIndices_;
 
+	UIIncorporatedShape incorporatedShape_;
+
 	static readonly int[] QuadIndices = new int[] { 0, 2, 1, 3, 1, 2 };
 	static readonly Vector2 UVZero = new Vector2(0, 0);
 	static readonly Vector2 UVRight = new Vector2(0, 1);
 	static readonly Vector2 UVUp = new Vector2(1, 0);
 	static readonly Vector2 UVOne = new Vector2(1, 1);
+	
+	protected override void OnEnable()
+	{
+		base.OnEnable();
+		incorporatedShape_ = GetComponentInParent<UIIncorporatedShape>();
+		if( incorporatedShape_ != null )
+		{
+			incorporatedShape_.SetVerticesDirty();
+		}
+	}
 
 	protected override void OnPopulateMesh(VertexHelper vh)
+	{
+		if( incorporatedShape_ != null )
+		{
+			vh.Clear();
+			return;
+		}
+		int vertCount = 0;
+		PopulateMesh(vh, ref vertCount);
+	}
+	public void PopulateMesh(VertexHelper vh, ref int vertIndexOffset)
 	{
 		if( uiVertices_ == null )
 		{
 			RecalculatePolygon();
 		}
 
-		int vertCount = uiVertices_.Length;
+		int unitVertCount = uiVertices_.Length;
 
-		if( vh.currentVertCount != vertCount * 3 )
+		UIVertex[] localuiVertices = null;
+		UIVertex[] localgrowInVertices = null;
+		UIVertex[] localgrowOutVertices = null;
+		if( incorporatedShape_ == null )
 		{
-			vh.Clear();
-			for( int i = 0; i < vertCount; ++i )
+			localuiVertices = uiVertices_;
+			localgrowInVertices = growInVertices_;
+			localgrowOutVertices = growOutVertices_;
+		}
+		else
+		{
+			Vector3 offset = Vector3.zero;
+			Transform parent = transform;
+			do
 			{
-				vh.AddVert(uiVertices_[i]);
+				offset += parent.localPosition;
+				parent = transform.parent;
+			} while( parent.gameObject != incorporatedShape_.gameObject );
+
+			localuiVertices = new UIVertex[unitVertCount];
+			for( int i = 0; i < unitVertCount; ++i )
+			{
+				localuiVertices[i] = uiVertices_[i];
+				localuiVertices[i].position += offset;
 			}
-			for( int i = 0; i + 2 < vertexIndices_.Count; i += 3 )
+			localgrowInVertices = new UIVertex[unitVertCount];
+			for( int i = 0; i < unitVertCount; ++i )
 			{
-				vh.AddTriangle(vertexIndices_[i], vertexIndices_[i + 1], vertexIndices_[i + 2]);
+				localgrowInVertices[i] = growInVertices_[i];
+				localgrowInVertices[i].position += offset;
 			}
-			
-			for( int i = 0; i < vertCount; ++i )
+			localgrowOutVertices = new UIVertex[unitVertCount];
+			for( int i = 0; i < unitVertCount; ++i )
 			{
-				vh.AddVert(growInVertices_[i]);
+				localgrowOutVertices[i] = growOutVertices_[i];
+				localgrowOutVertices[i].position += offset;
 			}
-			for( int i = 0; i + 2 < vertexIndices_.Count; i += 3 )
+		}
+
+		if( (incorporatedShape_ != null && incorporatedShape_.IsVertexCountDirty) || vh.currentVertCount != unitVertCount * 3 )
+		{
+			if( incorporatedShape_ == null )
 			{
-				vh.AddTriangle(vertCount + vertexIndices_[i], vertCount + vertexIndices_[i + 1], vertCount + vertexIndices_[i + 2]);
+				vh.Clear();
 			}
 
-			for( int i = 0; i < vertCount; ++i )
+			for( int i = 0; i < unitVertCount; ++i )
 			{
-				vh.AddVert(growOutVertices_[i]);
+				vh.AddVert(localuiVertices[i]);
 			}
 			for( int i = 0; i + 2 < vertexIndices_.Count; i += 3 )
 			{
-				vh.AddTriangle(vertCount * 2 + vertexIndices_[i], vertCount * 2 + vertexIndices_[i + 1], vertCount * 2 + vertexIndices_[i + 2]);
+				vh.AddTriangle(vertexIndices_[i] + vertIndexOffset, vertexIndices_[i + 1] + vertIndexOffset, vertexIndices_[i + 2] + vertIndexOffset);
+			}
+
+			for( int i = 0; i < unitVertCount; ++i )
+			{
+				vh.AddVert(localgrowInVertices[i]);
+			}
+			for( int i = 0; i + 2 < vertexIndices_.Count; i += 3 )
+			{
+				vh.AddTriangle(unitVertCount + vertexIndices_[i] + vertIndexOffset, unitVertCount + vertexIndices_[i + 1] + vertIndexOffset, unitVertCount + vertexIndices_[i + 2] + vertIndexOffset);
+			}
+
+			for( int i = 0; i < unitVertCount; ++i )
+			{
+				vh.AddVert(localgrowOutVertices[i]);
+			}
+			for( int i = 0; i + 2 < vertexIndices_.Count; i += 3 )
+			{
+				vh.AddTriangle(unitVertCount * 2 + vertexIndices_[i] + vertIndexOffset, unitVertCount * 2 + vertexIndices_[i + 1] + vertIndexOffset, unitVertCount * 2 + vertexIndices_[i + 2] + vertIndexOffset);
 			}
 		}
 		else
 		{
-			for( int i = 0; i < vertCount; ++i )
+			for( int i = 0; i < unitVertCount; ++i )
 			{
-				vh.SetUIVertex(uiVertices_[i], i);
+				vh.SetUIVertex(localuiVertices[i], i + vertIndexOffset);
 			}
-			for( int i = 0; i < vertCount; ++i )
+			for( int i = 0; i < unitVertCount; ++i )
 			{
-				vh.SetUIVertex(growInVertices_[i], vertCount + i);
+				vh.SetUIVertex(localgrowInVertices[i], unitVertCount + i + vertIndexOffset);
 			}
-			for( int i = 0; i < vertCount; ++i )
+			for( int i = 0; i < unitVertCount; ++i )
 			{
-				vh.SetUIVertex(growOutVertices_[i], vertCount * 2 + i);
+				vh.SetUIVertex(localgrowOutVertices[i], unitVertCount * 2 + i + vertIndexOffset);
 			}
 		}
+
+		vertIndexOffset += unitVertCount * 3;
 	}
-	
+
 	void CheckVertex()
 	{
 		int vertexCount = ArcN * 2 + 2;
@@ -411,7 +478,13 @@ public class UIMidairPrimitive : MaskableGraphic, IColoredObject
 	protected override void OnValidate()
 	{
 		base.OnValidate();
+
 		RecalculatePolygon();
+		if( incorporatedShape_ != null )
+		{
+			incorporatedShape_.SetVerticesDirty();
+			return;
+		}
 		SetVerticesDirty();
 	}
 #endif

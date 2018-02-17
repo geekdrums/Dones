@@ -15,7 +15,29 @@ public class UIGaugeRenderer : MaskableGraphic, IColoredObject
 	
 	Rect rect_ = new Rect();
 
+	UIIncorporatedShape incorporatedShape_;
+
+	protected override void OnEnable()
+	{
+		base.OnEnable();
+		incorporatedShape_ = GetComponentInParent<UIIncorporatedShape>();
+		if( incorporatedShape_ != null )
+		{
+			incorporatedShape_.SetVerticesDirty();
+		}
+	}
+
 	protected override void OnPopulateMesh(VertexHelper vh)
+	{
+		if( incorporatedShape_ != null )
+		{
+			vh.Clear();
+			return;
+		}
+		int vertCount = 0;
+		PopulateMesh(vh, ref vertCount);
+	}
+	public void PopulateMesh(VertexHelper vh, ref int vertIndexOffset)
 	{
 		if( Direction.x > 0 )
 		{
@@ -53,7 +75,7 @@ public class UIGaugeRenderer : MaskableGraphic, IColoredObject
 			rect_.yMax = Width / 2;
 		}
 		else return;
-		
+
 		// 左上
 		UIVertex lt = UIVertex.simpleVert;
 		lt.position = new Vector3(rect_.xMin, rect_.yMax, 0);
@@ -74,20 +96,41 @@ public class UIGaugeRenderer : MaskableGraphic, IColoredObject
 		lb.position = new Vector3(rect_.xMin, rect_.yMin, 0);
 		lb.color = color;
 
-		if( vh.currentVertCount != 4 )
+		if( incorporatedShape_ != null )
 		{
-			vh.Clear();
+			Vector3 offset = Vector3.zero;
+			Transform parent = transform;
+			do
+			{
+				offset += parent.localPosition;
+				parent = transform.parent;
+			} while( parent.gameObject != incorporatedShape_.gameObject );
+			lb.position += offset;
+			lt.position += offset;
+			rb.position += offset;
+			rt.position += offset;
+		}
+
+		if( (incorporatedShape_ != null && incorporatedShape_.IsVertexCountDirty) || vh.currentVertCount != 4 )
+		{
+			if( incorporatedShape_ == null )
+			{
+				vh.Clear();
+			}
+
 			vh.AddUIVertexQuad(new UIVertex[] {
 				lb, rb, rt, lt
 			});
 		}
 		else
 		{
-			vh.SetUIVertex(lb, 0);
-			vh.SetUIVertex(rb, 1);
-			vh.SetUIVertex(rt, 2);
-			vh.SetUIVertex(lt, 3);
+			vh.SetUIVertex(lb, 0 + vertIndexOffset);
+			vh.SetUIVertex(rb, 1 + vertIndexOffset);
+			vh.SetUIVertex(rt, 2 + vertIndexOffset);
+			vh.SetUIVertex(lt, 3 + vertIndexOffset);
 		}
+
+		vertIndexOffset += 4;
 	}
 
 
@@ -152,4 +195,18 @@ public class UIGaugeRenderer : MaskableGraphic, IColoredObject
 	{
 		return color;
 	}
+
+#if UNITY_EDITOR
+	protected override void OnValidate()
+	{
+		base.OnValidate();
+
+		if( incorporatedShape_ != null )
+		{
+			incorporatedShape_.SetVerticesDirty();
+			return;
+		}
+		SetVerticesDirty();
+	}
+#endif
 }

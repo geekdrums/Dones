@@ -15,6 +15,7 @@ public class TagParent : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDra
 
 	public TaggedLine TaggedLinePrefab;
 	public GameObject LineParent;
+	public Button PinButton;
 
 	#endregion
 
@@ -41,18 +42,10 @@ public class TagParent : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDra
 				if( isFolded_ )
 				{
 					LineParent.SetActive(false);
-					//foreach( TaggedLine line in this )
-					//{
-					//	line.gameObject.SetActive(false);
-					//}
 				}
 				else
 				{
 					LineParent.SetActive(true);
-					//foreach( TaggedLine line in this )
-					//{
-					//	line.gameObject.SetActive(true);
-					//}
 				}
 				if( tagToggle_ != null )
 				{
@@ -63,6 +56,20 @@ public class TagParent : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDra
 		}
 	}
 	bool isFolded_ = false;
+
+
+	public bool IsPinned
+	{
+		get
+		{
+			return isPinned_;
+		}
+		set
+		{
+			isPinned_ = value;
+		}
+	}
+	bool isPinned_ = false;
 
 	List<TaggedLine> lines_ = new List<TaggedLine>();
 	List<TaggedLine> doneLines_ = new List<TaggedLine>();
@@ -318,7 +325,7 @@ public class TagParent : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDra
 		}
 		AnimDoneLinesToTargetPosition(index, doneLines_.Count - 1);
 
-		if( lines_.Count > 0 || doneLines_.Count > 0 )
+		if( isPinned_ || lines_.Count > 0 || doneLines_.Count > 0 )
 		{
 			float animTime = 0.2f;
 			AnimManager.AddAnim(taggedLine, 0.0f, ParamType.AlphaColor, AnimType.Time, animTime, endOption: AnimEndOption.Deactivate);
@@ -498,6 +505,20 @@ public class TagParent : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDra
 	public void OnLineDisabled(TaggedLine line)
 	{
 		heapManager_.BackToHeap(line);
+	}
+
+	public void OnPinButtonDown()
+	{
+		isPinned_ = !isPinned_;
+		ColorBlock colors = new ColorBlock();
+		colors.normalColor = ColorManager.MakeAlpha(PinButton.colors.normalColor, isPinned_ ? 1.0f : 0.0f);
+		colors.highlightedColor = PinButton.colors.highlightedColor;
+		colors.pressedColor = PinButton.colors.pressedColor;
+		colors.disabledColor = PinButton.colors.disabledColor;
+		colors.fadeDuration = PinButton.colors.fadeDuration;
+		colors.colorMultiplier = PinButton.colors.colorMultiplier;
+		PinButton.colors = colors;
+		PinButton.OnDeselect(null);
 	}
 
 	#endregion

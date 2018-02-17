@@ -315,13 +315,19 @@ public class TagList : MonoBehaviour, IEnumerable<TagParent>
 		StreamReader reader = new StreamReader(taggedLineFile_.OpenRead());
 		string text = null;
 		int lineIndex = 0;
-		int tagIndex = 0;
 		TagParent tagParent = null;
+		List<TagParent> sortedTagParents = new List<TagParent>();
 		while( (text = reader.ReadLine()) != null )
 		{
 			if( text.StartsWith("##") )
 			{
 				text = text.Remove(0, 2);
+				bool isPinned = false;
+				if( text.EndsWith(PinnedTag) )
+				{
+					text = text.Remove(text.Length - PinnedTag.Length);
+					isPinned = true;
+				}
 				bool isFolded = false;
 				if( text.EndsWith(Line.FoldTag) )
 				{
@@ -329,16 +335,20 @@ public class TagList : MonoBehaviour, IEnumerable<TagParent>
 					isFolded = true;
 				}
 				tagParent = GetTagParent(text);
+				if( isPinned && tagParent == null )
+				{
+					tagParent = InstantiateTagParent(text);
+				}
+
 				if( tagParent != null )
 				{
 					tagParent.IsFolded = isFolded;
 					lineIndex = 0;
-					if( tagParents_.IndexOf(tagParent) != tagIndex )
+					sortedTagParents.Add(tagParent);
+					if( isPinned )
 					{
-						tagParents_.Remove(tagParent);
-						tagParents_.Insert(tagIndex, tagParent);
+						tagParent.OnPinButtonDown();
 					}
-					++tagIndex;
 				}
 			}
 			else if( tagParent != null )
@@ -359,10 +369,12 @@ public class TagList : MonoBehaviour, IEnumerable<TagParent>
 				}
 			}
 		}
+		tagParents_ = sortedTagParents;
 		UpdateLayoutElement();
 		reader.Close();
 	}
 
+	public static string PinnedTag = "<p>";
 	public void SaveTaggedLines()
 	{
 		if( taggedLineFile_.Exists == false )
@@ -377,7 +389,7 @@ public class TagList : MonoBehaviour, IEnumerable<TagParent>
 
 		foreach( TagParent tagParent in tagParents_ )
 		{
-			writer.WriteLine(String.Format("##{0}{1}", tagParent.Tag, (tagParent.IsFolded ? Line.FoldTag : "")));
+			writer.WriteLine(String.Format("##{0}{1}{2}", tagParent.Tag, (tagParent.IsFolded ? Line.FoldTag : ""), (tagParent.IsPinned ? PinnedTag : "")));
 			foreach( TaggedLine taggedLine in tagParent )
 			{
 				if( taggedLine.IsDone )
