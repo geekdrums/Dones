@@ -519,6 +519,11 @@ public class TagParent : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDra
 		colors.colorMultiplier = PinButton.colors.colorMultiplier;
 		PinButton.colors = colors;
 		PinButton.OnDeselect(null);
+
+		if( isPinned_ == false && lines_.Count == 0 && doneLines_.Count == 0 )
+		{
+			GameContext.TagList.OnTagEmpty(this);
+		}
 	}
 
 	#endregion

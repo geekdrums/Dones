@@ -847,10 +847,6 @@ public class Tree : MonoBehaviour
 					newline.Text += newString;
 					insertParent.Insert(insertIndex, newline);
 					insertParent.AdjustLayoutRecursive(insertIndex + 1);
-					target.CheckIsLink();
-					target.CheckHashTags();
-					newline.CheckIsLink();
-					newline.CheckHashTags();
 					newline.Field.CaretPosision = 0;
 					newline.Field.IsFocused = true;
 				},
@@ -859,8 +855,6 @@ public class Tree : MonoBehaviour
 					target.Text = oldString;
 					insertParent.Remove(newline);
 					insertParent.AdjustLayoutRecursive(insertIndex);
-					target.CheckIsLink();
-					target.CheckHashTags();
 					target.Field.CaretPosision = caretPos;
 					target.Field.IsFocused = true;
 				}
@@ -1441,8 +1435,6 @@ public class Tree : MonoBehaviour
 					pasteStart.Text = oldText;
 				}
 				));
-
-			pasteStart.CheckHashTags();
 		}
 		else
 		{
@@ -1489,8 +1481,6 @@ public class Tree : MonoBehaviour
 					RequestLayout(layoutStart);
 				}
 				));
-
-			pasteStart.CheckHashTags();
 		}
 
 		int oldLevel = currentLevel;

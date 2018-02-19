@@ -315,6 +315,10 @@ public class UIMidairPrimitive : MaskableGraphic, IColoredObject
 
 	public void RecalculatePolygon()
 	{
+		if( incorporatedShape_ != null )
+		{
+			incorporatedShape_.IsVertexCountDirty = true;
+		}
 		if( Num < 3 )
 		{
 			Num = 3;

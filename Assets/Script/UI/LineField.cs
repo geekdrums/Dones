@@ -73,7 +73,6 @@ public class LineField : CustomInputField
 		DeleteSelection();
 		BindedLine.Text = text.Insert(m_CaretPosition, pasteText);
 		caretSelectPositionInternal = caretPositionInternal += pasteText.Length;
-		BindedLine.CheckIsLink();
 	}
 
 	public void SetSelection(int start, int length)

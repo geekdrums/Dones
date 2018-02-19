@@ -12,6 +12,8 @@ public class TagIncrementalDialog : MonoBehaviour {
 	public float BaseXOffset;
 	public Image SelectionImage;
 
+	public List<string> ReservedTags;
+
 	public bool IsActive { get { return gameObject.activeSelf; } }
 
 	HeapManager<TagText> tagTextHeapManager_;
@@ -53,9 +55,24 @@ public class TagIncrementalDialog : MonoBehaviour {
 		{
 			if( string.IsNullOrEmpty(text) || (tagParent.Tag.StartsWith(text) && tagParent.Tag != text) )
 			{
-				TagText tagText = tagTextHeapManager_.Instantiate(LayoutParent.transform);
-				tagText.Text = "#" + tagParent.Tag;
-				searchResults_.Add(tagText);
+				if( searchResults_.Find((t) => t.Text == "#" + tagParent.Tag) == null )
+				{
+					TagText tagText = tagTextHeapManager_.Instantiate(LayoutParent.transform);
+					tagText.Text = "#" + tagParent.Tag;
+					searchResults_.Add(tagText);
+				}
+			}
+		}
+		foreach( string reservedTag in ReservedTags )
+		{
+			if( string.IsNullOrEmpty(text) || (reservedTag.StartsWith(text) && reservedTag != text) )
+			{
+				if( searchResults_.Find((t) => t.Text == "#" + reservedTag) == null )
+				{
+					TagText tagText = tagTextHeapManager_.Instantiate(LayoutParent.transform);
+					tagText.Text = "#" + reservedTag;
+					searchResults_.Add(tagText);
+				}
 			}
 		}
 		SortSeachResult();
@@ -134,19 +151,34 @@ public class TagIncrementalDialog : MonoBehaviour {
 
 	public void IncrementalSearch(string text)
 	{
+		// いらないやつを消す
 		foreach( TagText tagText in searchResults_ )
 		{
 			if( tagText.Text.StartsWith("#" + text) == false || tagText.Text == "#" + text )
 				tagTextHeapManager_.BackToHeap(tagText);
 		}
+
+		// 新しいやつを足す
 		foreach( TagParent tagParent in GameContext.TagList )
 		{
 			if( string.IsNullOrEmpty(text) || (tagParent.Tag.StartsWith(text) && tagParent.Tag != text) )
 			{
-				if( searchResults_.Find((TagText tagText) => tagText.Text == "#" + tagParent.Tag) == null )
+				if( searchResults_.Find((t) => t.Text == "#" + tagParent.Tag) == null )
 				{
 					TagText tagText = tagTextHeapManager_.Instantiate(LayoutParent.transform);
 					tagText.Text = "#" + tagParent.Tag;
+					searchResults_.Add(tagText);
+				}
+			}
+		}
+		foreach( string reservedTag in ReservedTags )
+		{
+			if( string.IsNullOrEmpty(text) || (reservedTag.StartsWith(text) && reservedTag != text) )
+			{
+				if( searchResults_.Find((t) => t.Text == "#" + reservedTag) == null )
+				{
+					TagText tagText = tagTextHeapManager_.Instantiate(LayoutParent.transform);
+					tagText.Text = "#" + reservedTag;
 					searchResults_.Add(tagText);
 				}
 			}
@@ -194,7 +226,6 @@ public class TagIncrementalDialog : MonoBehaviour {
 	{
 		SelectionImage.gameObject.SetActive(selectedIndex_ >= 0);
 		SelectionImage.rectTransform.anchoredPosition = new Vector2(BaseXOffset, -selectedIndex_ * TagTextHeight);
-		//LayoutParent.transform.parent.GetComponent<RectTransform>().anchoredPosition = new Vector2(BaseXOffset, (selectedIndex_ + 1) * TagTextHeight);
 	}
 
 	void SortSeachResult()

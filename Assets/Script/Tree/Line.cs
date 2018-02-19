@@ -23,21 +23,9 @@ public class Line : IEnumerable<Line>
 			{
 				Field.SetTextDirectly(text_);
 			}
-			if( Tree is LogTree == false )
-			{
-				foreach( string tag in Tags )
-				{
-					TagParent tagParent = GameContext.TagList.GetTagParent(tag);
-					if( tagParent != null )
-					{
-						TaggedLine taggedline = tagParent.FindBindedLine(this);
-						if( taggedline != null )
-						{
-							taggedline.Text = TextWithoutHashTags;
-						}
-					}
-				}
-			}
+			CheckIsLink();
+			CheckHashTags();
+			ApplyTextToTaggedLine();
 		}
 	}
 	protected string text_;
@@ -270,21 +258,27 @@ public class Line : IEnumerable<Line>
 
 			line_.Field.IsFocused = true;
 			line_.Field.CaretPosision = CaretPos;
-			line_.Text = line_.text_.Remove(CaretPos, Text.Length);
+			line_.text_ = line_.text_.Remove(CaretPos, Text.Length);
+			line_.Field.SetTextDirectly(line_.text_);
+
+			line_.CheckTagIncrementalDialog();
 		}
 
 		public override void Redo()
 		{
 			if( Text.Length == 0 ) return;
 
+			line_.Field.IsFocused = true;
+			line_.text_ = line_.text_.Insert(CaretPos, Text.ToString());
+			line_.Field.SetTextDirectly(line_.text_);
+			line_.Field.CaretPosision = CaretPos + Text.Length;
+
 			if( TagEdit != null )
 			{
 				TagEdit.Redo();
 			}
 
-			line_.Field.IsFocused = true;
-			line_.Text = line_.text_.Insert(CaretPos, Text.ToString());
-			line_.Field.CaretPosision = CaretPos + Text.Length;
+			line_.CheckTagIncrementalDialog();
 		}
 	}
 
@@ -301,14 +295,17 @@ public class Line : IEnumerable<Line>
 
 		public override void Undo()
 		{
+			line_.Field.IsFocused = true;
+			line_.text_ = line_.text_.Insert(CaretPos, Text.ToString());
+			line_.Field.SetTextDirectly(line_.text_);
+			line_.Field.CaretPosision = CaretPos + Text.Length;
+
 			if( TagEdit != null )
 			{
 				TagEdit.Undo();
 			}
 
-			line_.Field.IsFocused = true;
-			line_.Text = line_.text_.Insert(CaretPos, Text.ToString());
-			line_.Field.CaretPosision = CaretPos + Text.Length;
+			line_.CheckTagIncrementalDialog();
 		}
 
 		public override void Redo()
@@ -320,7 +317,10 @@ public class Line : IEnumerable<Line>
 
 			line_.Field.IsFocused = true;
 			line_.Field.CaretPosision = CaretPos;
-			line_.Text = line_.text_.Remove(CaretPos, Text.Length);
+			line_.text_ = line_.text_.Remove(CaretPos, Text.Length);
+			line_.Field.SetTextDirectly(line_.text_);
+
+			line_.CheckTagIncrementalDialog();
 		}
 	}
 
@@ -377,6 +377,11 @@ public class Line : IEnumerable<Line>
 				{
 					tagParent.InstantiateTaggedLine(line_);
 				}
+			}
+
+			if( line_.Field != null && line_.Field.BindedLine == line_ )
+			{
+				line_.Field.SetHashTags(line_.tags_);
 			}
 		}
 
@@ -439,7 +444,7 @@ public class Line : IEnumerable<Line>
 			}
 			string appendText = newText.Substring(oldCaretPos, currentCaretPos - oldCaretPos);
 			textAction_.Text.Append(appendText);
-			if( currentCaretPos == newText.Length && appendText == "#" && text_.EndsWith(" ") )
+			if( currentCaretPos == newText.Length && appendText == "#" && text_.EndsWith(" ") && Tree is LogTree == false )
 			{
 				Rect rect = Field.Rect;
 				GameContext.Window.TagIncrementalDialog.Show(new Vector2(rect.xMin + Field.GetTextRectLength(text_.Length - 1), rect.yMin));
@@ -490,29 +495,7 @@ public class Line : IEnumerable<Line>
 				}
 				textAction_.TagEdit.SetNewTag(newTags);
 				textAction_.TagEdit.UpdateTags(tagEditDiff.RemoveTags, tagEditDiff.AddTags);
-
-				Field.SetHashTags(tags_);
-
-				string caretTag = GetTagInCaretPosition(newText, currentCaretPos);
-				if( GameContext.Window.TagIncrementalDialog.IsActive )
-				{
-					if( caretTag != null )
-					{
-						GameContext.Window.TagIncrementalDialog.IncrementalSearch(caretTag);
-					}
-					else
-					{
-						GameContext.Window.TagIncrementalDialog.Close();
-					}
-				}
-				else
-				{
-					if( caretTag != null )
-					{
-						Rect rect = Field.Rect;
-						GameContext.Window.TagIncrementalDialog.Show(new Vector2(rect.xMin + Field.GetTextRectLength(newText.LastIndexOf(" #" + caretTag)), rect.yMin), caretTag);
-					}
-				}
+				CheckTagIncrementalDialog();
 			}
 		}
 
@@ -529,23 +512,37 @@ public class Line : IEnumerable<Line>
 		{
 			Field.OnTextLengthChanged();
 		}
-		if( Tree is LogTree == false )
-		{
-			foreach( string tag in Tags )
-			{
-				TaggedLine shortline = GameContext.TagList.GetTagParent(tag).FindBindedLine(this);
-				if( shortline != null )
-				{
-					shortline.Text = TextWithoutHashTags;
-				}
-			}
-		}
+		ApplyTextToTaggedLine();
 		CheckIsComment();
 	}
 
 	public void FixTextInputAction()
 	{
 		textAction_ = null;
+	}
+	
+	public void CheckTagIncrementalDialog()
+	{
+		string caretTag = GetTagInCaretPosition(text_, Field.ActualCaretPosition);
+		if( GameContext.Window.TagIncrementalDialog.IsActive )
+		{
+			if( caretTag != null )
+			{
+				GameContext.Window.TagIncrementalDialog.IncrementalSearch(caretTag);
+			}
+			else
+			{
+				GameContext.Window.TagIncrementalDialog.Close();
+			}
+		}
+		else
+		{
+			if( caretTag != null )
+			{
+				Rect rect = Field.Rect;
+				GameContext.Window.TagIncrementalDialog.Show(new Vector2(rect.xMin + Field.GetTextRectLength(text_.LastIndexOf(" #" + caretTag)), rect.yMin), caretTag);
+			}
+		}
 	}
 
 	#endregion
@@ -1217,13 +1214,14 @@ public class Line : IEnumerable<Line>
 	public void AddTag(string tag)
 	{
 		tags_.Add(tag);
-		Text = String.Format("{0} #{1}", text_, tag);
-		TagParent tagParent = GameContext.TagList.GetOrInstantiateTagParent(tag);
-		tagParent.InstantiateTaggedLine(this);
+		text_ = String.Format("{0} #{1}", text_, tag);
 		if( Field != null )
 		{
+			Field.SetTextDirectly(text_);
 			Field.SetHashTags(tags_);
 		}
+		TagParent tagParent = GameContext.TagList.GetOrInstantiateTagParent(tag);
+		tagParent.InstantiateTaggedLine(this);
 	}
 
 	public void RemoveTag(string tag)
@@ -1235,20 +1233,25 @@ public class Line : IEnumerable<Line>
 			{
 				Field.CaretPosision = 0;
 			}
-			Text = text_.Remove(text_.LastIndexOf("#" + tag) - 1, tag.Length + 2);
+			text_ = text_.Remove(text_.LastIndexOf("#" + tag) - 1, tag.Length + 2);
+			if( Field != null )
+			{
+				Field.SetTextDirectly(text_);
+				Field.SetHashTags(tags_);
+			}
 			TagParent tagParent = GameContext.TagList.GetTagParent(tag);
 			if( tagParent != null )
 			{
 				tagParent.RemoveLine(this);
 			}
-			if( Field != null )
-			{
-				Field.SetHashTags(tags_);
-			}
 		}
 		else if( tag == "" )
 		{
-			Text = text_.Remove(text_.LastIndexOf(" #"), 2);
+			text_ = text_.Remove(text_.LastIndexOf(" #"), 2);
+			if( Field != null )
+			{
+				Field.SetTextDirectly(text_);
+			}
 		}
 	}
 
@@ -1263,6 +1266,25 @@ public class Line : IEnumerable<Line>
 			}
 			text.TrimEnd(spaces);
 			return text;
+		}
+	}
+
+	void ApplyTextToTaggedLine()
+	{
+		if( Tree is LogTree == false )
+		{
+			foreach( string tag in Tags )
+			{
+				TagParent tagParent = GameContext.TagList.GetTagParent(tag);
+				if( tagParent != null )
+				{
+					TaggedLine taggedline = tagParent.FindBindedLine(this);
+					if( taggedline != null )
+					{
+						taggedline.Text = TextWithoutHashTags;
+					}
+				}
+			}
 		}
 	}
 
@@ -1496,7 +1518,6 @@ public class Line : IEnumerable<Line>
 			Line.TagTextEditAction tagEdit = new Line.TagTextEditAction(this, tags_);
 			tagEdit.SetNewTag(newTags);
 			tagEdit.UpdateTags(tagEditDiff.RemoveTags, tagEditDiff.AddTags);
-			Tree.ActionManager.Execute(tagEdit);
 			if( Field != null )
 			{
 				Field.SetHashTags(tags_);

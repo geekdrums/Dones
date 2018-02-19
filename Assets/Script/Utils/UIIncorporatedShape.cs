@@ -10,7 +10,7 @@ public class UIIncorporatedShape : MaskableGraphic, IColoredObject
 {
 	UIMidairPrimitive[] primitives_;
 	UIGaugeRenderer[] gauges_;
-	public bool IsVertexCountDirty { get { return isVertexCountDirty_; } }
+	public bool IsVertexCountDirty { get { return isVertexCountDirty_; } set { isVertexCountDirty_ = value; } }
 	bool isVertexCountDirty_ = false;
 	
 	protected override void OnEnable()
