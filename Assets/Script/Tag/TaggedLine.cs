@@ -169,6 +169,16 @@ public class TaggedLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragH
 	#endregion
 
 
+	#region events
+
+	public void OnActiveNoteChanged()
+	{
+		SetColor(GetTargetColor());
+	}
+
+	#endregion
+
+
 	#region selection
 
 	public override void OnSelect(BaseEventData eventData)
@@ -213,8 +223,7 @@ public class TaggedLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragH
 		{
 			strikeLine_.gameObject.SetActive(true);
 			checkMark_.gameObject.SetActive(true);
-			listMark_.SetColor(Color.clear);//.SetActive(false);
-			SetColor(GameContext.Config.DoneTextColor);
+			listMark_.SetColor(Color.clear);
 			UpdateStrikeLine();
 
 			if( withAnim )
@@ -228,10 +237,9 @@ public class TaggedLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragH
 		{
 			strikeLine_.gameObject.SetActive(false);
 			checkMark_.gameObject.SetActive(false);
-			//listMark_.gameObject.SetActive(true);
 			listMark_.SetColor(Color.black);
-			SetColor(GameContext.Config.TextColor);
 		}
+		SetColor(GetTargetColor());
 
 		tagParent_.OnDoneChanged(this);
 	}
@@ -242,6 +250,22 @@ public class TaggedLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragH
 		{
 			shouldUpdateTextLength_ = true;
 			StartCoroutine(UpdateTextLengthCoroutine());
+		}
+	}
+
+	Color GetTargetColor()
+	{
+		if( IsDone )
+		{
+			return GameContext.Config.DoneTextColor;
+		}
+		else if( BindedLine.Tree.OwnerNote.IsActive || GameContext.Window.MainTabGroup.ActiveNote is TreeNote == false )
+		{
+			return GameContext.Config.TextColor;
+		}
+		else
+		{
+			return GameContext.Config.TagSubTextColor;
 		}
 	}
 

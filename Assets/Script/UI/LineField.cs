@@ -275,13 +275,25 @@ public class LineField : CustomInputField
 		if( checkMark_.gameObject.activeSelf )
 			checkMark_.SetPositionX(charLength);
 
+		float rectHeight = RectHeight;
 		foreach( TagText tagText in tagTexts_ )
 		{
 			int index = text.LastIndexOf(tagText.Text);
 			float x = GetTextRectLength(index - 1);
 			tagText.Rect.anchoredPosition = new Vector2(x + textComponent.rectTransform.offsetMin.x, 0);
 			float width = GetTextRectLength(index + tagText.Text.Length - 1) - x;
-			tagText.Rect.sizeDelta = new Vector2(width, tagText.Rect.sizeDelta.y);
+			tagText.Rect.sizeDelta = new Vector2(width, rectHeight);
+		}
+	}
+
+	public void OnFontSizeChanged(int fontSize, float heightPerLine)
+	{
+		textComponent.fontSize = fontSize;
+		RectHeight = heightPerLine;
+		OnTextLengthChanged();
+		foreach( TagText tagText in tagTexts_ )
+		{
+			tagText.TextComponent.fontSize = fontSize;
 		}
 	}
 

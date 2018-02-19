@@ -931,9 +931,7 @@ public class Line : IEnumerable<Line>
 		{
 			if( children_[i].Field != null )
 			{
-				children_[i].Field.textComponent.fontSize = fontSize;
-				children_[i].Field.RectHeight = heightPerLine;
-				children_[i].Field.OnTextLengthChanged();
+				children_[i].Field.OnFontSizeChanged(fontSize, heightPerLine);
 				children_[i].Toggle.AnimToTargetVisual();
 				children_[i].AdjustFontSizeRecursive(fontSize, heightPerLine);
 			}

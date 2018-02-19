@@ -49,6 +49,7 @@ public class Config : MonoBehaviour
 	public Color CommentLineColor;
 	public Color CommentTextColor;
 	public Color TagSelectionColor;
+	public Color TagSubTextColor;
 
 	public Color ToggleColor;
 	public Color ToggleOpenedColor;

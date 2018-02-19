@@ -193,6 +193,14 @@ public class TagList : MonoBehaviour, IEnumerable<TagParent>
 		}
 	}
 
+	public void OnActiveNoteChanged()
+	{
+		foreach( TaggedLine line in TaggedLines )
+		{
+			line.OnActiveNoteChanged();
+		}
+	}
+
 	#region drag
 
 	public void OnBeginDragTag(TagParent tagParent)

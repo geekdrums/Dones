@@ -145,6 +145,10 @@ public class TreeNote : Note
 			field.RectHeight = GameContext.Config.HeightPerLine;
 			field.OnTextLengthChanged();
 		}
+		foreach( TagText tagText in tagHeapManager_ )
+		{
+			tagText.TextComponent.fontSize = GameContext.Config.FontSize;
+		}
 		logNote_.OnFontSizeChanged();
 		UpdateLayoutElement();
 		CheckScrollbarEnabled();

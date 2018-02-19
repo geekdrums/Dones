@@ -124,6 +124,7 @@ public class TabGroup : MonoBehaviour, IEnumerable<TabButton>
 		activeTab_ = tab;
 		GameContext.Window.TitleText.text = activeTab_.Text;
 		GameContext.Window.UpdateVerticalLayout();
+		GameContext.TagList.OnActiveNoteChanged();
 	}
 
 	public void OnTabClosed(TabButton tab)
