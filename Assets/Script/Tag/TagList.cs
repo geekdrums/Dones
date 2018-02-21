@@ -377,6 +377,16 @@ public class TagList : MonoBehaviour, IEnumerable<TagParent>
 				}
 			}
 		}
+
+		// 余ったやつは最後に追加する
+		foreach( TagParent leftoverParent in tagParents_ )
+		{
+			if( sortedTagParents.Contains(leftoverParent) == false )
+			{
+				sortedTagParents.Add(leftoverParent);
+			}
+		}
+
 		tagParents_ = sortedTagParents;
 		UpdateLayoutElement();
 		reader.Close();
