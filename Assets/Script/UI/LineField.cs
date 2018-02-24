@@ -128,10 +128,6 @@ public class LineField : CustomInputField
 			}
 			tagTexts_.Clear();
 		}
-		else
-		{
-			SetHashTags(BindedLine.Tags);
-		}
 	}
 
 	public void SetHashTags(List<string> tags)

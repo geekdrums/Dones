@@ -22,7 +22,10 @@ public class TagToggle : Toggle {
 				tagParent_.IsFolded = isFolded;
 			}
 		}).AddTo(this);
-		AnimToTargetVisual();
+		if( GameContext.Config != null )
+		{
+			AnimToTargetVisual();
+		}
 	}
 
 	// Update is called once per frame

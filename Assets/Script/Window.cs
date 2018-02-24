@@ -40,6 +40,7 @@ public class Window : MonoBehaviour
 	public FileMenuButton FileMenu;
 	public ModalDialog ModalDialog;
 	public TagIncrementalDialog TagIncrementalDialog;
+	public TagMenu TagMenu;
 	public Text FontSizeText;
 	public SaveText SaveText;
 	public Text TitleText;
@@ -91,8 +92,12 @@ public class Window : MonoBehaviour
 	{
 		// Editorではいいんだけど、アプリ版はこうしないとScrollがバグってその後一切操作できなくなる。。
 		yield return new WaitForEndOfFrame();
-		LoadSettings();
 		GameContext.TagList.LoadTaggedLines();
+		LoadSettings();
+		foreach( TagParent tagParent in GameContext.TagList )
+		{
+			tagParent.ApplyLineOrder();
+		}
 
 		if( MainTabGroup.Count == 0 )
 		{

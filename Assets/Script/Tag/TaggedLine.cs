@@ -98,11 +98,6 @@ public class TaggedLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragH
 	protected override void Awake()
 	{
 		base.Awake();
-		textComponent_ = GetComponentInChildren<Text>();
-		strikeLine_ = textComponent_.GetComponentInChildren<UIGaugeRenderer>(includeInactive: true);
-		checkMark_ = GetComponentInChildren<CheckMark>(includeInactive: true);
-		listMark_ = GetComponentInChildren<Button>().GetComponentInChildren<UIMidairPrimitive>();
-		tagParent_ = GetComponentInParent<TagParent>();
 		this.OnPointerDownAsObservable()
 			.TimeInterval()
 			.Select(t => t.Interval.TotalSeconds)
@@ -146,6 +141,15 @@ public class TaggedLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragH
 
 	public void Bind(Line line)
 	{
+		if( textComponent_ == null )
+		{
+			textComponent_ = GetComponentInChildren<Text>();
+			strikeLine_ = textComponent_.GetComponentInChildren<UIGaugeRenderer>(includeInactive: true);
+			checkMark_ = GetComponentInChildren<CheckMark>(includeInactive: true);
+			listMark_ = GetComponentInChildren<Button>().GetComponentInChildren<UIMidairPrimitive>();
+			tagParent_ = GetComponentInParent<TagParent>();
+		}
+
 		BindedLine = line;
 		Text = line.TextWithoutHashTags;
 		IsDone = line.IsDone;

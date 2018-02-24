@@ -749,10 +749,66 @@ public class Tree : MonoBehaviour
 			if( line.Text != "" )
 			{
 				Line targetLine = line;
+				List<string> removeTags = new List<string>();
 				actionManager_.Execute(new Action(
 					execute: () =>
 					{
 						targetLine.IsDone = !targetLine.IsDone;
+
+						// タグ整理
+						if( targetLine.IsDone )
+						{
+							// doneされたのでタグを消す、Repeatの場合は反映する
+							foreach( string tag in targetLine.Tags )
+							{
+								TagParent tagParent = GameContext.TagList.GetTagParent(tag);
+								if( tagParent != null )
+								{
+									if( tagParent.IsRepeat )
+									{
+										TaggedLine bindedLine = tagParent.FindBindedLine(targetLine);
+										if( bindedLine != null )
+										{
+											bindedLine.IsDone = targetLine.IsDone;
+										}
+									}
+									else
+									{
+										removeTags.Add(tag);
+									}
+								}
+							}
+							foreach( string removeTag in removeTags )
+							{
+								targetLine.RemoveTag(removeTag);
+							}
+						}
+						else
+						{
+							// done解除されたのでRepeatのやつは反映して、消したのは復活させる
+							foreach( string tag in targetLine.Tags )
+							{
+								TagParent tagParent = GameContext.TagList.GetTagParent(tag);
+								if( tagParent != null && tagParent.IsRepeat )
+								{
+									TaggedLine bindedLine = tagParent.FindBindedLine(targetLine);
+									if( bindedLine != null )
+									{
+										bindedLine.IsDone = targetLine.IsDone;
+									}
+								}
+							}
+							// さっき消したタグは復活
+							foreach( string removedTag in removeTags )
+							{
+								targetLine.AddTag(removedTag);
+							}
+							removeTags.Clear();
+						}
+
+						if( targetLine.Field != null )
+							targetLine.Field.SetHashTags(targetLine.Tags);
+
 						if( OnDoneChanged != null )
 							OnDoneChanged(targetLine, null);
 					}

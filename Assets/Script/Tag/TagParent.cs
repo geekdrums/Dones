@@ -15,7 +15,8 @@ public class TagParent : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDra
 
 	public TaggedLine TaggedLinePrefab;
 	public GameObject LineParent;
-	public Button PinButton;
+	public GameObject PinMark;
+	public GameObject RepeatMark;
 
 	#endregion
 
@@ -67,15 +68,32 @@ public class TagParent : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDra
 		set
 		{
 			isPinned_ = value;
+			PinMark.SetActive(isPinned_);
 		}
 	}
 	bool isPinned_ = false;
+
+
+	public bool IsRepeat
+	{
+		get
+		{
+			return isRepeat_;
+		}
+		set
+		{
+			isRepeat_ = value;
+			RepeatMark.SetActive(isRepeat_);
+		}
+	}
+	bool isRepeat_ = false;
 
 	List<TaggedLine> lines_ = new List<TaggedLine>();
 	List<TaggedLine> doneLines_ = new List<TaggedLine>();
 	TaggedLine selectedLine_;
 	TagToggle tagToggle_;
 	int selectedIndex_ = -1;
+	List<string> lineOrder_ = new List<string>();
 
 	HeapManager<TaggedLine> heapManager_ = new HeapManager<TaggedLine>();
 
@@ -375,6 +393,8 @@ public class TagParent : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDra
 		else return -1;
 	}
 
+	public int Count { get { return lines_.Count + doneLines_.Count; } }
+
 	#endregion
 
 
@@ -507,23 +527,9 @@ public class TagParent : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDra
 		heapManager_.BackToHeap(line);
 	}
 
-	public void OnPinButtonDown()
+	public void OnMenuButtonDown()
 	{
-		isPinned_ = !isPinned_;
-		ColorBlock colors = new ColorBlock();
-		colors.normalColor = ColorManager.MakeAlpha(PinButton.colors.normalColor, isPinned_ ? 1.0f : 0.0f);
-		colors.highlightedColor = PinButton.colors.highlightedColor;
-		colors.pressedColor = PinButton.colors.pressedColor;
-		colors.disabledColor = PinButton.colors.disabledColor;
-		colors.fadeDuration = PinButton.colors.fadeDuration;
-		colors.colorMultiplier = PinButton.colors.colorMultiplier;
-		PinButton.colors = colors;
-		PinButton.OnDeselect(null);
-
-		if( isPinned_ == false && lines_.Count == 0 && doneLines_.Count == 0 )
-		{
-			GameContext.TagList.OnTagEmpty(this);
-		}
+		GameContext.Window.TagMenu.Show(this);
 	}
 
 	#endregion
@@ -670,11 +676,42 @@ public class TagParent : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDra
 
 	public void RemoveAllDones()
 	{
+		if( IsRepeat )
+		{
+			return;
+		}
+
 		List<TaggedLine> removeLines = new List<TaggedLine>(doneLines_);
 		foreach( TaggedLine taggedline in removeLines )
 		{
 			RemoveTaggedLine(taggedline);
 		}
+	}
+
+	public void AddLineOrder(string line)
+	{
+		lineOrder_.Add(line);
+	}
+
+	public void ApplyLineOrder()
+	{
+		List<TaggedLine> sortedlines = new List<TaggedLine>();
+		foreach( string text in lineOrder_ )
+		{
+			TaggedLine line = lines_.Find((l) => l.Text == text);
+			if( line != null )
+			{
+				sortedlines.Add(line);
+			}
+		}
+		foreach( TaggedLine taggedLine in lines_ )
+		{
+			if( sortedlines.Contains(taggedLine) == false )
+				sortedlines.Add(taggedLine);
+		}
+
+		lines_ = sortedlines;
+		AnimLinesToTargetPosition(0, lines_.Count - 1);
 	}
 
 	#endregion

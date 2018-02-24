@@ -103,7 +103,7 @@ public class UIGaugeRenderer : MaskableGraphic, IColoredObject
 			do
 			{
 				offset += parent.localPosition;
-				parent = transform.parent;
+				parent = parent.parent;
 			} while( parent.gameObject != incorporatedShape_.gameObject );
 			lb.position += offset;
 			lt.position += offset;

@@ -88,42 +88,6 @@ public class Line : IEnumerable<Line>
 				{
 					Field.SetIsDone(isDone_);
 				}
-				if( Tree is LogTree == false )
-				{
-					if( isDone_ )
-					{
-						// doneされたのでタグリストに既にある場合はDone状態にする
-						foreach( string tag in Tags )
-						{
-							TagParent tagParent = GameContext.TagList.GetTagParent(tag);
-							if( tagParent != null )
-							{
-								TaggedLine bindedLine = tagParent.FindBindedLine(this);
-								if( bindedLine != null )
-								{
-									bindedLine.IsDone = isDone_;
-								}
-							}
-						}
-					}
-					else
-					{
-						// done解除されたのでタグ登録されてなければしにいく。
-						foreach( string tag in Tags )
-						{
-							TagParent tagParent = GameContext.TagList.GetOrInstantiateTagParent(tag);
-							TaggedLine bindedLine = tagParent.FindBindedLine(this);
-							if( bindedLine != null )
-							{
-								bindedLine.IsDone = isDone_;
-							}
-							else
-							{
-								tagParent.InstantiateTaggedLine(this);
-							}
-						}
-					}
-				}
 			}
 		}
 	}
@@ -692,13 +656,25 @@ public class Line : IEnumerable<Line>
 
 		child.OnFoundParent();
 
-		if( child.IsDone == false && child.Tree is LogTree == false )
+		if( child.Tree is LogTree == false )
 		{
 			foreach( string tag in child.Tags )
 			{
-				TagParent tagParent = GameContext.TagList.GetOrInstantiateTagParent(tag);
-				TaggedLine taggedline = tagParent.FindBindedLine(child);
-				if( taggedline == null )
+				bool add = (child.IsDone == false);
+				TagParent tagParent = GameContext.TagList.GetTagParent(tag);
+				if( tagParent == null )
+				{
+					// Doneしてないタグなら生成する
+					if( add )
+						tagParent = GameContext.TagList.InstantiateTagParent(tag);
+				}
+				else
+				{
+					// DoneしててもRepeatなら追加してよい
+					add |= tagParent.IsRepeat;
+				}
+				add &= tagParent != null && tagParent.FindBindedLine(child) == null;
+				if( add )
 				{
 					tagParent.InstantiateTaggedLine(child);
 				}

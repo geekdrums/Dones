@@ -12,6 +12,8 @@ using System.Text;
 // Window > [ TagList ] > TagParent > TaggedLine
 public class TagList : MonoBehaviour, IEnumerable<TagParent>
 {
+	#region editor params
+
 	public TagParent TagParentPrefab;
 	public float TopMargin = 60;
 	public float WidthMargin = 17;
@@ -19,6 +21,12 @@ public class TagList : MonoBehaviour, IEnumerable<TagParent>
 	public GameObject OpenButton;
 	public GameObject CloseButton;
 	public GameObject TagMoveOverlay;
+	public int MaxTagOrderCount = 30;
+
+	#endregion
+
+
+	#region property
 
 	public float Width { get { return isOpened_ ? GameContext.Config.TagListWidth : 0; } }
 
@@ -26,7 +34,10 @@ public class TagList : MonoBehaviour, IEnumerable<TagParent>
 	bool isOpened_ = false;
 
 	List<TagParent> tagParents_ = new List<TagParent>();
+
 	FileInfo taggedLineFile_;
+
+	List<string> tagOrder_ = new List<string>();
 
 	LayoutElement layout_;
 	ContentSizeFitter contentSizeFitter_;
@@ -35,6 +46,11 @@ public class TagList : MonoBehaviour, IEnumerable<TagParent>
 	HeapManager<TagParent> heapManager_ = new HeapManager<TagParent>();
 
 	int tagOvelayDesiredIndex_ = -1;
+
+	#endregion
+
+
+	#region unity functions
 
 	void Awake()
 	{
@@ -49,6 +65,11 @@ public class TagList : MonoBehaviour, IEnumerable<TagParent>
 	{
 		taggedLineFile_ = new FileInfo(System.Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + "/Dones/taglist.txt");
 	}
+
+	#endregion
+
+
+	#region IEnumerable
 
 	// IEnumerable<TagParent>
 	public IEnumerator<TagParent> GetEnumerator()
@@ -65,7 +86,6 @@ public class TagList : MonoBehaviour, IEnumerable<TagParent>
 
 	public int Count { get { return tagParents_.Count; } }
 	public TagParent this[int i] { get { return tagParents_[i]; } }
-
 	public IEnumerable<TaggedLine> TaggedLines
 	{
 		get
@@ -79,6 +99,11 @@ public class TagList : MonoBehaviour, IEnumerable<TagParent>
 			}
 		}
 	}
+
+	#endregion
+
+
+	#region instantiate
 
 	public TagParent GetTagParent(string tag)
 	{
@@ -96,8 +121,8 @@ public class TagList : MonoBehaviour, IEnumerable<TagParent>
 	{
 		TagParent tagParent = heapManager_.Instantiate(this.transform);
 		tagParent.Initialize(tag);
-		tagParents_.Add(tagParent);
-		tagParent.transform.localPosition = GetTargetPosition(tagParent);
+		tagParents_.Insert(GetTagOrderIndex(tag), tagParent);
+		UpdateLayoutElement();
 		return tagParent;
 	}
 
@@ -111,12 +136,54 @@ public class TagList : MonoBehaviour, IEnumerable<TagParent>
 		else return tagParent;
 	}
 
-	public void OnTagEmpty(TagParent tagParent)
+	int GetTagOrderIndex(string tag)
 	{
-		tagParents_.Remove(tagParent);
-		heapManager_.BackToHeap(tagParent);
-		UpdateLayoutElement();
+		if( tagOrder_.Contains(tag) )
+		{
+			int index = tagOrder_.IndexOf(tag);
+			for( int i = 0; i < tagParents_.Count; ++i )
+			{
+				int otherIndex = tagOrder_.IndexOf(tagParents_[i].Tag);
+				if( index < otherIndex  )
+				{
+					// この要素よりは前にあってほしいタグなので、この直前に挿入する
+					return i;
+				}
+			}
+		}
+
+		return tagParents_.Count;
 	}
+
+	void AddTagOrder(string tag, int index)
+	{
+		if( tagOrder_.Contains(tag) )
+		{
+			tagOrder_.Remove(tag);
+		}
+
+		int insertIndex = tagOrder_.Count;
+		for( int i = 0; i < tagOrder_.Count; ++i )
+		{
+			int otherIndex = tagParents_.FindIndex((p)=>p.Tag == tagOrder_[i]);
+			if( index < otherIndex )
+			{
+				// この要素よりは前にあってほしいタグなので、この直前に挿入する
+				insertIndex = i;
+				break;
+			}
+		}
+		tagOrder_.Insert(insertIndex, tag);
+		while( tagOrder_.Count > MaxTagOrderCount )
+		{
+			tagOrder_.RemoveAt(MaxTagOrderCount);
+		}
+	}
+
+	#endregion
+
+
+	#region layout
 
 	public void UpdateLayoutElement()
 	{
@@ -159,7 +226,11 @@ public class TagList : MonoBehaviour, IEnumerable<TagParent>
 		return new Vector3(WidthMargin, -sum);
 	}
 
-	
+	#endregion
+
+
+	#region open / close
+
 	public void Open()
 	{
 		isOpened_ = true;
@@ -193,6 +264,13 @@ public class TagList : MonoBehaviour, IEnumerable<TagParent>
 		}
 	}
 
+	public void OnTagEmpty(TagParent tagParent)
+	{
+		tagParents_.Remove(tagParent);
+		heapManager_.BackToHeap(tagParent);
+		UpdateLayoutElement();
+	}
+
 	public void OnActiveNoteChanged()
 	{
 		foreach( TaggedLine line in TaggedLines )
@@ -200,6 +278,9 @@ public class TagList : MonoBehaviour, IEnumerable<TagParent>
 			line.OnActiveNoteChanged();
 		}
 	}
+
+	#endregion
+
 
 	#region drag
 
@@ -239,6 +320,7 @@ public class TagList : MonoBehaviour, IEnumerable<TagParent>
 	{
 		if( tagParents_.Contains(tagParent) )
 		{
+			AddTagOrder(tagParent.Tag, tagParents_.IndexOf(tagParent));
 			AnimManager.AddAnim(tagParent, GetTargetPosition(tagParent), ParamType.Position, AnimType.Time, GameContext.Config.AnimTime);
 		}
 	}
@@ -313,67 +395,96 @@ public class TagList : MonoBehaviour, IEnumerable<TagParent>
 
 	#region save / load
 
+	public static string OrderTag = "<order>";
+	public static string EndOrderTag = "</order>";
+	public static string PinnedTag = "<p>";
+	public static string RepeatTag = "<r>";
+
+	enum Settings
+	{
+		Initialize,
+		OrderList,
+		TagList,
+		Count
+	}
+
 	public void LoadTaggedLines()
 	{
 		if( taggedLineFile_.Exists == false )
 		{
+			foreach( string reservedTag in GameContext.Window.TagIncrementalDialog.ReservedTags )
+			{
+				tagOrder_.Add(reservedTag);
+			}
 			return;
 		}
 
 		StreamReader reader = new StreamReader(taggedLineFile_.OpenRead());
 		string text = null;
-		int lineIndex = 0;
 		TagParent tagParent = null;
 		List<TagParent> sortedTagParents = new List<TagParent>();
+		Settings setting = Settings.Initialize;
 		while( (text = reader.ReadLine()) != null )
 		{
-			if( text.StartsWith("##") )
+			if( setting == Settings.Initialize )
 			{
-				text = text.Remove(0, 2);
-				bool isPinned = false;
-				if( text.EndsWith(PinnedTag) )
+				if( text == OrderTag )
 				{
-					text = text.Remove(text.Length - PinnedTag.Length);
-					isPinned = true;
+					setting = Settings.OrderList;
 				}
-				bool isFolded = false;
-				if( text.EndsWith(Line.FoldTag) )
+				else
 				{
-					text = text.Remove(text.Length - Line.FoldTag.Length);
-					isFolded = true;
-				}
-				tagParent = GetTagParent(text);
-				if( isPinned && tagParent == null )
-				{
-					tagParent = InstantiateTagParent(text);
-				}
-
-				if( tagParent != null )
-				{
-					tagParent.IsFolded = isFolded;
-					lineIndex = 0;
-					sortedTagParents.Add(tagParent);
-					if( isPinned )
+					// 無かったのでデフォルトとして予約語タグを入れる
+					foreach( string reservedTag in GameContext.Window.TagIncrementalDialog.ReservedTags )
 					{
-						tagParent.OnPinButtonDown();
+						tagOrder_.Add(reservedTag);
 					}
+					setting = Settings.TagList;
 				}
 			}
-			else if( tagParent != null )
+			else if( setting == Settings.OrderList )
 			{
-				TaggedLine taggedLine = null;
-				foreach( TaggedLine line in tagParent )
+				if( text == EndOrderTag )
 				{
-					if( line.BindedLine.Text == text )
-					{
-						taggedLine = line;
-						break;
-					}
+					setting = Settings.TagList;
 				}
-				if( taggedLine != null )
+				else
 				{
-					tagParent.SetLineIndex(taggedLine, lineIndex);
-					++lineIndex;
+					tagOrder_.Add(text);
+				}
+			}
+			else if( setting == Settings.TagList )
+			{
+				if( text.StartsWith("##") )
+				{
+					text = text.Remove(0, 2);
+					bool isPinned = false;
+					bool isRepeat = false;
+					if( text.EndsWith(RepeatTag) )
+					{
+						text = text.Remove(text.Length - RepeatTag.Length);
+						isRepeat = true;
+					}
+					if( text.EndsWith(PinnedTag) )
+					{
+						text = text.Remove(text.Length - PinnedTag.Length);
+						isPinned = true;
+					}
+					bool isFolded = false;
+					if( text.EndsWith(Line.FoldTag) )
+					{
+						text = text.Remove(text.Length - Line.FoldTag.Length);
+						isFolded = true;
+					}
+					tagParent = InstantiateTagParent(text);
+					tagParent.IsFolded = isFolded;
+					tagParent.IsPinned = isPinned;
+					tagParent.IsRepeat = isRepeat;
+					sortedTagParents.Add(tagParent);
+				}
+				else if( tagParent != null )
+				{
+					tagParent.AddLineOrder(text);
 				}
 			}
 		}
@@ -392,7 +503,6 @@ public class TagList : MonoBehaviour, IEnumerable<TagParent>
 		reader.Close();
 	}
 
-	public static string PinnedTag = "<p>";
 	public void SaveTaggedLines()
 	{
 		if( taggedLineFile_.Exists == false )
@@ -405,9 +515,18 @@ public class TagList : MonoBehaviour, IEnumerable<TagParent>
 
 		StreamWriter writer = new StreamWriter(taggedLineFile_.FullName, append: false);
 
+		if( tagOrder_.Count > 0 )
+		{
+			writer.WriteLine(OrderTag);
+			foreach( string tagText in tagOrder_ )
+			{
+				writer.WriteLine(tagText);
+			}
+			writer.WriteLine(EndOrderTag);
+		}
 		foreach( TagParent tagParent in tagParents_ )
 		{
-			writer.WriteLine(String.Format("##{0}{1}{2}", tagParent.Tag, (tagParent.IsFolded ? Line.FoldTag : ""), (tagParent.IsPinned ? PinnedTag : "")));
+			writer.WriteLine(String.Format("##{0}{1}{2}{3}", tagParent.Tag, (tagParent.IsFolded ? Line.FoldTag : ""), (tagParent.IsPinned ? PinnedTag : ""), (tagParent.IsRepeat ? RepeatTag : "")));
 			foreach( TaggedLine taggedLine in tagParent )
 			{
 				if( taggedLine.IsDone )
@@ -416,7 +535,7 @@ public class TagList : MonoBehaviour, IEnumerable<TagParent>
 				}
 				if( taggedLine.BindedLine != null )
 				{
-					writer.WriteLine(taggedLine.BindedLine.Text);
+					writer.WriteLine(taggedLine.BindedLine.TextWithoutHashTags);
 				}
 			}
 		}
