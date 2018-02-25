@@ -183,15 +183,14 @@ public class Tree : MonoBehaviour
 			{
 				OnCtrlDInput();
 			}
-			//ArialのBoldが残念すぎるので、フォント改善するまで封印
-//#if UNITY_EDITOR
-//			else if( Input.GetKeyDown(KeyCode.G) )
-//#else
-//			else if( Input.GetKeyDown(KeyCode.B) )
-//#endif
-//			{
-//				OnCtrlBInput();
-//			}
+#if UNITY_EDITOR
+			else if( Input.GetKeyDown(KeyCode.G) )
+#else
+			else if( Input.GetKeyDown(KeyCode.B) )
+#endif
+			{
+				OnCtrlBInput();
+			}
 			else if( Input.GetKeyDown(KeyCode.Home) )
 			{
 				if( ownerNote_ is TreeNote )

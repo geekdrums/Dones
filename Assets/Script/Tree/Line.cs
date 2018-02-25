@@ -126,7 +126,7 @@ public class Line : IEnumerable<Line>
 				isBold_ = value;
 				if( Field != null )
 				{
-					Field.textComponent.fontStyle = isBold_ ? FontStyle.Bold : FontStyle.Normal;
+					Field.SetIsBold(isBold_);
 				}
 			}
 		}
@@ -601,7 +601,7 @@ public class Line : IEnumerable<Line>
 			Field.SetIsClone(isClone_);
 			Field.SetIsDone(isDone_, withAnim: false);
 			Field.SetHashTags(tags_);
-			Field.textComponent.fontStyle = isBold_ ? FontStyle.Bold : FontStyle.Normal;
+			Field.SetIsBold(isBold_);
 			if( isLinkText_ )
 				Field.SetIsLinkText(isLinkText_);
 			if( isComment_ )
@@ -1236,9 +1236,8 @@ public class Line : IEnumerable<Line>
 			string text = text_;
 			foreach( string tag in tags_ )
 			{
-				text = text.Remove(text.LastIndexOf(tag) - 1, tag.Length + 1);
+				text = text.Remove(text.LastIndexOf(tag) - 2, tag.Length + 2);
 			}
-			text.TrimEnd(spaces);
 			return text;
 		}
 	}

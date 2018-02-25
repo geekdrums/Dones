@@ -155,6 +155,7 @@ public class LineField : CustomInputField
 				tagText.Text = "#" + tag;
 				tagText.Rect.anchoredPosition = Vector2.zero;
 				tagText.gameObject.SetActive(isFocused == false);
+				tagText.TextComponent.fontStyle = BindedLine.IsBold ? FontStyle.Bold : FontStyle.Normal;
 				tagTexts_.Add(tagText);
 				OnTextLengthChanged();
 			}
@@ -216,6 +217,17 @@ public class LineField : CustomInputField
 			}
 		}
 	}
+
+	public void SetIsBold(bool isBold)
+	{
+		textComponent.fontStyle = isBold ? FontStyle.Bold : FontStyle.Normal;
+		foreach( TagText tagText in tagTexts_ )
+		{
+			tagText.TextComponent.fontStyle = isBold ? FontStyle.Bold : FontStyle.Normal;
+		}
+		OnTextLengthChanged();
+	}
+
 
 	protected Color GetDesiredTextColor()
 	{
