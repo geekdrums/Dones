@@ -346,7 +346,12 @@ public class TagParent : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDra
 		if( isPinned_ || lines_.Count > 0 || doneLines_.Count > 0 )
 		{
 			float animTime = 0.2f;
-			AnimManager.AddAnim(taggedLine, 0.0f, ParamType.AlphaColor, AnimType.Time, animTime, endOption: AnimEndOption.Deactivate);
+			float delayTime = 0.0f;
+			if( taggedLine.IsDoneAnimating )
+			{
+				delayTime = 0.2f;
+			}
+			AnimManager.AddAnim(taggedLine, 0.0f, ParamType.AlphaColor, AnimType.Time, animTime, delay: delayTime, endOption: AnimEndOption.Deactivate);
 			
 			if( needSelectionUpdate )
 			{

@@ -76,6 +76,8 @@ public class TaggedLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragH
 	public Color GetColor() { return textComponent_.color; }
 	public void SetColor(Color color) { textComponent_.color = color; }
 
+	public bool IsDoneAnimating { get { return isDone_ && AnimManager.IsAnimating(strikeLine_); } }
+
 	#endregion
 
 
@@ -208,17 +210,8 @@ public class TaggedLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragH
 
 	public void Done()
 	{
-		Line line = BindedLine;
-		TreeNote treeNote = line.Tree.OwnerNote as TreeNote;
-		line.Tree.ActionManager.Execute(new Action(
-			execute: () =>
-			{
-				line.IsDone = !line.IsDone;
-				if( treeNote != null )
-				{
-					treeNote.LogNote.OnDoneChanged(line);
-				}
-			}));
+		BindedLine.Tree.Done(BindedLine);
+		ShowBindedLine();
 	}
 
 	public void OnDoneChanged(bool withAnim = true)
