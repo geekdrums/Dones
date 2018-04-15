@@ -1337,20 +1337,42 @@ public class Tree : MonoBehaviour
 
 		string newtag = GameContext.TagList.Count > 0 ? GameContext.TagList[0].Tag : GameContext.Config.DefaultTag;
 
+		string existTag = null;
+		if( focusedLine_.Tags.Count > 0 )
+		{
+			existTag = focusedLine_.Tags[focusedLine_.Tags.Count - 1];
+			for( int i=0; i< GameContext.TagList.Count; ++i )
+			{
+				if( GameContext.TagList[i].Tag == existTag )
+				{
+					newtag = GameContext.TagList[(i + (Input.GetKey(KeyCode.LeftShift) ? GameContext.TagList.Count - 1 : 1)) % GameContext.TagList.Count].Tag;
+					break;
+				}
+			}
+		}
 		actionManager_.StartChain();
 		foreach( Line line in GetSelectedOrFocusedLines() )
 		{
 			if( line.IsDone || line.Tags.Contains(newtag) ) continue;
 			
 			Line targetLine = line;
+			bool hasExistTag = existTag != null && targetLine.Tags.Contains(existTag);
 			actionManager_.Execute(new Action(
 				execute: () =>
 				{
+					if( hasExistTag )
+					{
+						targetLine.RemoveTag(existTag);
+					}
 					targetLine.AddTag(newtag);
 				},
 				undo: () =>
 				{
 					targetLine.RemoveTag(newtag);
+					if( hasExistTag )
+					{
+						targetLine.AddTag(existTag);
+					}
 				}
 				));
 		}
