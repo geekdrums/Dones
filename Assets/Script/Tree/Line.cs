@@ -1181,7 +1181,7 @@ public class Line : IEnumerable<Line>
 	#endregion
 
 
-	#region tags
+	#region Tags
 
 	public bool HasAnyTags { get { return tags_.Count > 0; } }
 
@@ -1484,6 +1484,11 @@ public class Line : IEnumerable<Line>
 
 	public void CheckHashTags()
 	{
+		if( Tree == null || Tree is LogTree )
+		{
+			return;
+		}
+
 		List<string> newTags = GetHashTags(text_);
 		Line.TagTextEditAction.TagEditDiff tagEditDiff = Line.TagTextEditAction.CheckTagChanged(newTags, tags_);
 		if( tagEditDiff.IsEdited )

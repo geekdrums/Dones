@@ -103,6 +103,7 @@ public class Window : MonoBehaviour
 		{
 			NewFile();
 		}
+		GameContext.TagList.OnActiveNoteChanged(MainTabGroup.ActiveNote);
 
 		MainTabGroup.UpdateLayoutAll();
 		foreach( TreeNote treeNote in MainTabGroup.TreeNotes )

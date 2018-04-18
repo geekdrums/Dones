@@ -33,6 +33,7 @@ public class TagList : MonoBehaviour, IEnumerable<TagParent>
 	public bool IsOpened { get { return isOpened_; } }
 	bool isOpened_ = false;
 
+	List<TagParent> sourceTagParents_ = new List<TagParent>();
 	List<TagParent> tagParents_ = new List<TagParent>();
 
 	FileInfo taggedLineFile_;
@@ -74,7 +75,7 @@ public class TagList : MonoBehaviour, IEnumerable<TagParent>
 	// IEnumerable<TagParent>
 	public IEnumerator<TagParent> GetEnumerator()
 	{
-		foreach( TagParent tagParent in tagParents_ )
+		foreach( TagParent tagParent in sourceTagParents_ )
 		{
 			yield return tagParent;
 		}
@@ -90,7 +91,7 @@ public class TagList : MonoBehaviour, IEnumerable<TagParent>
 	{
 		get
 		{
-			foreach( TagParent tagParent in tagParents_ )
+			foreach( TagParent tagParent in sourceTagParents_ )
 			{
 				foreach( TaggedLine taggedLine in tagParent )
 				{
@@ -119,9 +120,19 @@ public class TagList : MonoBehaviour, IEnumerable<TagParent>
 
 	public TagParent InstantiateTagParent(string tag)
 	{
+		foreach( TagParent sourceTagParent in sourceTagParents_ )
+		{
+			if( sourceTagParent.Tag == tag )
+			{
+				sourceTagParent.gameObject.SetActive(true);
+				return sourceTagParent;
+			}
+		}
+
 		TagParent tagParent = heapManager_.Instantiate(this.transform);
 		tagParent.Initialize(tag);
-		tagParents_.Insert(GetTagOrderIndex(tag), tagParent);
+		sourceTagParents_.Insert(GetTagOrderIndex(tag, sourceTagParents_), tagParent);
+		tagParents_.Insert(GetTagOrderIndex(tag, tagParents_), tagParent);
 		UpdateLayoutElement();
 		return tagParent;
 	}
@@ -136,14 +147,14 @@ public class TagList : MonoBehaviour, IEnumerable<TagParent>
 		else return tagParent;
 	}
 
-	int GetTagOrderIndex(string tag)
+	int GetTagOrderIndex(string tag, List<TagParent> list)
 	{
 		if( tagOrder_.Contains(tag) )
 		{
 			int index = tagOrder_.IndexOf(tag);
-			for( int i = 0; i < tagParents_.Count; ++i )
+			for( int i = 0; i < list.Count; ++i )
 			{
-				int otherIndex = tagOrder_.IndexOf(tagParents_[i].Tag);
+				int otherIndex = tagOrder_.IndexOf(list[i].Tag);
 				if( index < otherIndex  )
 				{
 					// この要素よりは前にあってほしいタグなので、この直前に挿入する
@@ -152,7 +163,7 @@ public class TagList : MonoBehaviour, IEnumerable<TagParent>
 			}
 		}
 
-		return tagParents_.Count;
+		return list.Count;
 	}
 
 	void AddTagOrder(string tag, int index)
@@ -239,8 +250,6 @@ public class TagList : MonoBehaviour, IEnumerable<TagParent>
 		AnimManager.RemoveOtherAnim(scrollRect_);
 		AnimManager.AddAnim(scrollRect_, GameContext.Config.TagListWidth, ParamType.SizeDeltaX, AnimType.Time, 0.1f);
 		GameContext.Window.OnHeaderWidthChanged();
-
-		RemoveAllDones();
 	}
 
 	public void Close()
@@ -251,32 +260,30 @@ public class TagList : MonoBehaviour, IEnumerable<TagParent>
 		AnimManager.RemoveOtherAnim(scrollRect_);
 		AnimManager.AddAnim(scrollRect_, -1, ParamType.SizeDeltaX, AnimType.BounceOut, 0.2f);
 		GameContext.Window.OnHeaderWidthChanged();
-
-		RemoveAllDones();
-	}
-
-	void RemoveAllDones()
-	{
-		List<TagParent> removeList = new List<TagParent>(tagParents_);
-		foreach( TagParent parent in removeList )
-		{
-			parent.RemoveAllDones();
-		}
 	}
 
 	public void OnTagEmpty(TagParent tagParent)
 	{
 		tagParents_.Remove(tagParent);
+		sourceTagParents_.Remove(tagParent);
 		heapManager_.BackToHeap(tagParent);
 		UpdateLayoutElement();
 	}
 
-	public void OnActiveNoteChanged()
+	public void OnActiveNoteChanged(Note activeNote)
 	{
-		foreach( TaggedLine line in TaggedLines )
+		tagParents_.Clear();
+		foreach( TagParent tagParent in sourceTagParents_ )
 		{
-			line.OnActiveNoteChanged();
+			tagParent.OnActiveNoteChanged(activeNote);
+			bool isActive = ( tagParent.Count > 0 );
+			tagParent.gameObject.SetActive(isActive);
+			if( isActive )
+			{
+				tagParents_.Add(tagParent);
+			}
 		}
+		UpdateLayoutElement();
 	}
 
 	#endregion
@@ -305,6 +312,9 @@ public class TagList : MonoBehaviour, IEnumerable<TagParent>
 
 			if( index != desiredIndex )
 			{
+				TagParent oldDesiredIndexTagParent = tagParents_[desiredIndex];
+				sourceTagParents_.Remove(tagParent);
+				sourceTagParents_.Insert(sourceTagParents_.IndexOf(oldDesiredIndexTagParent), tagParent);
 				tagParents_.Remove(tagParent);
 				tagParents_.Insert(desiredIndex, tagParent);
 				int sign = (int)Mathf.Sign(desiredIndex - index);
@@ -524,7 +534,7 @@ public class TagList : MonoBehaviour, IEnumerable<TagParent>
 			}
 			writer.WriteLine(EndOrderTag);
 		}
-		foreach( TagParent tagParent in tagParents_ )
+		foreach( TagParent tagParent in sourceTagParents_ )
 		{
 			writer.WriteLine(String.Format("##{0}{1}{2}{3}", tagParent.Tag, (tagParent.IsFolded ? Line.FoldTag : ""), (tagParent.IsPinned ? PinnedTag : ""), (tagParent.IsRepeat ? RepeatTag : "")));
 			foreach( TaggedLine taggedLine in tagParent )

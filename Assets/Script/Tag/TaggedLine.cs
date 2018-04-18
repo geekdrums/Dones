@@ -173,17 +173,7 @@ public class TaggedLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragH
 	}
 
 	#endregion
-
-
-	#region events
-
-	public void OnActiveNoteChanged()
-	{
-		SetColor(GetTargetColor());
-	}
-
-	#endregion
-
+	
 
 	#region selection
 
@@ -256,14 +246,18 @@ public class TaggedLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragH
 		{
 			return GameContext.Config.DoneTextColor;
 		}
-		else if( BindedLine.Tree.OwnerNote.IsActive || GameContext.Window.MainTabGroup.ActiveNote is TreeNote == false )
+		else
 		{
 			return GameContext.Config.TextColor;
 		}
-		else
-		{
-			return GameContext.Config.TagSubTextColor;
-		}
+		//else if( BindedLine.Tree.OwnerNote.IsActive || GameContext.Window.MainTabGroup.ActiveNote is TreeNote == false )
+		//{
+		//	return GameContext.Config.TextColor;
+		//}
+		//else
+		//{
+		//	return GameContext.Config.TagSubTextColor;
+		//}
 	}
 
 	IEnumerator UpdateTextLengthCoroutine()

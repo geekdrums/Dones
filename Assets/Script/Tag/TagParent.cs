@@ -23,7 +23,7 @@ public class TagParent : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDra
 
 	#region params
 
-	public float Height { get { return isFolded_ ? 30 : 30 + GameContext.Config.TagLineHeight * (lines_.Count + doneLines_.Count); } }
+	public float Height { get { return isFolded_ ? 30 : 30 + GameContext.Config.TagLineHeight * lines_.Count; } }
 
 	public string Tag { get { return tag_; } }
 	string tag_;
@@ -88,8 +88,8 @@ public class TagParent : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDra
 	}
 	bool isRepeat_ = false;
 
+	List<TaggedLine> sourceLines_ = new List<TaggedLine>();
 	List<TaggedLine> lines_ = new List<TaggedLine>();
-	List<TaggedLine> doneLines_ = new List<TaggedLine>();
 	TaggedLine selectedLine_;
 	TagToggle tagToggle_;
 	int selectedIndex_ = -1;
@@ -104,7 +104,6 @@ public class TagParent : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDra
 	{
 		tag_ = tag;
 		lines_.Clear();
-		doneLines_.Clear();
 		selectedLine_ = null;
 		selectedIndex_ = -1;
 		GetComponentInChildren<Text>().text = "#" + tag_;
@@ -166,13 +165,11 @@ public class TagParent : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDra
 		bool alt = Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt);
 		bool ctrlOnly = ctrl && !alt && !shift;
 		
-		List<TaggedLine> list = selectedLine_.IsDone ? doneLines_ : lines_;
-
 		switch( key )
 		{
 		case KeyCode.Space:
 			selectedLine_.Done();
-			UpdateSelection(list);
+			UpdateSelection();
 			break;
 		case KeyCode.Backspace:
 		case KeyCode.Delete:
@@ -189,25 +186,20 @@ public class TagParent : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDra
 			break;
 		case KeyCode.DownArrow:
 			{
-				if( selectedIndex_ < list.Count - 1 )
+				if( selectedIndex_ < lines_.Count - 1 )
 				{
 					++selectedIndex_;
 					if( alt )
 					{
-						list.Remove(selectedLine_);
-						list.Insert(selectedIndex_, selectedLine_);
+						lines_.Remove(selectedLine_);
+						lines_.Insert(selectedIndex_, selectedLine_);
 						AnimManager.AddAnim(selectedLine_, GetTargetPosition(selectedLine_), ParamType.Position, AnimType.Time, GameContext.Config.AnimTime);
-						AnimManager.AddAnim(list[selectedIndex_ - 1], GetTargetPosition(list[selectedIndex_ - 1]), ParamType.Position, AnimType.Time, GameContext.Config.AnimTime);
+						AnimManager.AddAnim(lines_[selectedIndex_ - 1], GetTargetPosition(lines_[selectedIndex_ - 1]), ParamType.Position, AnimType.Time, GameContext.Config.AnimTime);
 					}
 					else
 					{
-						list[selectedIndex_].Select();
+						lines_[selectedIndex_].Select();
 					}
-				}
-				else if( selectedLine_.IsDone == false && doneLines_.Count > 0 && alt == false )
-				{
-					selectedIndex_ = 0;
-					doneLines_[0].Select();
 				}
 			}
 			break;
@@ -218,20 +210,15 @@ public class TagParent : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDra
 					--selectedIndex_;
 					if( alt )
 					{
-						list.Remove(selectedLine_);
-						list.Insert(selectedIndex_, selectedLine_);
+						lines_.Remove(selectedLine_);
+						lines_.Insert(selectedIndex_, selectedLine_);
 						AnimManager.AddAnim(selectedLine_, GetTargetPosition(selectedLine_), ParamType.Position, AnimType.Time, GameContext.Config.AnimTime);
-						AnimManager.AddAnim(list[selectedIndex_ + 1], GetTargetPosition(list[selectedIndex_ + 1]), ParamType.Position, AnimType.Time, GameContext.Config.AnimTime);
+						AnimManager.AddAnim(lines_[selectedIndex_ + 1], GetTargetPosition(lines_[selectedIndex_ + 1]), ParamType.Position, AnimType.Time, GameContext.Config.AnimTime);
 					}
 					else
 					{
-						list[selectedIndex_].Select();
+						lines_[selectedIndex_].Select();
 					}
-				}
-				else if( selectedLine_.IsDone && lines_.Count > 0 && alt == false )
-				{
-					selectedIndex_ = lines_.Count - 1;
-					lines_[lines_.Count - 1].Select();
 				}
 			}
 			break;
@@ -253,34 +240,18 @@ public class TagParent : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDra
 		TaggedLine taggedLine = heapManager_.Instantiate(LineParent.transform);
 
 		AnimManager.RemoveOtherAnim(taggedLine);
-
-		if( line.IsDone == false )
+		
+		if( index < 0 )
 		{
-			if( index < 0 )
-			{
-				index = lines_.Count;
-				lines_.Add(taggedLine);
-			}
-			else
-			{
-				lines_.Insert(index, taggedLine);
-			}
-			AnimLinesToTargetPosition(index, lines_.Count - 1);
-			AnimDoneLinesToTargetPosition(0, doneLines_.Count - 1);
+			index = lines_.Count;
+			lines_.Add(taggedLine);
+			sourceLines_.Add(taggedLine);
 		}
 		else
 		{
-			if( index < 0 )
-			{
-				index = doneLines_.Count;
-				doneLines_.Add(taggedLine);
-			}
-			else
-			{
-				doneLines_.Insert(index, taggedLine);
-			}
-			AnimDoneLinesToTargetPosition(index, doneLines_.Count - 1);
+			lines_.Insert(index, taggedLine);
 		}
+		AnimLinesToTargetPosition(index, lines_.Count - 1);
 
 		taggedLine.Bind(line);
 
@@ -296,14 +267,7 @@ public class TagParent : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDra
 
 	public TaggedLine FindBindedLine(Line line)
 	{
-		foreach( TaggedLine taggedLine in lines_ )
-		{
-			if( taggedLine.BindedLine == line )
-			{
-				return taggedLine;
-			}
-		}
-		foreach( TaggedLine taggedLine in doneLines_ )
+		foreach( TaggedLine taggedLine in sourceLines_ )
 		{
 			if( taggedLine.BindedLine == line )
 			{
@@ -321,6 +285,8 @@ public class TagParent : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDra
 			needSelectionUpdate = true;
 		}
 
+		sourceLines_.Remove(taggedLine);
+
 		int index = lines_.IndexOf(taggedLine);
 		if( index >= 0 )
 		{
@@ -332,18 +298,7 @@ public class TagParent : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDra
 		}
 		AnimLinesToTargetPosition(index, lines_.Count - 1);
 
-		index = doneLines_.IndexOf(taggedLine);
-		if( index >= 0 )
-		{
-			doneLines_.Remove(taggedLine);
-		}
-		else
-		{
-			index = 0;
-		}
-		AnimDoneLinesToTargetPosition(index, doneLines_.Count - 1);
-
-		if( isPinned_ || lines_.Count > 0 || doneLines_.Count > 0 )
+		if( isPinned_ || sourceLines_.Count > 0 )
 		{
 			float animTime = 0.2f;
 			float delayTime = 0.0f;
@@ -355,7 +310,7 @@ public class TagParent : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDra
 			
 			if( needSelectionUpdate )
 			{
-				UpdateSelection(taggedLine.BindedLine.IsDone ? doneLines_ : lines_);
+				UpdateSelection();
 			}
 		}
 		else
@@ -375,20 +330,6 @@ public class TagParent : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDra
 		}
 	}
 
-	public void SetLineIndex(TaggedLine taggedLine, int index)
-	{
-		if( lines_.Contains(taggedLine) && index < lines_.Count )
-		{
-			int oldIndex = lines_.IndexOf(taggedLine);
-			if( oldIndex != index )
-			{
-				lines_.Remove(taggedLine);
-				lines_.Insert(index, taggedLine);
-				AnimLinesToTargetPosition(index, oldIndex);
-			}
-		}
-	}
-
 	public int IndexOf(TaggedLine taggedLine)
 	{
 		if( lines_.Contains(taggedLine) )
@@ -398,7 +339,7 @@ public class TagParent : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDra
 		else return -1;
 	}
 
-	public int Count { get { return lines_.Count + doneLines_.Count; } }
+	public int Count { get { return lines_.Count; } }
 
 	#endregion
 
@@ -419,14 +360,10 @@ public class TagParent : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDra
 		{
 			selectedIndex_ = lines_.IndexOf(selectedLine_);
 		}
-		else if( doneLines_.Contains(taggedLine) )
-		{
-			selectedIndex_ = doneLines_.IndexOf(selectedLine_);
-		}
 		else
 		{
 			selectedIndex_ = -1;
-			Debug.LogError("couldn't find " + taggedLine.ToString() + " in any list.");
+			Debug.LogError("couldn't find " + taggedLine.ToString());
 		}
 	}
 
@@ -441,6 +378,7 @@ public class TagParent : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDra
 
 	public void OnDoneChanged(TaggedLine taggedLine)
 	{
+		/*
 		// move to target position
 		if( taggedLine.IsDone )
 		{
@@ -468,6 +406,7 @@ public class TagParent : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDra
 				taggedLine.transform.SetAsLastSibling();
 			}
 		}
+		*/
 	}
 
 	public void OnBeginDragLine(TaggedLine taggedLine)
@@ -494,6 +433,9 @@ public class TagParent : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDra
 				int desiredIndex = Mathf.Clamp((int)(currentY / GameContext.Config.TagLineHeight), 0, lines_.Count - 1);
 				if( index != desiredIndex )
 				{
+					TaggedLine oldDesiredIndexLine = lines_[desiredIndex];
+					sourceLines_.Remove(taggedLine);
+					sourceLines_.Insert(sourceLines_.IndexOf(oldDesiredIndexLine), taggedLine);
 					lines_.Remove(taggedLine);
 					lines_.Insert(desiredIndex, taggedLine);
 					int sign = (int)Mathf.Sign(desiredIndex - index);
@@ -537,6 +479,21 @@ public class TagParent : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDra
 		GameContext.Window.TagMenu.Show(this);
 	}
 
+	public void OnActiveNoteChanged(Note activeNote)
+	{
+		lines_.Clear();
+		foreach( TaggedLine line in sourceLines_ )
+		{
+			bool isActive = ( activeNote is DiaryNote || line.BindedLine.Tree.OwnerNote == activeNote );
+			line.gameObject.SetActive(isActive);
+			if( isActive )
+			{
+				lines_.Add(line);
+			}
+		}
+		AnimLinesToTargetPosition(0, lines_.Count - 1);
+	}
+
 	#endregion
 
 
@@ -569,10 +526,6 @@ public class TagParent : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDra
 		{
 			yield return line;
 		}
-		foreach( TaggedLine line in doneLines_ )
-		{
-			yield return line;
-		}
 	}
 	IEnumerator IEnumerable.GetEnumerator()
 	{
@@ -581,57 +534,24 @@ public class TagParent : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDra
 
 	Vector3 GetTargetPosition(TaggedLine taggedLine)
 	{
-		if( taggedLine.IsDone )
+		return Vector3.down * GameContext.Config.TagLineHeight * lines_.IndexOf(taggedLine);
+	}
+
+	void UpdateSelection()
+	{
+		if( selectedIndex_ < lines_.Count )
 		{
-			return Vector3.down * GameContext.Config.TagLineHeight * (lines_.Count + doneLines_.IndexOf(taggedLine));
+			lines_[selectedIndex_].Select();
+		}
+		else if( lines_.Count > 0 )
+		{
+			lines_[lines_.Count - 1].Select();
+			selectedIndex_ = lines_.Count - 1;
 		}
 		else
 		{
-			return Vector3.down * GameContext.Config.TagLineHeight * lines_.IndexOf(taggedLine);
-		}
-	}
-
-	void UpdateSelection(List<TaggedLine> list)
-	{
-		if( selectedIndex_ < list.Count )
-		{
-			list[selectedIndex_].Select();
-		}
-		else if( lines_ == list )
-		{
-			if( lines_.Count > 0 )
-			{
-				lines_[lines_.Count - 1].Select();
-				selectedIndex_ = lines_.Count - 1;
-			}
-			else if( doneLines_.Count > 0 )
-			{
-				doneLines_[0].Select();
-				selectedIndex_ = 0;
-			}
-			else
-			{
-				selectedLine_ = null;
-				selectedIndex_ = -1;
-			}
-		}
-		else// if( lines_ == doneLines_ )
-		{
-			if( doneLines_.Count > 0 )
-			{
-				doneLines_[0].Select();
-				selectedIndex_ = 0;
-			}
-			else if( lines_.Count > 0 )
-			{
-				lines_[lines_.Count - 1].Select();
-				selectedIndex_ = lines_.Count - 1;
-			}
-			else
-			{
-				selectedLine_ = null;
-				selectedIndex_ = -1;
-			}
+			selectedLine_ = null;
+			selectedIndex_ = -1;
 		}
 	}
 
@@ -657,39 +577,6 @@ public class TagParent : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDra
 		{
 			AnimManager.RemoveOtherAnim(lines_[i], ParamType.Position);
 			AnimManager.AddAnim(lines_[i], GetTargetPosition(lines_[i]), ParamType.Position, AnimType.Time, GameContext.Config.AnimTime);
-		}
-	}
-
-	void AnimDoneLinesToTargetPosition(int startIndex, int endIndex)
-	{
-		if( startIndex > endIndex )
-		{
-			int start = endIndex;
-			endIndex = startIndex;
-			startIndex = start;
-		}
-		if( startIndex < 0 || doneLines_.Count <= endIndex )
-		{
-			return;
-		}
-		for( int i = startIndex; i <= endIndex; ++i )
-		{
-			AnimManager.RemoveOtherAnim(doneLines_[i], ParamType.Position);
-			AnimManager.AddAnim(doneLines_[i], GetTargetPosition(doneLines_[i]), ParamType.Position, AnimType.Time, GameContext.Config.AnimTime);
-		}
-	}
-
-	public void RemoveAllDones()
-	{
-		if( IsRepeat )
-		{
-			return;
-		}
-
-		List<TaggedLine> removeLines = new List<TaggedLine>(doneLines_);
-		foreach( TaggedLine taggedline in removeLines )
-		{
-			RemoveTaggedLine(taggedline);
 		}
 	}
 
