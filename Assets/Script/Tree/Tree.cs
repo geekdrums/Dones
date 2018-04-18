@@ -32,6 +32,7 @@ public class Tree : MonoBehaviour
 
 	// input states
 	protected bool wasDeleteKeyConsumed_ = false;
+	protected bool wasCtrlDPushed_ = false;
 	protected List<IDisposable> throttleInputSubscriptions_ = new List<IDisposable>();
 
 	// layout
@@ -182,6 +183,7 @@ public class Tree : MonoBehaviour
 			else if( Input.GetKeyDown(KeyCode.D) )
 			{
 				OnCtrlDInput();
+				wasCtrlDPushed_ = true;
 			}
 #if UNITY_EDITOR
 			else if( Input.GetKeyDown(KeyCode.G) )
@@ -228,6 +230,11 @@ public class Tree : MonoBehaviour
 			{
 				OnTabInput();
 			}
+		}
+
+		if( wasCtrlDPushed_ && Input.anyKeyDown && ctrl == false && (ctrl && Input.GetKeyDown(KeyCode.D)) == false )
+		{
+			wasCtrlDPushed_ = false;
 		}
 
 		// mouse input
@@ -1337,19 +1344,50 @@ public class Tree : MonoBehaviour
 
 		string newtag = GameContext.TagList.Count > 0 ? GameContext.TagList[0].Tag : GameContext.Config.DefaultTag;
 
+		// Ctrl+Dを連続で押している時はその次のタグに変更する
 		string existTag = null;
-		if( focusedLine_.Tags.Count > 0 )
+		if( wasCtrlDPushed_ && focusedLine_.Tags.Count > 0 )
 		{
 			existTag = focusedLine_.Tags[focusedLine_.Tags.Count - 1];
+			int existIndex = -1;
 			for( int i=0; i< GameContext.TagList.Count; ++i )
 			{
 				if( GameContext.TagList[i].Tag == existTag )
 				{
-					newtag = GameContext.TagList[(i + (Input.GetKey(KeyCode.LeftShift) ? GameContext.TagList.Count - 1 : 1)) % GameContext.TagList.Count].Tag;
+					existIndex = i;
 					break;
 				}
 			}
+
+			if( existIndex >= 0 )
+			{
+				int sign = (Input.GetKey(KeyCode.LeftShift) ? GameContext.TagList.Count - 1 : 1);
+				int newTagIndex = (existIndex + sign) % GameContext.TagList.Count;
+				bool foundNewTag = false;
+				// 次のタグが万が一既に含まれていた場合はその次のタグ……と探していく。
+				while( newTagIndex != existIndex )
+				{
+					string newtagCandid = GameContext.TagList[newTagIndex].Tag;
+					if( focusedLine_.Tags.Contains(newtagCandid) == false )
+					{
+						foundNewTag = true;
+						newtag = newtagCandid;
+						break;
+					}
+					else
+					{
+						newTagIndex += sign;
+						newTagIndex %= GameContext.TagList.Count;
+					}
+				}
+				// 変更すべきタグが見つからなかったのでナシ
+				if( foundNewTag == false )
+				{
+					existTag = null;
+				}
+			}
 		}
+
 		actionManager_.StartChain();
 		foreach( Line line in GetSelectedOrFocusedLines() )
 		{

@@ -471,7 +471,10 @@ public class TagParent : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDra
 
 	public void OnLineDisabled(TaggedLine line)
 	{
-		heapManager_.BackToHeap(line);
+		if( sourceLines_.Contains(line) == false )
+		{
+			heapManager_.BackToHeap(line);
+		}
 	}
 
 	public void OnMenuButtonDown()
