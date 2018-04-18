@@ -125,6 +125,8 @@ public class TagList : MonoBehaviour, IEnumerable<TagParent>
 			if( sourceTagParent.Tag == tag )
 			{
 				sourceTagParent.gameObject.SetActive(true);
+				tagParents_.Insert(GetTagOrderIndex(tag, tagParents_), sourceTagParent);
+				UpdateLayoutElement();
 				return sourceTagParent;
 			}
 		}
