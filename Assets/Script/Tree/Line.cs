@@ -640,7 +640,7 @@ public class Line : IEnumerable<Line>
 			}
 		}
 
-		child.UpdateBindState();
+		child.FindBindingField();
 		child.OnInserted();
 	}
 
@@ -689,19 +689,37 @@ public class Line : IEnumerable<Line>
 		}
 	}
 
-	public void UpdateBindState()
+	public void FindBindingField()
 	{
 		if( IsVisible == false )
 		{
 			return;
 		}
 
+
+		switch( BindState )
+		{
+		case EBindState.Unbind:
+			// Fieldがまだ無い、またはヒープに返して他のLineに使われた
+			Bind(Tree.FindBindingField());
+			break;
+		case EBindState.WeakBind:
+			// ヒープに返したが、他のものには使われていなかった
+			ReBind();
+			break;
+		case EBindState.Bind:
+			// 適切なFieldをもう持っている
+			if( Binding.transform.parent != Parent.Binding.transform )
+			{
+				Binding.transform.SetParent(Parent.Binding.transform);
+			}
+			Binding.transform.localPosition = CalcTargetPosition();
+			break;
+		}
+
+		/*
 		if( Tree == null )
 		{
-			foreach( Line child in this )
-			{
-				child.UpdateBindState();
-			}
 		}
 		else if( Field == null || Field.BindedLine != this )
 		{
@@ -710,11 +728,7 @@ public class Line : IEnumerable<Line>
 				Debug.Log(String.Format("{0} | state is not Unbind, is {1}", Text, BindState.ToString()));
 			}
 			// Fieldがまだ無い、またはヒープに返して他のLineに使われた
-			Tree.Bind(this);
-			foreach( Line child in this )
-			{
-				child.UpdateBindState();
-			}
+			Bind(Tree.FindBindingField());
 		}
 		else if( Field.BindedLine == this && Field.gameObject.activeSelf == false )
 		{
@@ -724,10 +738,6 @@ public class Line : IEnumerable<Line>
 			}
 			// ヒープに返したが、他のものには使われていなかった
 			ReBind();
-			foreach( Line child in this )
-			{
-				child.UpdateBindState();
-			}
 		}
 		else // Field != null && Field.BindedLine == this && && Field.gameObject.activeSelf
 		{
@@ -741,6 +751,12 @@ public class Line : IEnumerable<Line>
 				Binding.transform.SetParent(Parent.Binding.transform, worldPositionStays: true);
 			}
 			AdjustLayout();
+		}
+		*/
+
+		foreach( Line child in this )
+		{
+			child.FindBindingField();
 		}
 	}
 
@@ -939,7 +955,7 @@ public class Line : IEnumerable<Line>
 		}
 	}
 
-	public void AdjustLayoutInChildren()
+	public void AdjustLayoutInChildren(bool withAnim = false)
 	{
 		if( Count > 0 )
 		{
@@ -949,7 +965,14 @@ public class Line : IEnumerable<Line>
 				if( children_[i].Binding != null )
 				{
 					children_[i].TargetPosition = target;
-					AnimManager.AddAnim(children_[i].Binding, target, ParamType.Position, AnimType.Time, GameContext.Config.AnimTime);
+					if( withAnim )
+					{
+						AnimManager.AddAnim(children_[i].Binding, target, ParamType.Position, AnimType.Time, GameContext.Config.AnimTime);
+					}
+					else
+					{
+						children_[i].Binding.transform.localPosition = target;
+					}
 				}
 				target.y -= (1 + children_[i].VisibleChildCount) * GameContext.Config.HeightPerLine;
 			}
@@ -958,6 +981,20 @@ public class Line : IEnumerable<Line>
 
 	public void UpdateFoldLayout()
 	{
+		bool isChildVisible = isFolded_ == false || IsTitleLine;
+		foreach( Line line in children_ )
+		{
+			if( isChildVisible && line.Field == null )
+			{
+				line.FindBindingField();
+			}
+
+			if( line.Field != null )
+			{
+				line.Field.gameObject.SetActive(isChildVisible);
+			}
+		}
+		/*
 		if( isFolded_ )
 		{
 			foreach( Line line in children_ )
@@ -973,9 +1010,10 @@ public class Line : IEnumerable<Line>
 		{
 			foreach( Line line in children_ )
 			{
-				line.UpdateBindState();
+				line.FindBindingField();
 			}
 		}
+		*/
 	}
 
 	protected Vector3 CalcTargetPosition(Direction dir = Direction.XY)
@@ -1011,6 +1049,18 @@ public class Line : IEnumerable<Line>
 				return 0;
 			}
 			return parent_.Level + 1;
+		}
+	}
+
+	public int LevelFromRoot
+	{
+		get
+		{
+			if( parent_.parent_ == null )
+			{
+				return 0;
+			}
+			return parent_.LevelFromRoot + 1;
 		}
 	}
 
@@ -1053,7 +1103,7 @@ public class Line : IEnumerable<Line>
 		}
 	}
 
-	public bool HasVisibleChild { get { return IsFolded == false && children_.Count > 0; } }
+	public bool HasVisibleChild { get { return (IsFolded == false || IsTitleLine) && children_.Count > 0; } }
 
 	public int VisibleChildCount
 	{
@@ -1388,9 +1438,9 @@ public class Line : IEnumerable<Line>
 	public static string CommentTag = "> ";
 	public static char[] spaces = new char[] { ' ' };
 
-	public void AppendStringTo(StringBuilder builder, bool appendTag = false, int ignoreLevel = 0)
+	public void AppendStringTo(StringBuilder builder, bool appendTag = false, int ignoreLevel = 0, bool fromRoot = false)
 	{
-		int level = Level;
+		int level = fromRoot ? LevelFromRoot : Level;
 		for( int i = 0; i < level - ignoreLevel; ++i )
 		{
 			builder.Append(TabString);

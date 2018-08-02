@@ -344,20 +344,6 @@ public class Window : MonoBehaviour
 
 	#region settings save / load
 
-	enum Settings
-	{
-		Tab,
-		ScreenSize,
-		IsTagListOpened,
-		Count
-	}
-
-	static string[] SettingsTags = new string[(int)Settings.Count] {
-		"[tab list]",
-		"[screen]",
-		"[tag list]",
-	};
-
 	[XmlRoot("setting")]
 	public class SettingXML
 	{
@@ -416,62 +402,6 @@ public class Window : MonoBehaviour
 		{
 			GameContext.TagList.Close();
 		}
-
-		//Settings setting = Settings.Tab;
-		//while( (text = reader.ReadLine()) != null )
-		//{
-		//	foreach(Settings set in (Settings[])Enum.GetValues(typeof(Settings)))
-		//	{
-		//		if( set == Settings.Count ) break;
-		//		else if( SettingsTags[(int)set] == text )
-		//		{
-		//			setting = set;
-		//			text = reader.ReadLine();
-		//			break;
-		//		}
-		//	}
-		//	try
-		//	{
-		//		switch( setting )
-		//		{
-		//		case Settings.Tab:
-		//			break;
-		//		case Settings.LogTab:
-		//			string[] tabparams = text.Split(',');
-		//			foreach( TreeNote treeNote in MainTabGroup.TreeNotes )
-		//			{
-		//				if( treeNote.Tree.TitleText == tabparams[0] )
-		//				{
-		//					treeNote.LogNote.OpenRatio = float.Parse(tabparams[2].Remove(0, " ratio=".Length));
-		//					treeNote.LogNote.IsOpended = tabparams[1].EndsWith("open");
-		//					break;
-		//				}
-		//			}
-		//			UpdateVerticalLayout();
-		//			break;
-		//		case Settings.ScreenSize:
-		//			string[] size = text.Split(',');
-		//			UnityEngine.Screen.SetResolution(int.Parse(size[0]), int.Parse(size[1]), size[2] == "true");
-		//			break;
-		//		case Settings.IsTagListOpened:
-		//			if( text == "open" )
-		//			{
-		//				GameContext.TagList.Open();
-		//			}
-		//			else if( text == "close" )
-		//			{
-		//				GameContext.TagList.Close();
-		//			}
-		//			break;
-		//		}
-		//	}
-		//	catch(Exception e)
-		//	{
-		//		print(e.Message);
-		//		print(e.StackTrace);
-		//	}
-		//}
-		//reader.Close();
 	}
 
 	void SaveSettings()

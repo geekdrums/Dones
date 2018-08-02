@@ -89,7 +89,7 @@ public class Note : MonoBehaviour
 	
 	public void CheckScrollbarEnabled()
 	{
-		if( scrollRect_.verticalScrollbar.isActiveAndEnabled == false )
+		if( scrollRect_.verticalScrollbar.enabled == false )
 		{
 			scrollRect_.verticalScrollbar.value = 1.0f;
 		}

@@ -136,7 +136,7 @@ public class Tree : MonoBehaviour
 		actionManager_.Executed += this.actionManager__Executed;
 
 		rootLineObject_ = new GameObject("RootLine");
-		rootLineObject_.transform.SetParent(this.transform);
+		rootLineObject_.transform.SetParent(this.transform, worldPositionStays: false);
 		rootLineObject_.SetActive(false);
 
 		heapParentObject_ = new GameObject("LineHeap");
@@ -1692,7 +1692,7 @@ public class Tree : MonoBehaviour
 
 	#region events
 	
-	public void Bind(Line line)
+	public GameObject FindBindingField()
 	{
 		LineField field = heapManager_.Instantiate(heapParentObject_.transform);
 		field.Initialize();
@@ -1704,7 +1704,7 @@ public class Tree : MonoBehaviour
 			}
 			field.BindedLine = null;
 		}
-		line.Bind(field.gameObject);
+		return field.gameObject;
 	}
 
 	public void OnReBind(Line line)
@@ -1964,7 +1964,7 @@ public class Tree : MonoBehaviour
 		StringBuilder builder = new StringBuilder();
 		foreach( Line line in rootLine_.GetAllChildren() )
 		{
-			line.AppendStringTo(builder, appendTag: true);
+			line.AppendStringTo(builder, appendTag: true, fromRoot: true);
 		}
 
 		StreamWriter writer = new StreamWriter(file_.FullName, append: false);
@@ -2207,7 +2207,7 @@ public class Tree : MonoBehaviour
 					unbidedLine = null;
 					break;
 				case Line.EBindState.Unbind:
-					Bind(unbidedLine);
+					unbidedLine.Bind(FindBindingField());
 					unbidedLine = unbidedLine.Parent;
 					break;
 				case Line.EBindState.WeakBind:
@@ -2217,26 +2217,23 @@ public class Tree : MonoBehaviour
 				}
 			}
 		}
-
-		SuspendLayout();
+		
+		Line oldTitleLine = titleLine_;
+		GameObject oldTitleLineObject = titleLineObject_;
+		titleLine_ = line;
+		titleLineObject_ = titleLine_ != null ? (titleLine_.Binding == this.gameObject ? rootLineObject_ : titleLine_.Binding) : null;
 
 		// 前のTitleLine以下を元のツリーに戻す
-		if( titleLine_ != null && titleLineObject_ != null )
+		if( oldTitleLine != null && oldTitleLineObject != null )
 		{
-			titleLine_.Bind(titleLineObject_);
-			foreach( Line child in titleLine_ )
+			oldTitleLine.Bind(oldTitleLineObject);
+			foreach( Line child in oldTitleLine )
 			{
-				child.ReBind();
+				child.Field.transform.SetParent(oldTitleLineObject.transform);
 			}
-			if( titleLine_.Count > 0 )
-			{
-				RequestLayout(titleLine_[0]);
-			}
-			titleLine_.UpdateFoldLayout();
+			oldTitleLine.UpdateFoldLayout();
+			oldTitleLine.AdjustLayoutInChildren();
 		}
-
-		titleLine_ = line;
-		titleLineObject_ = titleLine_ != null ? titleLine_.Binding : null;
 
 		// 新しいTitleLine以下をTreeの下に移動する
 		if( titleLine_ != null && titleLineObject_ != null )
@@ -2244,21 +2241,21 @@ public class Tree : MonoBehaviour
 			titleLine_.Bind(this.gameObject);
 			foreach( Line child in titleLine_ )
 			{
-				child.UpdateBindState();
-				child.ReBind();
+				if( child.Field == null )
+				{
+					child.FindBindingField();
+				}
+				child.Field.transform.SetParent(this.gameObject.transform);
 			}
-
-			if( titleLine_.Count == 0 )
-			{
-				titleLine_.Add(new Line(""));
-			}
+			titleLine_.UpdateFoldLayout();
+			titleLine_.AdjustLayoutInChildren();
 		}
 
 		focusedLine_ = null;
 		selectionStartLine_ = selectionEndLine_ = null;
 		selectedLines_.Clear();
 
-		ResumeLayout();
+		ownerNote_.UpdateLayoutElement();
 	}
 
 	#endregion

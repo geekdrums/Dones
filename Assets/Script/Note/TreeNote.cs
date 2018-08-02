@@ -93,9 +93,8 @@ public class TreeNote : Note
 	
 	public override void SetNoteViewParam(NoteViewParam param)
 	{
-		base.SetNoteViewParam(param);
 		Tree.SetPath(param.Path);
-
+		scrollRect_.verticalScrollbar.value = param.TargetScrollValue;
 		LogNote.SetNoteViewParam(param);
 	}
 
