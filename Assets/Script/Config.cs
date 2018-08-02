@@ -35,6 +35,7 @@ public class Config : MonoBehaviour
 	public float TagListWidth = 200;
 	public float TagCommaInterval = 58;
 	public float LogNoteHeaderMargin = 30;
+	public float LogNoteSetPathCoroutineInterval = 0.03f;
 
 	public Color ThemeColor;
 	public Color AccentColor;

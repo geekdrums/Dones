@@ -272,12 +272,12 @@ public class TagList : MonoBehaviour, IEnumerable<TagParent>
 		UpdateLayoutElement();
 	}
 
-	public void OnActiveNoteChanged(Note activeNote)
+	public void OnTreePathChanged(Line titleLine)
 	{
 		tagParents_.Clear();
 		foreach( TagParent tagParent in sourceTagParents_ )
 		{
-			tagParent.OnActiveNoteChanged(activeNote);
+			tagParent.OnTreePathChanged(titleLine);
 			bool isActive = ( tagParent.Count > 0 );
 			tagParent.gameObject.SetActive(isActive);
 			if( isActive )

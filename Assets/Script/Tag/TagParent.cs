@@ -482,16 +482,16 @@ public class TagParent : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDra
 		GameContext.Window.TagMenu.Show(this);
 	}
 
-	public void OnActiveNoteChanged(Note activeNote)
+	public void OnTreePathChanged(Line titleLine)
 	{
 		lines_.Clear();
-		foreach( TaggedLine line in sourceLines_ )
+		foreach( TaggedLine taggedLine in sourceLines_ )
 		{
-			bool isActive = ( activeNote is DiaryNote || line.BindedLine.Tree.OwnerNote == activeNote );
-			line.gameObject.SetActive(isActive);
+			bool isActive = titleLine == null || taggedLine.BindedLine.IsChildOf(titleLine);
+			taggedLine.gameObject.SetActive(isActive);
 			if( isActive )
 			{
-				lines_.Add(line);
+				lines_.Add(taggedLine);
 			}
 		}
 		AnimLinesToTargetPosition(0, lines_.Count - 1);

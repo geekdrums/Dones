@@ -41,24 +41,7 @@ public class Line : IEnumerable<Line>
 			{
 				isFolded_ = value;
 
-				if( isFolded_ )
-				{
-					foreach( Line line in children_ )
-					{
-						line.BackToHeap();
-						foreach( Line child in line.GetVisibleChildren() )
-						{
-							child.BackToHeap();
-						}
-					}
-				}
-				else
-				{
-					foreach( Line line in children_ )
-					{
-						line.OnFoundParent();
-					}
-				}
+				UpdateFoldLayout();
 				if( Toggle != null )
 				{
 					Toggle.SetFold(IsFolded);
@@ -549,7 +532,7 @@ public class Line : IEnumerable<Line>
 			});
 			Toggle.SetFold(IsFolded);
 
-			if( parent_ != null && parent_.IsFolded )
+			if( parent_ != null && parent_.IsFolded && parent_.IsTitleLine == false )
 			{
 				Binding.SetActive(false);
 			}
@@ -562,8 +545,11 @@ public class Line : IEnumerable<Line>
 
 	public void ReBind()
 	{
-		Tree.OnReBind(this);
-		Bind(Binding);
+		if( Tree != null && Binding != null )
+		{
+			Tree.OnReBind(this);
+			Bind(Binding);
+		}
 	}
 
 	public void UnBind()
@@ -654,38 +640,45 @@ public class Line : IEnumerable<Line>
 			}
 		}
 
-		child.OnFoundParent();
+		child.UpdateBindState();
+		child.OnInserted();
+	}
 
-		if( child.Tree is LogTree == false )
+	public void OnInserted()
+	{
+		if( Tree == null || Tree is LogTree )
 		{
-			foreach( string tag in child.Tags )
-			{
-				bool add = (child.IsDone == false);
-				TagParent tagParent = GameContext.TagList.GetTagParent(tag);
-				if( tagParent == null )
-				{
-					// Doneしてないタグなら生成する
-					if( add )
-						tagParent = GameContext.TagList.InstantiateTagParent(tag);
-				}
-				else
-				{
-					// DoneしててもRepeatなら追加してよい
-					add |= tagParent.IsRepeat;
-				}
-				add &= tagParent != null && tagParent.FindBindedLine(child) == null;
-				if( add )
-				{
-					tagParent.InstantiateTaggedLine(child);
-				}
-			}
+			return;
+		}
 
-			if( child.Field != null )
+		foreach( string tag in Tags )
+		{
+			bool add = (IsDone == false);
+			TagParent tagParent = GameContext.TagList.GetTagParent(tag);
+			if( tagParent == null )
 			{
-				child.Field.SetHashTags(child.tags_);
+				// Doneしてないタグなら生成する
+				if( add )
+					tagParent = GameContext.TagList.InstantiateTagParent(tag);
+			}
+			else
+			{
+				// DoneしててもRepeatなら追加してよい
+				add |= tagParent.IsRepeat;
+			}
+			add &= tagParent != null && tagParent.FindBindedLine(this) == null;
+			if( add )
+			{
+				tagParent.InstantiateTaggedLine(this);
 			}
 		}
+
+		if( Field != null )
+		{
+			Field.SetHashTags(tags_);
+		}
 	}
+
 	public void Remove(Line child)
 	{
 		children_.Remove(child);
@@ -696,14 +689,21 @@ public class Line : IEnumerable<Line>
 		}
 	}
 
-	protected void OnFoundParent()
+	public void UpdateBindState()
 	{
 		if( IsVisible == false )
 		{
 			return;
 		}
 
-		if( Field == null || Field.BindedLine != this )
+		if( Tree == null )
+		{
+			foreach( Line child in this )
+			{
+				child.UpdateBindState();
+			}
+		}
+		else if( Field == null || Field.BindedLine != this )
 		{
 			if( BindState != EBindState.Unbind )
 			{
@@ -711,9 +711,9 @@ public class Line : IEnumerable<Line>
 			}
 			// Fieldがまだ無い、またはヒープに返して他のLineに使われた
 			Tree.Bind(this);
-			foreach( Line child in this.GetAllChildren() )
+			foreach( Line child in this )
 			{
-				child.OnFoundParent();
+				child.UpdateBindState();
 			}
 		}
 		else if( Field.BindedLine == this && Field.gameObject.activeSelf == false )
@@ -724,9 +724,9 @@ public class Line : IEnumerable<Line>
 			}
 			// ヒープに返したが、他のものには使われていなかった
 			ReBind();
-			foreach( Line child in this.GetAllChildren() )
+			foreach( Line child in this )
 			{
-				child.OnFoundParent();
+				child.UpdateBindState();
 			}
 		}
 		else // Field != null && Field.BindedLine == this && && Field.gameObject.activeSelf
@@ -758,10 +758,35 @@ public class Line : IEnumerable<Line>
 				}
 			}
 		}
-		foreach(Line child in this.GetAllChildren())
+		foreach( Line child in this )
 		{
 			child.OnLostParent();
 		}
+	}
+
+	public TreePath GetTreePath()
+	{
+		List<string> path = new List<string>();
+		Line line = this;
+		while( line.parent_ != null )
+		{
+			path.Insert(0, line.TextWithoutHashTags);
+			line = line.parent_;
+		}
+		return new TreePath(path);
+	}
+
+	public bool IsChildOf(Line line)
+	{
+		Line parent = parent_;
+		while( parent != null )
+		{
+			if( parent == line )
+				return true;
+
+			parent = parent.parent_;
+		}
+		return false;
 	}
 
 	#endregion
@@ -894,7 +919,7 @@ public class Line : IEnumerable<Line>
 			}
 		}
 
-		if( parent_ != null )
+		if( IsTitleLine == false )
 		{
 			parent_.AdjustLayoutRecursive(Index + 1, predToBreak);
 		}
@@ -931,6 +956,28 @@ public class Line : IEnumerable<Line>
 		}
 	}
 
+	public void UpdateFoldLayout()
+	{
+		if( isFolded_ )
+		{
+			foreach( Line line in children_ )
+			{
+				line.BackToHeap();
+				foreach( Line child in line.GetVisibleChildren() )
+				{
+					child.BackToHeap();
+				}
+			}
+		}
+		else
+		{
+			foreach( Line line in children_ )
+			{
+				line.UpdateBindState();
+			}
+		}
+	}
+
 	protected Vector3 CalcTargetPosition(Direction dir = Direction.XY)
 	{
 		switch(dir)
@@ -953,16 +1000,17 @@ public class Line : IEnumerable<Line>
 
 	#region Properties
 	
+	public bool IsTitleLine { get { return parent_ == null || (Tree != null && this == Tree.TitleLine); } }
+
 	public int Level
 	{
 		get
 		{
-			int level = 0;
-			if( parent_ != null && parent_.parent_ != null )
+			if( parent_.IsTitleLine )
 			{
-				level = parent_.Level + 1;
+				return 0;
 			}
-			return level;
+			return parent_.Level + 1;
 		}
 	}
 
@@ -971,7 +1019,7 @@ public class Line : IEnumerable<Line>
 		get
 		{
 			Line parent = parent_;
-			while( parent != null )
+			while( parent != null && parent.IsTitleLine == false )
 			{
 				if( parent.IsFolded )
 				{
@@ -988,7 +1036,7 @@ public class Line : IEnumerable<Line>
 				Tree.ActionManager.StartChain();
 				Line parent = parent_;
 				List<Line> foldedLines = new List<Line>();
-				while( parent != null )
+				while( parent.IsTitleLine == false )
 				{
 					if( parent.IsFolded )
 					{
@@ -1033,10 +1081,10 @@ public class Line : IEnumerable<Line>
 			int index = 0;
 			if( parent_ != null )
 			{
-				if( parent_.IsFolded == false )
+				if( parent_.IsFolded == false || parent_.IsTitleLine )
 				{
 					int indexInParent = Index;
-					index += indexInParent + (parent_.parent_ == null ? 0 : 1);
+					index += indexInParent + (parent_.IsTitleLine ? 0 : 1);
 					for( int i = 0; i < indexInParent; ++i )
 					{
 						index += parent_[i].VisibleChildCount;
@@ -1052,7 +1100,7 @@ public class Line : IEnumerable<Line>
 		get
 		{
 			int index = 0;
-			if( parent_ != null )
+			if( IsTitleLine == false )
 			{
 				index = parent_.IndexInTree + IndexInLocalTree;
 			}
@@ -1072,7 +1120,7 @@ public class Line : IEnumerable<Line>
 			{
 				Line parent = parent_;
 				Line child = this;
-				while( parent != null )
+				while( child.IsTitleLine == false )
 				{
 					if( parent.Count > child.Index + 1 )
 					{
@@ -1090,7 +1138,7 @@ public class Line : IEnumerable<Line>
 	{
 		get
 		{
-			if( parent_ != null )
+			if( IsTitleLine == false )
 			{
 				if( parent_.children_[0] != this )
 				{
@@ -1122,7 +1170,7 @@ public class Line : IEnumerable<Line>
 	{
 		get
 		{
-			if( parent_ != null )
+			if( parent_ != null && parent_.IsTitleLine == false )
 			{
 				return parent_.NextSiblingOrUnkleLine;
 			}
@@ -1172,7 +1220,7 @@ public class Line : IEnumerable<Line>
 	{
 		get
 		{
-			if( parent_.parent_ != null ) return TargetPosition + parent_.TargetAbsolutePosition;
+			if( parent_.IsTitleLine == false ) return TargetPosition + parent_.TargetAbsolutePosition;
 			else if( Field != null ) return TargetPosition + Field.transform.parent.position;
 			else return TargetPosition;
 		}
@@ -1236,6 +1284,13 @@ public class Line : IEnumerable<Line>
 			string text = text_;
 			foreach( string tag in tags_ )
 			{
+#if UNITY_EDITOR
+				if( text.Contains(tag) == false )
+				{
+					Debug.Log(String.Format("[{0}] does not contains #{1}", text, tag));
+					return text;
+				}
+#endif
 				text = text.Remove(text.LastIndexOf(tag) - 2, tag.Length + 2);
 			}
 			return text;
@@ -1510,19 +1565,19 @@ public class Line : IEnumerable<Line>
 
 	public Line Clone(bool removeHashTags = true)
 	{
-		Line line = new Line(text_);
+		Line line = null;
+		if( removeHashTags )
+		{
+			line = new Line(TextWithoutHashTags);
+		}
+		else
+		{
+			line = new Line(text_);
+		}
 		line.isDone_ = isDone_;
 		line.isFolded_ = isFolded_;
 		line.isLinkText_ = isLinkText_;
 		line.isComment_ = isComment_;
-		if( removeHashTags )
-		{
-			line.text_ = TextWithoutHashTags;
-		}
-		else
-		{
-			line.tags_ = new List<string>(tags_);
-		}
 		line.isClone_ = true;
 		return line;
 	}

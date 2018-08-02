@@ -22,6 +22,7 @@ public class LogTree : Tree
 	public DateTime Date { get { return date_; } }
 	DateTime date_;
 
+	public LayoutElement Layout { get { return layout_; } }
 	LayoutElement layout_;
 	ContentSizeFitter contentSizeFitter_;
 
@@ -36,6 +37,13 @@ public class LogTree : Tree
 		if( rootLine_.Count == 1 && rootLine_[0].Text == "" )
 		{
 			rootLine_.Remove(rootLine_[0]);
+		}
+
+		bool needSetPath = false;
+		if( titleLine_ == null )
+		{
+			needSetPath = true;
+			SetRootPath();
 		}
 
 		// clone & stack parents
@@ -98,6 +106,11 @@ public class LogTree : Tree
 		RequestLayout(addParent.NextSiblingOrUnkleLine);
 		ResumeLayout();
 		IsEdited = true;
+		if( needSetPath )
+		{
+			SetPath(path_);
+			GetComponentInParent<DateUI>().UpdateLayout();
+		}
 	}
 	
 	void AddLogChildRecursive(Line original, Line cloneParent)
@@ -234,7 +247,7 @@ public class LogTree : Tree
 
 	protected override void OnOverflowArrowInput(KeyCode key)
 	{
-		(ownerNote_ as DiaryNoteBase).OnOverflowArrowInput(this, key);
+		(ownerNote_ as LogNote).OnOverflowArrowInput(this, key);
 	}
 
 	protected override void OnCtrlDInput()
@@ -266,7 +279,7 @@ public class LogTree : Tree
 					}
 
 					Line originalLine = null;
-					Line searchParent = OwnerLogNote.TreeNote.Tree.RootLine;
+					Line searchParent = OwnerLogNote.TreeNote.Tree.TitleLine;
 					Line searchChild = targetAncestors.Pop();
 					bool found = true;
 					while( found && originalLine == null )
@@ -341,7 +354,7 @@ public class LogTree : Tree
 
 	#region layout
 
-	public void UpdateLayoutElement(bool applyMinHeight = true)
+	public void UpdateLayoutElement()
 	{
 		if( layout_ == null )
 		{
@@ -349,18 +362,18 @@ public class LogTree : Tree
 			contentSizeFitter_ = GetComponent<ContentSizeFitter>();
 		}
 
-		if( suspendLayoutCount_ <= 0 && rootLine_ != null )
+		if( suspendLayoutCount_ <= 0 && titleLine_ != null )
 		{
-			Line lastLine = rootLine_.LastVisibleLine;
+			Line lastLine = titleLine_.LastVisibleLine;
 			if( lastLine != null && lastLine.Field != null )
 			{
-				layout_.preferredHeight = -(lastLine.TargetAbsolutePosition.y - this.transform.position.y) + GameContext.Config.HeightPerLine * 1.0f;
-				if( applyMinHeight )
-				{
-					layout_.preferredHeight = Math.Max(GameContext.Config.MinLogTreeHeight, layout_.preferredHeight);
-				}
+				layout_.preferredHeight = Math.Max(GameContext.Config.MinLogTreeHeight, -(lastLine.TargetAbsolutePosition.y - this.transform.position.y) + GameContext.Config.HeightPerLine * 1.0f);
 				contentSizeFitter_.SetLayoutVertical();
 			}
+		}
+		else
+		{
+			layout_.preferredHeight = 0;
 		}
 	}
 
@@ -389,7 +402,7 @@ public class LogTree : Tree
 		{
 			if( OwnerLogNote != null )
 			{
-				file_ = new FileInfo(DiaryNoteBase.ToFileName(OwnerLogNote.TreeNote, date_));
+				file_ = new FileInfo(LogNote.ToFileName(OwnerLogNote.TreeNote, date_));
 			}
 			else
 			{

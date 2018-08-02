@@ -11,10 +11,35 @@ public class DateUI : MonoBehaviour {
 
 	public Text MonthText;
 	public Text DayText;
-	public DateTextBox DayTextBox;
 	public Text WeekDayText;
-	public Button AddDateButton;
+	public Text DateText;
 
+	public float PreferredHeight
+	{
+		get
+		{
+			if( layoutElement_ == null )
+			{
+				layoutElement_ = GetComponentInChildren<LayoutElement>();
+				contentSizeFitter_ = GetComponent<ContentSizeFitter>();
+			}
+			return layoutElement_.preferredHeight;
+		}
+		set
+		{
+			if( layoutElement_ == null )
+			{
+				layoutElement_ = GetComponentInChildren<LayoutElement>();
+				contentSizeFitter_ = GetComponent<ContentSizeFitter>();
+			}
+			layoutElement_.preferredHeight = value;
+		}
+	}
+	LayoutElement layoutElement_;
+	ContentSizeFitter contentSizeFitter_;
+
+	public LogTree Tree { get { return logTree_; } }
+	LogTree logTree_;
 
 	// Use this for initialization
 	void Start () {
@@ -26,39 +51,33 @@ public class DateUI : MonoBehaviour {
 		
 	}
 
-	public void AddDate()
+	public void Set(LogTree tree, DateTime date, DateTime today, Color color)
 	{
-		GetComponentInParent<LogNote>().AddDate(date_.AddDays(-1.0));
-		SetEnableAddDateButtton(false);
-	}
-
-	public void SetEnableAddDateButtton(bool enable)
-	{
-		AddDateButton.gameObject.SetActive(enable);
-	}
-
-	public void Set(DateTime date, Color color)
-	{
-		date_ = date;
-		SetDate(date_);
+		SetTree(tree);
+		SetDate(date, today);
 		SetColor(color);
+		gameObject.name = "Date " + date.ToString("yyyy/MM/dd");
 	}
 
-	public void OnDateChanged(DateTime date)
+	void SetDate(DateTime date, DateTime today)
 	{
 		date_ = date;
-		SetDate(date_);
-		SetColor(DiaryNoteBase.ToColor(date_));
-		GetComponentInChildren<LogTree>().OnDateChanged(date);
-	}
-
-	void SetDate(DateTime date)
-	{
-		MonthText.text = date.ToString("yyyy/M");
-		DayText.text = date.ToString("dd").TrimStart('0');//なぜか"d"だと6/26/2017みたいにフルで出力されるので。。
-		if( DayTextBox != null )
+		if( (today - date).Days < (int)today.DayOfWeek )
 		{
-			DayTextBox.text = date.ToString("dd").TrimStart('0');
+			MonthText.text = date.ToString("M/d");
+			DateText.text = date.ToString("ddd");
+		}
+		else if( date.Year == today.Year )
+		{
+			MonthText.text = date.ToString("M/");
+			DayText.text = date.ToString("dd").TrimStart('0');//なぜか"d"だと6/26/2017みたいにフルで出力されるので。。
+			DateText.text = date.ToString("M/d");
+		}
+		else
+		{
+			MonthText.text = date.ToString("yyyy/M/");
+			DayText.text = date.ToString("dd").TrimStart('0');
+			DateText.text = date.ToString("M/d");
 		}
 		WeekDayText.text = date.ToString("ddd");
 	}
@@ -68,10 +87,45 @@ public class DateUI : MonoBehaviour {
 		MonthText.color = color;
 		DayText.color = color;
 		WeekDayText.color = color;
+		DateText.color = color;
 		GetComponentInChildren<Image>().color = color;
-		if( DayTextBox != null )
+	}
+
+	void SetTree(LogTree tree)
+	{
+		logTree_ = tree;
+		UpdateLayout();
+	}
+
+	public void UpdateLayout()
+	{
+		if( logTree_ != null && logTree_.TitleLine != null )
 		{
-			DayTextBox.Foreground = color;
+			MonthText.gameObject.SetActive(true);
+			DayText.gameObject.SetActive(true);
+			WeekDayText.gameObject.SetActive(true);
+			DateText.gameObject.SetActive(false);
+			PreferredHeight = 100;
 		}
+		else
+		{
+			MonthText.gameObject.SetActive(false);
+			DayText.gameObject.SetActive(false);
+			WeekDayText.gameObject.SetActive(false);
+			DateText.gameObject.SetActive(true);
+			PreferredHeight = 30;
+		}
+	}
+
+	public float UpdatePreferredHeight()
+	{
+		if( logTree_ != null && logTree_.TitleLine != null )
+		{
+			logTree_.UpdateLayoutElement();
+			PreferredHeight = logTree_.Layout.preferredHeight;
+			contentSizeFitter_.SetLayoutVertical();
+		}
+
+		return PreferredHeight;
 	}
 }

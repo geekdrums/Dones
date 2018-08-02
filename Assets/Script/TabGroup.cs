@@ -16,7 +16,7 @@ public class TabGroup : MonoBehaviour, IEnumerable<TabButton>
 	public UIGaugeRenderer SplitBar;
 	public RectTransform NoteAreaTransform;
 	public RectTransform NoteTitleAreaTransform;
-	public FileMenuButton FileMenu;
+	//public FileMenuButton FileMenu;
 	public GameObject Split;
 
 	public float DesiredTabWidth = 200.0f;
@@ -30,15 +30,6 @@ public class TabGroup : MonoBehaviour, IEnumerable<TabButton>
 	public TabButton ActiveTab { get { return activeTab_; } }
 	public Note ActiveNote { get { return activeTab_ != null ? activeTab_.BindedNote : null; } }
 	public TreeNote ActiveTreeNote { get { return activeTab_ != null && activeTab_.BindedNote != null ? activeTab_.BindedNote as TreeNote : null; } }
-	public DiaryNote ExistDiaryNote
-	{
-		get
-		{
-			TabButton diaryTab = tabButtons_.Find((TabButton tab) => tab.BindedNote is DiaryNote);
-			if( diaryTab != null ) return diaryTab.BindedNote as DiaryNote;
-			else return null;
-		}
-	}
 
 	TabButton activeTab_;
 	List<TabButton> tabButtons_ = new List<TabButton>();
@@ -88,7 +79,10 @@ public class TabGroup : MonoBehaviour, IEnumerable<TabButton>
 				int index = tabButtons_.IndexOf(activeTab_);
 				if( index > 0 )
 				{
-					tabButtons_[index - 1].IsOn = true;
+					if( tabButtons_[index - 1].CanSelect(showDialog: true) )
+					{
+						tabButtons_[index - 1].IsSelected = true;
+					}
 				}
 			}
 			else if( (Input.GetKeyDown(KeyCode.RightArrow) && Input.GetKey(KeyCode.LeftCommand)) || Input.GetKeyDown(KeyCode.PageDown) )
@@ -96,7 +90,10 @@ public class TabGroup : MonoBehaviour, IEnumerable<TabButton>
 				int index = tabButtons_.IndexOf(activeTab_);
 				if( index < tabButtons_.Count - 1 )
 				{
-					tabButtons_[index + 1].IsOn = true;
+					if( tabButtons_[index + 1].CanSelect(showDialog: true) )
+					{
+						tabButtons_[index + 1].IsSelected = true;
+					}
 				}
 			}
 		}
@@ -115,23 +112,40 @@ public class TabGroup : MonoBehaviour, IEnumerable<TabButton>
 		UpdateTabLayout();
 	}
 
-	public void OnTabActivated(TabButton tab)
+	public void OnTabSelected(TabButton tab)
 	{
-		if( activeTab_ != null && tab != activeTab_ )
+		if( activeTab_ == tab )
 		{
-			activeTab_.IsOn = false;
+			return;
 		}
+
+		TabButton oldActiveTab = activeTab_;
+
 		activeTab_ = tab;
-		GameContext.Window.TitleText.text = activeTab_.Text;
-		GameContext.Window.UpdateVerticalLayout();
-		GameContext.TagList.OnActiveNoteChanged(activeTab_.BindedNote);
+		
+#if UNITY_STANDALONE_WIN
+		GameContext.Window.SetTitle(tab.Text + " - Dones");
+#endif
+
+		if( oldActiveTab != null )
+		{
+			oldActiveTab.IsSelected = false;
+			if( oldActiveTab.BindedNote != activeTab_.BindedNote )
+			{
+				oldActiveTab.BindedNote.Deactivate();
+			}
+		}
+		if( oldActiveTab == null || oldActiveTab.BindedNote != activeTab_.BindedNote )
+		{
+			activeTab_.BindedNote.Activate();
+		}
 	}
 
 	public void OnTabClosed(TabButton tab)
 	{
-		if( tab.BindedNote is TreeNote && (tab.BindedNote as TreeNote).File != null )
+		if( tab.BindedNote is TreeNote )
 		{
-			GameContext.Window.AddRecentClosedFiles((tab.BindedNote as TreeNote).File.FullName);
+			GameContext.Window.AddRecentClosedTab(tab);
 		}
 
 		int index = tabButtons_.IndexOf(tab);
@@ -139,7 +153,15 @@ public class TabGroup : MonoBehaviour, IEnumerable<TabButton>
 		if( tab == activeTab_ )
 		{
 			if( index >= tabButtons_.Count ) index = tabButtons_.Count - 1;
-			tabButtons_[index].IsOn = true;
+			while( tabButtons_[index].CanSelect() == false )
+			{
+				index--;
+				if( index < 0 )
+				{
+					index = tabButtons_.Count - 1;
+				}
+			}
+			tabButtons_[index].IsSelected = true;
 		}
 
 		UpdateTabLayout();
@@ -177,7 +199,7 @@ public class TabGroup : MonoBehaviour, IEnumerable<TabButton>
 			tab.Width = DesiredTabWidth;
 			tab.TargetPosition = GetTabPosition(tab);
 		}
-		FileMenu.TargetPosition = Vector3.down * DesiredTabHeight * tabButtons_.Count;
+		//FileMenu.TargetPosition = Vector3.down * DesiredTabHeight * tabButtons_.Count;
 		Split.transform.SetAsLastSibling();
 	}
 
@@ -193,7 +215,7 @@ public class TabGroup : MonoBehaviour, IEnumerable<TabButton>
 
 	public void OnBeginTabDrag(TabButton tab)
 	{
-		tab.IsOn = true;
+		//tab.IsSelected = true;
 		if( tab.BindedNote is TreeNote && (tab.BindedNote as TreeNote).Tree.FocusedLine != null )
 		{
 			(tab.BindedNote as TreeNote).Tree.FocusedLine.Field.IsFocused = false;

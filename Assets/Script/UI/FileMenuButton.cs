@@ -71,6 +71,7 @@ public class FileMenuButton : MonoBehaviour
 
 	public void SetupRecentFiles()
 	{
+		/*
 		if( GameContext.Window.RecentOpenedFiles.Count > 0 )
 		{
 			RecentFilesSubMenu.SetActive(true);
@@ -88,6 +89,7 @@ public class FileMenuButton : MonoBehaviour
 				}
 			}
 		}
+		*/
 	}
 
 	public void Close()

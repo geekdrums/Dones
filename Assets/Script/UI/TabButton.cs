@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -10,36 +11,36 @@ public class TabButton : UnityEngine.UI.Button, IDragHandler, IBeginDragHandler,
 {
 	#region params
 
-	public Note BindedNote;
-	
-	public bool IsOn
+	public Note BindedNote { get; private set; }
+	public NoteViewParam ViewParam { get; private set; }
+
+	public bool IsSelected
 	{
-		get { return isOn_; }
+		get { return isSelected_; }
 		set
 		{
-			isOn_ = value;
-			transition = isOn_ ? Transition.None : Transition.ColorTint;
-
-			if( isOn_ )
+			if( value != isSelected_ )
 			{
-				OwnerTabGroup.OnTabActivated(this);
-			}
-			else
-			{
-				BindedNote.OnTabDeselected();
-			}
-			if( isOn_ )
-			{
-				BindedNote.OnTabSelected();
-			}
-
-			if( image_ != null )
-			{
+				isSelected_ = value;
+				transition = isSelected_ ? Transition.None : Transition.ColorTint;
 				UpdateColor();
+
+				if( isSelected_ )
+				{
+					OwnerTabGroup.OnTabSelected(this);
+					BindedNote.SetNoteViewParam(ViewParam);
+					
+					GameContext.Window.UpdateVerticalLayout();
+					GameContext.TagList.OnTreePathChanged(BindedNote is TreeNote ? (BindedNote as TreeNote).Tree.TitleLine : null);
+				}
+				else
+				{
+					BindedNote.CacheNoteViewParam(ViewParam);
+				}
 			}
 		}
 	}
-	bool isOn_ = false;
+	bool isSelected_ = false;
 	
 	public string Text
 	{
@@ -53,8 +54,8 @@ public class TabButton : UnityEngine.UI.Button, IDragHandler, IBeginDragHandler,
 	}
 	Text textComponent_;
 
-	public Color Background { get { return image_.canvasRenderer.GetColor(); } set { image_.color = value; image_.CrossFadeColor(Color.white, 0.0f, true, true); } }
-	Image image_;
+	public Color Background { get { return background_.canvasRenderer.GetColor(); } set { background_.color = value; background_.CrossFadeColor(Color.white, 0.0f, true, true); } }
+	Image background_;
 
 	public float Width
 	{
@@ -95,12 +96,30 @@ public class TabButton : UnityEngine.UI.Button, IDragHandler, IBeginDragHandler,
 	#endregion
 
 
+	public void Bind(TreeNote note, TreePath path = null)
+	{
+		ViewParam = new NoteViewParam();
+		BindedNote = note;
+		ViewParam.Path = (path == null ? new TreePath() : path);
+		ViewParam.TargetScrollValue = 1.0f;
+		ViewParam.LogNoteTargetScrollValue = 1.0f;
+		Line line = note.Tree.GetLineFromPath(ViewParam.Path);
+		if( ViewParam.Path.Length == 0 )
+		{
+			Text = "Home";
+		}
+		else
+		{
+			Text = ViewParam.Path[ViewParam.Path.Length - 1];
+		}
+	}
+
 	#region unity events
 
 	protected override void Awake()
 	{
 		base.Awake();
-		image_ = GetComponent<Image>();
+		background_ = GetComponent<Image>();
 		rect_ = GetComponent<RectTransform>();
 	}
 
@@ -123,8 +142,34 @@ public class TabButton : UnityEngine.UI.Button, IDragHandler, IBeginDragHandler,
 
 	public void OnClick()
 	{
-		if( IsOn == false )
-			IsOn = true;
+		if( IsSelected == false )
+		{
+			if( CanSelect(showDialog: true) == false )
+			{
+				return;
+			}
+
+			IsSelected = true;
+		}
+	}
+
+	public bool CanSelect(bool showDialog = false)
+	{
+		if( BindedNote is TreeNote )
+		{
+			Line line = (BindedNote as TreeNote).Tree.GetLineFromPath(ViewParam.Path);
+			if( line == null )
+			{
+				// pathが見つからなければ表示できない
+				if( showDialog )
+				{
+					GameContext.Window.ModalDialog.Show(String.Format("\"{0}\" は見つかりませんでした", ViewParam.Path.ToString()), ModalDialog.DialogType.OK, null);
+				}
+				return false;
+			}
+		}
+
+		return true;
 	}
 
 	public void TryClose()
@@ -134,42 +179,33 @@ public class TabButton : UnityEngine.UI.Button, IDragHandler, IBeginDragHandler,
 
 	public void DoClose()
 	{
-		if( IsOn )
-			IsOn = false;
-
-		BindedNote.OnTabClosed();
+		if( IsSelected )
+			IsSelected = false;
+		
 		OwnerTabGroup.OnTabClosed(this);
 		Destroy(this.gameObject);
 	}
 
 	public void UpdateColor()
 	{
+		if( background_ == null )
+		{
+			return;
+		}
+
 		if( BindedNote is TreeNote )
 		{
 			TreeNote treeNote = BindedNote as TreeNote;
-			Background = isOn_ ? (treeNote.LogNote.IsFullArea ? GameContext.Config.DoneColor : GameContext.Config.ThemeColor) : Color.white;
-			if( isOn_ )
+			Background = isSelected_ ? (treeNote.LogNote.IsFullArea ? GameContext.Config.DoneColor : GameContext.Config.ThemeColor) : Color.white;
+			if( isSelected_ )
 			{
 				OwnerTabGroup.SplitBar.SetColor(treeNote.LogNote.IsFullArea ? GameContext.Config.DoneColor : GameContext.Config.ThemeColor);
 			}
 		}
-		if( BindedNote is DiaryNote )
+		if( textComponent_ != null && GameContext.Config != null )
 		{
-			Background = isOn_ ? GameContext.Config.DiaryColor : Color.white;
-			if( isOn_ )
-			{
-				OwnerTabGroup.SplitBar.SetColor(GameContext.Config.DiaryColor);
-			}
+			textComponent_.color = isSelected_ ? Color.white : GameContext.Config.TextColor;
 		}
-		if( textComponent_ != null )
-		{
-			textComponent_.color = isOn_ ? Color.white : GameContext.Config.TextColor;
-		}
-	}
-
-	public void UpdateTitleText()
-	{
-		Text = BindedNote.TitleText;
 	}
 
 	IEnumerator UpdateTransformCoroutine()

@@ -17,20 +17,26 @@ public class Tree : MonoBehaviour
 {
 	#region params
 
+	public Note OwnerNote { get { return ownerNote_; } }
+	protected Note ownerNote_;
+
+	protected TreePath path_;
 	protected Line rootLine_;
+	protected GameObject rootLineObject_;
+	protected GameObject titleLineObject_;
+	protected GameObject heapParentObject_;
+	protected Line titleLine_;
 	protected Line focusedLine_;
 	protected Line selectionStartLine_, selectionEndLine_;
 	protected SortedList<int, Line> selectedLines_ = new SortedList<int, Line>();
-	protected Vector3 cachedMousePosition_;
 
 	protected HeapManager<LineField> heapManager_;
 	protected ActionManagerProxy actionManager_;
-	public Note OwnerNote { get { return ownerNote_; } }
-	protected Note ownerNote_;
 	public HeapManager<TagText> TagHeapManager { get { return tagHeapManager_; } }
 	protected HeapManager<TagText> tagHeapManager_;
 
 	// input states
+	protected Vector3 cachedMousePosition_;
 	protected bool wasDeleteKeyConsumed_ = false;
 	protected bool wasCtrlDPushed_ = false;
 	protected List<IDisposable> throttleInputSubscriptions_ = new List<IDisposable>();
@@ -43,9 +49,9 @@ public class Tree : MonoBehaviour
 	{
 		get
 		{
-			if( suspendLayoutCount_ <= 0 && rootLine_ != null && gameObject.activeInHierarchy )
+			if( suspendLayoutCount_ <= 0 && titleLine_ != null && gameObject.activeInHierarchy )
 			{
-				Line lastLine = rootLine_.LastVisibleLine;
+				Line lastLine = titleLine_.LastVisibleLine;
 				if( lastLine != null && lastLine.Field != null )
 				{
 					return -(lastLine.TargetAbsolutePosition.y - this.transform.position.y) + GameContext.Config.HeightPerLine * 1.5f;
@@ -81,8 +87,10 @@ public class Tree : MonoBehaviour
 	public FileInfo File { get { return file_; } }
 	public Line FocusedLine { get { return focusedLine_; } }
 	public Line RootLine { get { return rootLine_; } }
+	public Line TitleLine { get { return titleLine_; } }
+	public TreePath Path { get { return path_; } }
 
-	public string TitleText { get { return rootLine_ != null ? rootLine_.Text : ""; } }
+	public string TitleText { get { return titleLine_ != null ? titleLine_.Text: ""; } }
 	public override string ToString() { return TitleText; }
 
 
@@ -126,6 +134,14 @@ public class Tree : MonoBehaviour
 		actionManager_.ChainStarted += this.actionManager__ChainStarted;
 		actionManager_.ChainEnded += this.actionManager__ChainEnded;
 		actionManager_.Executed += this.actionManager__Executed;
+
+		rootLineObject_ = new GameObject("RootLine");
+		rootLineObject_.transform.SetParent(this.transform);
+		rootLineObject_.SetActive(false);
+
+		heapParentObject_ = new GameObject("LineHeap");
+		heapParentObject_.transform.SetParent(this.transform);
+		heapParentObject_.SetActive(false);
 	}
 
 
@@ -161,20 +177,20 @@ public class Tree : MonoBehaviour
 			{
 				SelectAll();
 			}
+			else if( Input.GetKeyDown(KeyCode.E) )
+			{
+				if( focusedLine_ != null )
+				{
+					GameContext.Window.AddTab(focusedLine_);
+				}
+			}
 #if UNITY_EDITOR
 			else if( Input.GetKeyDown(KeyCode.W) )
 #else
 			else if( Input.GetKeyDown(KeyCode.S) )
 #endif
 			{
-				if( shift )
-				{
-					GameContext.Window.SaveAll();
-				}
-				else
-				{
-					SaveFile();
-				}
+				SaveFile();
 			}
 			else if( Input.GetKeyDown(KeyCode.Space) )
 			{
@@ -197,26 +213,26 @@ public class Tree : MonoBehaviour
 			{
 				if( ownerNote_ is TreeNote )
 				{
-					Line line = rootLine_[0];
+					Line line = titleLine_[0];
 					line.Field.IsFocused = true;
 					OnFocused(line);
 				}
-				else if( ownerNote_ is DiaryNoteBase )
+				else if( ownerNote_ is LogNote )
 				{
-					(ownerNote_ as DiaryNoteBase).OnHomeEndInput(KeyCode.Home);
+					(ownerNote_ as LogNote).OnHomeEndInput(KeyCode.Home);
 				}
 			}
 			else if( Input.GetKeyDown(KeyCode.End) )
 			{
 				if( ownerNote_ is TreeNote )
 				{
-					Line line = rootLine_.LastVisibleLine;
+					Line line = titleLine_.LastVisibleLine;
 					line.Field.IsFocused = true;
 					OnFocused(line);
 				}
-				else if( ownerNote_ is DiaryNoteBase )
+				else if( ownerNote_ is LogNote )
 				{
-					(ownerNote_ as DiaryNoteBase).OnHomeEndInput(KeyCode.End);
+					(ownerNote_ as LogNote).OnHomeEndInput(KeyCode.End);
 				}
 			}
 		}
@@ -404,7 +420,7 @@ public class Tree : MonoBehaviour
 
 		ClearSelection();
 
-		selectionStartLine_ = rootLine_[0];
+		selectionStartLine_ = titleLine_[0];
 		Line line = selectionStartLine_;
 		while( line != null )
 		{
@@ -449,7 +465,7 @@ public class Tree : MonoBehaviour
 						// 選択中のやつは消されるので、消されないものの中で一番近いものを選ぶ
 						prev = prev.PrevVisibleLine;
 					}
-					if( prev == null ) prev = rootLine_;
+					if( prev == null ) prev = titleLine_;
 					Line lostParent = line;
 					bool wasFolded = prev.IsFolded;
 					reparentActions.Add(new Action(
@@ -689,7 +705,7 @@ public class Tree : MonoBehaviour
 		foreach( Line line in GetSelectedOrFocusedLines() )
 		{
 			int index = line.Index;
-			if( index > 0 && (line.Parent == rootLine_ || line.Parent.Field.IsSelected == false) && line.IsComment == false )
+			if( index > 0 && (line.Parent == titleLine_ || line.Parent.Field.IsSelected == false) && line.IsComment == false )
 			{
 				Line oldParent = line.Parent;
 				Line newParent = line.Parent[index - 1];
@@ -1215,7 +1231,7 @@ public class Tree : MonoBehaviour
 				else
 				{
 					Line newFocus = key == KeyCode.UpArrow ? focusedLine_.Parent : focusedLine_.NextSiblingOrUnkleLine;
-					if( newFocus != null && newFocus != rootLine_ )
+					if( newFocus != null && newFocus != titleLine_ )
 					{
 						newFocus.Field.IsFocused = true;
 						OnFocused(newFocus);
@@ -1678,11 +1694,15 @@ public class Tree : MonoBehaviour
 	
 	public void Bind(Line line)
 	{
-		LineField field = heapManager_.Instantiate(this.transform);
+		LineField field = heapManager_.Instantiate(heapParentObject_.transform);
 		field.Initialize();
 		if( field.BindedLine != null )
 		{
-			field.BindedLine.UnBind();
+			foreach( LineField childField in field.GetComponentsInChildren<LineField>() )
+			{
+				childField.transform.SetParent(heapParentObject_.transform);
+			}
+			field.BindedLine = null;
 		}
 		line.Bind(field.gameObject);
 	}
@@ -1767,7 +1787,7 @@ public class Tree : MonoBehaviour
 		if( isAllFolded == false )
 		{
 			// unfold all
-			Line line = rootLine_[0];
+			Line line = titleLine_[0];
 			while( line != null )
 			{
 				if( line.Count > 0 && line.IsFolded )
@@ -1804,7 +1824,7 @@ public class Tree : MonoBehaviour
 		else
 		{
 			// fold all
-			Line addLine = rootLine_.LastVisibleLine;
+			Line addLine = titleLine_.LastVisibleLine;
 			List<Line> foldLines = new List<Line>();
 			while( addLine != null )
 			{
@@ -1928,19 +1948,15 @@ public class Tree : MonoBehaviour
 	public void NewFile(FileInfo file)
 	{
 		file_ = file;
+		path_ = new TreePath();
 		SuspendLayout();
 		rootLine_ = new Line(file_.Name);
+		titleLine_ = rootLine_;
+		titleLineObject_ = rootLineObject_;
 		gameObject.name = "Tree - " + TitleText;
-		rootLine_.Bind(this.gameObject);
-		rootLine_.Add(new Line(""));
+		titleLine_.Bind(this.gameObject);
+		titleLine_.Add(new Line(""));
 		ResumeLayout();
-	}
-
-	public void SaveFileAs(FileInfo file)
-	{
-		file_ = file;
-		rootLine_.Text = file_.Name;
-		SaveFile();
 	}
 
 	public virtual void SaveFile()
@@ -1959,18 +1975,31 @@ public class Tree : MonoBehaviour
 		IsEdited = false;
 	}
 
+	public void SaveAllTreeInOneFile(StringBuilder builder)
+	{
+		builder.AppendLine(rootLine_.Text.Replace(".dtml",""));
+		foreach( Line line in rootLine_.GetAllChildren() )
+		{
+			builder.Append("	");
+			line.AppendStringTo(builder, appendTag: true);
+		}
+	}
+
 	public void LoadFile(FileInfo file)
 	{
 		file_ = file;
+		path_ = new TreePath();
 
 		SuspendLayout();
 
 		rootLine_ = new Line(file_.Name);
+		titleLine_ = rootLine_;
+		titleLineObject_ = rootLineObject_;
 		gameObject.name = "Tree - " + TitleText;
-		rootLine_.Bind(this.gameObject);
+		titleLine_.Bind(this.gameObject);
 
 		StreamReader reader = new StreamReader(file_.OpenRead());
-		Line parent = rootLine_;
+		Line parent = titleLine_;
 		Line brother = null;
 		string text = null;
 		int currentLevel, oldLevel = 0;
@@ -2013,16 +2042,17 @@ public class Tree : MonoBehaviour
 			brother = line;
 			oldLevel = currentLevel;
 		}
-		if( rootLine_.Count == 0 )
+		if( titleLine_.Count == 0 )
 		{
-			rootLine_.Add(new Line(""));
+			titleLine_.Add(new Line(""));
 		}
 		reader.Close();
 		ResumeLayout();
-		rootLine_.AdjustFontSizeRecursive(GameContext.Config.FontSize, GameContext.Config.HeightPerLine);
+		titleLine_.AdjustFontSizeRecursive(GameContext.Config.FontSize, GameContext.Config.HeightPerLine);
 		IsEdited = false;
 		actionManager_.Clear();
 	}
+
 
 	public void ReloadFile()
 	{
@@ -2051,6 +2081,184 @@ public class Tree : MonoBehaviour
 		}
 
 		LoadFile(file_);
+	}
+
+	#endregion
+
+	#region path
+
+	public Line GetLineFromPath(TreePath path)
+	{
+		if( path.Length == 0 )
+		{
+			return rootLine_;
+		}
+
+		Line line = rootLine_;
+		foreach( string lineStr in path )
+		{
+			bool find = false;
+			foreach( Line child in line )
+			{
+				if( child.TextWithoutHashTags == lineStr )
+				{
+					line = child;
+					find = true;
+					break;
+				}
+			}
+			if( find == false )
+			{
+				return null;
+			}
+		}
+
+		return line;
+	}
+
+	public void SetRootPath()
+	{
+		SetPath(rootLine_);
+	}
+
+	public void SetPath(TreePath path)
+	{
+		path_ = path;
+		SetPath(GetLineFromPath(path));
+	}
+
+	void UpdateTitleLine()
+	{
+		List<Text> textList = new List<Text>(GameContext.Window.TitleLine.GetComponentsInChildren<Text>(includeInactive: true));
+		List<UIMidairPrimitive> triangleList = new List<UIMidairPrimitive>(GameContext.Window.TitleLine.GetComponentsInChildren<UIMidairPrimitive>(includeInactive: true));
+
+		while( textList.Count < path_.Length )
+		{
+			textList.Add(Instantiate(textList[0].gameObject, GameContext.Window.TitleLine.transform).GetComponent<Text>());
+			triangleList.Add(Instantiate(triangleList[0].gameObject, GameContext.Window.TitleLine.transform).GetComponent<UIMidairPrimitive>());
+		}
+
+		for( int i = 0; i < textList.Count; ++i )
+		{
+			textList[i].gameObject.SetActive(i < path_.Length);
+			triangleList[i].gameObject.SetActive(i < path_.Length - 1);
+			if( i < path_.Length )
+			{
+				bool isLastPath = i == path_.Length - 1;
+				textList[i].text = path_[i];
+				textList[i].color = (isLastPath ? GameContext.Config.TextColor : GameContext.Config.DoneTextColor);
+				UnityEngine.UI.Button button = textList[i].GetComponent<UnityEngine.UI.Button>();
+				button.enabled = isLastPath == false;
+				button.onClick.RemoveAllListeners();
+				int length = i + 1;
+				button.onClick.AddListener(() => 
+				{
+					GameContext.Window.AddTab(GetLineFromPath(path_.GetPartialPath(length)));
+				});
+			}
+		}
+
+		if( path_.Length > 0 )
+		{
+			StartCoroutine(UpdateTextLengthCoroutine(textList[0].cachedTextGenerator));
+		}
+	}
+
+	IEnumerator UpdateTextLengthCoroutine(TextGenerator gen)
+	{
+		yield return new WaitWhile(() => gen.characterCount == 0);
+
+		List<Text> textList = new List<Text>(GameContext.Window.TitleLine.GetComponentsInChildren<Text>());
+		List<UIMidairPrimitive> triangleList = new List<UIMidairPrimitive>(GameContext.Window.TitleLine.GetComponentsInChildren<UIMidairPrimitive>());
+
+		float x = 0;
+		float margin = 12;
+		float triangleWidth = 12;
+		for( int i = 0; i < path_.Length; ++i )
+		{
+			float width = LineField.CalcTextRectLength(textList[i].cachedTextGenerator, path_[i].Length);
+			textList[i].transform.localPosition = new Vector3(x, textList[i].transform.localPosition.y, 0);
+			x += width;
+			x += margin;
+			if( i <triangleList.Count )
+			{
+				triangleList[i].transform.localPosition = new Vector3(x, triangleList[i].transform.localPosition.y, 0);
+				x += triangleWidth;
+			}
+		}
+	}
+
+	public void SetPath(Line line)
+	{
+		if( ownerNote_ is TreeNote )
+		{
+			UpdateTitleLine();
+		}
+
+		// Bindされてなければ（Foldされている状態なら）親までたどってBindする
+		if( line != null && line.BindState != Line.EBindState.Bind )
+		{
+			Line unbidedLine = line;
+			while( unbidedLine != null && unbidedLine.IsTitleLine == false )
+			{
+				switch( unbidedLine.BindState )
+				{
+				case Line.EBindState.Bind:
+					unbidedLine = null;
+					break;
+				case Line.EBindState.Unbind:
+					Bind(unbidedLine);
+					unbidedLine = unbidedLine.Parent;
+					break;
+				case Line.EBindState.WeakBind:
+					unbidedLine.ReBind();
+					unbidedLine = unbidedLine.Parent;
+					break;
+				}
+			}
+		}
+
+		SuspendLayout();
+
+		// 前のTitleLine以下を元のツリーに戻す
+		if( titleLine_ != null && titleLineObject_ != null )
+		{
+			titleLine_.Bind(titleLineObject_);
+			foreach( Line child in titleLine_ )
+			{
+				child.ReBind();
+			}
+			if( titleLine_.Count > 0 )
+			{
+				RequestLayout(titleLine_[0]);
+			}
+			titleLine_.UpdateFoldLayout();
+		}
+
+		titleLine_ = line;
+		titleLineObject_ = titleLine_ != null ? titleLine_.Binding : null;
+
+		// 新しいTitleLine以下をTreeの下に移動する
+		if( titleLine_ != null && titleLineObject_ != null )
+		{
+			titleLine_.Bind(this.gameObject);
+			foreach( Line child in titleLine_ )
+			{
+				child.UpdateBindState();
+				child.ReBind();
+			}
+
+			if( titleLine_.Count == 0 )
+			{
+				titleLine_.Add(new Line(""));
+			}
+		}
+
+		focusedLine_ = null;
+		selectionStartLine_ = selectionEndLine_ = null;
+		selectedLines_.Clear();
+
+		ResumeLayout();
 	}
 
 	#endregion

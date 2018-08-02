@@ -20,25 +20,10 @@ public class TreeNote : Note
 	public Tree Tree { get { return tree_; } }
 	protected Tree tree_;
 
-	public LogNote LogNote { get { return logNote_; } }
-	protected LogNote logNote_;
-
 	public bool IsEdited { get { return tree_.IsEdited; } }
 	public FileInfo File { get { return tree_ != null ? tree_.File : null; } }
-	public override string TitleText
-	{
-		get
-		{
-			if( logNote_.IsFullArea )
-			{
-				return logNote_.TitleText;
-			}
-			else
-			{
-				return tree_.TitleText;
-			}
-		}
-	}
+
+	public LogNote LogNote;
 
 	public TagText TagTextPrefab;
 
@@ -69,7 +54,7 @@ public class TreeNote : Note
 		
 		if( ctrlOnly && Input.GetKeyDown(KeyCode.L) )
 		{
-			logNote_.IsOpended = !logNote_.IsOpended;
+			LogNote.IsOpended = !LogNote.IsOpended;
 		}
 	}
 
@@ -78,7 +63,7 @@ public class TreeNote : Note
 	void OnDoneChanged(object sender, EventArgs e)
 	{
 		Line line = sender as Line;
-		logNote_.OnDoneChanged(line);
+		LogNote.OnDoneChanged(line);
 	}
 
 	#endregion
@@ -86,29 +71,42 @@ public class TreeNote : Note
 
 	#region tab
 
-	public override void OnTabSelected()
+	public override void Activate()
 	{
-		base.OnTabSelected();
+		base.Activate();
 
-		logNote_.gameObject.SetActive(true);
-		logNote_.UpdateLayoutElement();
-		logNote_.OnTreeNoteSelected();
+		LogNote.gameObject.SetActive(true);
+		LogNote.UpdateLayoutElement();
 
 		tree_.SubscribeKeyInput();
-		logNote_.SubscribeKeyInput();
+		LogNote.SubscribeKeyInput();
 
 		GameContext.Window.LogTabButton.OwnerNote = this;
 	}
 
-	public override void OnTabDeselected()
+	public override void Deactivate()
 	{
-		base.OnTabDeselected();
+		base.Deactivate();
 		
-		logNote_.OnTreeNoteDeselected();
-		logNote_.gameObject.SetActive(false);
+		LogNote.gameObject.SetActive(false);
+	}
+	
+	public override void SetNoteViewParam(NoteViewParam param)
+	{
+		base.SetNoteViewParam(param);
+		Tree.SetPath(param.Path);
+
+		LogNote.SetNoteViewParam(param);
 	}
 
-	public override void OnTabClosed()
+
+	public override void CacheNoteViewParam(NoteViewParam param)
+	{
+		base.CacheNoteViewParam(param);
+		LogNote.CacheNoteViewParam(param);
+	}
+
+	public override void Destroy()
 	{
 		List<TaggedLine> removeList = new List<TaggedLine>();
 		foreach( TaggedLine taggedLine in GameContext.TagList.TaggedLines )
@@ -125,15 +123,7 @@ public class TreeNote : Note
 		
 		SaveNote();
 		Destroy(this.gameObject);
-		Destroy(logNote_.gameObject);
-	}
-
-	public override void OnBeginTabDrag()
-	{
-		if( Tree.FocusedLine != null )
-		{
-			Tree.FocusedLine.Field.IsFocused = false;
-		}
+		Destroy(LogNote.gameObject);
 	}
 
 	public void OnFontSizeChanged()
@@ -149,7 +139,7 @@ public class TreeNote : Note
 		{
 			tagText.TextComponent.fontSize = GameContext.Config.FontSize;
 		}
-		logNote_.OnFontSizeChanged();
+		LogNote.OnFontSizeChanged();
 		UpdateLayoutElement();
 		CheckScrollbarEnabled();
 	}
@@ -164,7 +154,7 @@ public class TreeNote : Note
 		RectTransform logNoteTransform = GameContext.Window.LogNoteTransform;
 		RectTransform treeNoteTransform = GameContext.Window.TreeNoteTransform;
 		logNoteTransform.anchoredPosition += new Vector2(0, eventData.delta.y);
-		float height = Tab.OwnerTabGroup.NoteAreaTransform.rect.height;
+		float height = GameContext.Window.MainTabGroup.NoteAreaTransform.rect.height;
 		if( logNoteTransform.anchoredPosition.y < -height )
 		{
 			logNoteTransform.anchoredPosition = new Vector2(logNoteTransform.anchoredPosition.x, -height);
@@ -174,21 +164,21 @@ public class TreeNote : Note
 			logNoteTransform.anchoredPosition = new Vector2(logNoteTransform.anchoredPosition.x, 0);
 		}
 		logNoteTransform.sizeDelta = new Vector2(logNoteTransform.sizeDelta.x, logNoteTransform.anchoredPosition.y + height);
-		logNote_.OpenRatio = logNoteTransform.sizeDelta.y / height;
+		LogNote.OpenRatio = logNoteTransform.sizeDelta.y / height;
 
-		treeNoteTransform.sizeDelta = new Vector2(treeNoteTransform.sizeDelta.x, height * (1.0f - logNote_.OpenRatio) - GameContext.Config.LogNoteHeaderMargin);
+		treeNoteTransform.sizeDelta = new Vector2(treeNoteTransform.sizeDelta.x, height * (1.0f - LogNote.OpenRatio) - GameContext.Config.LogNoteHeaderMargin);
 
 		CheckScrollbarEnabled();
-		logNote_.CheckScrollbarEnabled();
+		LogNote.CheckScrollbarEnabled();
 	}
 
 	public void OnLogSplitLineEndDrag(object sender, PointerEventData eventData)
 	{
-		if( logNote_.OpenRatio <= 0 )
+		if( LogNote.OpenRatio <= 0 )
 		{
-			logNote_.IsOpended = false;
+			LogNote.IsOpended = false;
 		}
-		else if( logNote_.OpenRatio >= 1 )
+		else if( LogNote.OpenRatio >= 1 )
 		{
 			GameContext.Window.UpdateVerticalLayout();
 		}
@@ -196,19 +186,19 @@ public class TreeNote : Note
 
 	public void OpenLogNote()
 	{
-		if( logNote_.IsOpended == false )
+		if( LogNote.IsOpended == false )
 		{
-			logNote_.IsOpended = true;
+			LogNote.IsOpended = true;
 		}
 		GameContext.Window.UpdateVerticalLayout();
 	}
 
 	public void CloseLogNote()
 	{
-		if( logNote_.IsOpended )
+		if( LogNote.IsOpended )
 		{
-			logNote_.OpenRatio = 0.0f;
-			logNote_.IsOpended = false;
+			LogNote.OpenRatio = 0.0f;
+			LogNote.IsOpended = false;
 		}
 	}
 
@@ -226,88 +216,22 @@ public class TreeNote : Note
 		}
 	}
 
-	public override void ScrollTo(Line targetLine)
-	{
-		if( IsActive == false )
-		{
-			IsActive = true;
-		}
-
-		base.ScrollTo(targetLine);
-	}
-
 	#endregion
 
 
 	#region file
 
-	public void NewNote(string path, TabButton tab, LogNote logNote)
+	public void LoadNote(string path)
 	{
-		tabButton_ = tab;
-		logNote_ = logNote;
-		
-		tree_.NewFile(new FileInfo(path));
-
-		tabButton_.BindedNote = this;
-		tabButton_.Text = tree_.TitleText;
-
-		logNote.Initialize(this);
-	}
-
-	public void LoadNote(string path, TabButton tab, LogNote logNote)
-	{
-		tabButton_ = tab;
-		logNote_ = logNote;
-
 		tree_.LoadFile(new FileInfo(path));
-		//if( GameContext.Config.DoBackUp && tree_.File.Exists )
-		//{
-		//	tree_.File.CopyTo(tree_.File.FullName + ".bak", overwrite: true);
-		//}
-
-		tabButton_.BindedNote = this;
-		tabButton_.Text = tree_.TitleText;
 		targetScrollValue_ = 1.0f;
-		
-		logNote.Initialize(this);
 	}
 
 	public void SaveNote()
 	{
-		if( tree_.File == null )
-		{
-			SaveAs();
-		}
-		else
-		{
-			tree_.SaveFile();
-			logNote_.SaveLog();
-		}
+		tree_.SaveFile();
+		LogNote.SaveLog();
 		saveRequestedTrees_.Clear();
-	}
-
-	public void SaveAs()
-	{
-		SaveFileDialog saveFileDialog = new SaveFileDialog();
-		saveFileDialog.Filter = "dones file (*.dtml)|*.dtml";
-		saveFileDialog.FileName = tree_.TitleText;
-		DialogResult dialogResult = saveFileDialog.ShowDialog();
-		if( dialogResult == DialogResult.OK )
-		{
-			//if( GameContext.Config.DoBackUp )
-			//{
-			//	DeleteBackup();
-			//}
-
-			tree_.SaveFileAs(new FileInfo(saveFileDialog.FileName));
-			logNote_.Initialize(this);
-			logNote_.SaveLog();
-			GameContext.Window.AddRecentOpenedFiles(tree_.File.FullName);
-
-#if UNITY_STANDALONE_WIN
-			GameContext.Window.SetTitle(tree_.TitleText + " - Dones");
-#endif
-		}
 	}
 
 	public override void ReloadNote()
@@ -315,7 +239,7 @@ public class TreeNote : Note
 		if( tree_.File != null )
 		{
 			tree_.ReloadFile();
-			logNote_.ReloadLog();
+			LogNote.ReloadLog();
 		}
 	}
 
@@ -328,39 +252,6 @@ public class TreeNote : Note
 			{
 				backupFile.Delete();
 			}
-		}
-	}
-	
-	public bool AskDoClose()
-	{
-		if( IsEdited )
-		{
-			GameContext.Window.ModalDialog.Show(tree_.TitleText + "ファイルへの変更を保存しますか？", this.CloseConfirmCallback);
-			return false;
-		}
-
-		if( logNote_.IsEdited )
-		{
-			GameContext.Window.ModalDialog.Show(logNote_.TitleText + "ログファイルへの変更を保存しますか？", this.CloseConfirmCallback);
-			return false;
-		}
-		return true;
-	}
-
-	void CloseConfirmCallback(ModalDialog.DialogResult result)
-	{
-		switch( result )
-		{
-		case ModalDialog.DialogResult.Yes:
-			SaveNote();
-			Tab.DoClose();
-			break;
-		case ModalDialog.DialogResult.No:
-			Tab.DoClose();
-			break;
-		case ModalDialog.DialogResult.Cancel:
-			// do nothing
-			break;
 		}
 	}
 

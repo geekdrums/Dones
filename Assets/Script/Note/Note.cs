@@ -22,12 +22,6 @@ public class Note : MonoBehaviour
 
 	#endregion
 
-
-	public TabButton Tab { get { return tabButton_; } }
-	protected TabButton tabButton_;
-	public bool IsActive { get { return (tabButton_ != null ? tabButton_.IsOn : false); } set { if( tabButton_ != null ) tabButton_.IsOn = value; } }
-	public virtual string TitleText { get { return ""; } }
-
 	protected ActionManager actionManager_ = new ActionManager();
 	protected HeapManager<LineField> heapManager_ = new HeapManager<LineField>();
 	protected List<Tree> saveRequestedTrees_ = new List<Tree>();
@@ -35,8 +29,12 @@ public class Note : MonoBehaviour
 	protected LayoutElement layout_;
 	protected ContentSizeFitter contentSizeFitter_;
 	protected ScrollRect scrollRect_;
+
+	public float TargetScrollValue { get { return targetScrollValue_; } }
 	protected float targetScrollValue_ = 1.0f;
+
 	protected bool isScrollAnimating_;
+
 	protected float lastSaveRequestedTime_ = 0;
 
 	protected virtual void Awake()
@@ -102,35 +100,35 @@ public class Note : MonoBehaviour
 	}
 
 
-	public virtual void OnTabSelected()
+	public virtual void Activate()
 	{
 		this.gameObject.SetActive(true);
 		GameContext.CurrentActionManager = actionManager_;
 		UpdateLayoutElement();
-		scrollRect_.verticalScrollbar.value = targetScrollValue_;
-
-#if UNITY_STANDALONE_WIN
-		GameContext.Window.SetTitle(TitleText + " - Dones");
-#endif
 	}
 
-	public virtual void OnTabDeselected()
+	public virtual void Deactivate()
 	{
 		this.gameObject.SetActive(false);
-		targetScrollValue_ = scrollRect_.verticalScrollbar.gameObject.activeInHierarchy ? scrollRect_.verticalScrollbar.value : 1.0f;
 		if( saveRequestedTrees_.Count > 0 )
 		{
 			DoAutoSave();
 		}
 	}
 
-	public virtual void OnTabClosed()
+	public virtual void SetNoteViewParam(NoteViewParam param)
 	{
-		Destroy(this.gameObject);
+		scrollRect_.verticalScrollbar.value = param.TargetScrollValue;
 	}
 
-	public virtual void OnBeginTabDrag()
+	public virtual void CacheNoteViewParam(NoteViewParam param)
 	{
+		param.TargetScrollValue = scrollRect_.verticalScrollbar.gameObject.activeInHierarchy ? scrollRect_.verticalScrollbar.value : 1.0f;
+	}
+
+	public virtual void Destroy()
+	{
+		Destroy(this.gameObject);
 	}
 
 	public virtual void OnEdited(object sender, EventArgs e)

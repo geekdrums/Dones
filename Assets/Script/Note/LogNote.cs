@@ -13,11 +13,31 @@ using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
 // Window - [ LogNote ] - LogTree - Line
-public class LogNote : DiaryNoteBase
+public class LogNote : Note
 {
 	public GameObject LogTreePrefab;
+	public GameObject ThisWeekDateUIPrefab;
+	public GameObject ThisYearDateUIPrefab;
 	public GameObject DateUIPrefab;
 
+	public bool IsEdited
+	{
+		get
+		{
+			foreach( LogTree logTree in logTrees_ )
+			{
+				if( logTree.IsEdited )
+					return true;
+			}
+			return false;
+		}
+	}
+
+	List<LogTree> logTrees_ = new List<LogTree>();
+	List<DateUI> dateUIlist_ = new List<DateUI>();
+	DateTime today_;
+	DateTime endDate_;
+	
 	public LogTree TodayTree { get { return todayTree_; } }
 	private LogTree todayTree_;
 
@@ -31,7 +51,7 @@ public class LogNote : DiaryNoteBase
 		get { return openRatio_; }
 		set { openRatio_ = value; }
 	}
-	private float openRatio_ = 0.5f;
+	private float openRatio_ = 0.0f;
 
 	public bool IsFullArea { get { return isOpended_ && openRatio_ >= 1.0f; } }
 
@@ -53,7 +73,7 @@ public class LogNote : DiaryNoteBase
 			{
 				if( OpenRatio >= 1.0f )
 				{
-					OpenRatio = 0.5f;
+					OpenRatio = 0.0f;
 				}
 				OnAreaClosed();
 			}
@@ -61,9 +81,30 @@ public class LogNote : DiaryNoteBase
 	}
 	private bool isOpended_ = false;
 
-	public override string TitleText { get { return treeNote_ != null ? treeNote_.Tree.TitleText.Replace(".dtml", ".dones") : ""; } }
+	private bool isDateUIlistUpdating_ = false;
+	
+	protected override void Awake()
+	{
+		base.Awake();
+		today_ = DateTime.Now.Date;
+		endDate_ = today_;
+	}
 
-	SortedList<DateTime, string> logFileList_ = new SortedList<DateTime, string>();
+	protected override void Update()
+	{
+		base.Update();
+
+		if( Input.mouseScrollDelta.y < 0 )
+		{
+			if( isDateUIlistUpdating_ == false && treeNote_ != null && 
+				scrollRect_.verticalScrollbar.isActiveAndEnabled && scrollRect_.verticalScrollbar.value <= 100.0f / layout_.preferredHeight )
+			{
+				LoadMore();
+			}
+		}
+	}
+
+
 
 	#region input
 
@@ -81,6 +122,89 @@ public class LogNote : DiaryNoteBase
 			}
 		}
 	}
+	
+	public void SubscribeKeyInput()
+	{
+		foreach( LogTree logTree in logTrees_ )
+		{
+			logTree.SubscribeKeyInput();
+		}
+	}
+
+	public void OnOverflowArrowInput(LogTree tree, KeyCode key)
+	{
+		int index = logTrees_.IndexOf(tree);
+		int nextIndex = index + 1;
+		while( nextIndex < logTrees_.Count - 1 && logTrees_[nextIndex].gameObject.activeInHierarchy == false )
+		{
+			++nextIndex;
+		}
+		int prevIndex = index - 1;
+		while( prevIndex > 0 && logTrees_[prevIndex].gameObject.activeInHierarchy == false )
+		{
+			--prevIndex;
+		}
+		switch( key )
+		{
+		case KeyCode.DownArrow:
+			{
+				Line next = (nextIndex < logTrees_.Count ? logTrees_[nextIndex].TitleLine[0] : null);
+				if( next != null )
+				{
+					next.Field.IsFocused = true;
+				}
+			}
+			break;
+		case KeyCode.UpArrow:
+			{
+				Line prev = (prevIndex >= 0 ? logTrees_[prevIndex].TitleLine.LastVisibleLine : null);
+				if( prev != null )
+				{
+					prev.Field.IsFocused = true;
+				}
+			}
+			break;
+		case KeyCode.RightArrow:
+			{
+				Line next = (nextIndex < logTrees_.Count ? logTrees_[nextIndex].TitleLine[0] : null);
+				if( next != null )
+				{
+					next.Field.CaretPosision = 0;
+					next.Field.IsFocused = true;
+				}
+			}
+			break;
+		case KeyCode.LeftArrow:
+			{
+				Line prev = (prevIndex >= 0 ? logTrees_[prevIndex].TitleLine.LastVisibleLine : null);
+				if( prev != null )
+				{
+					prev.Field.CaretPosision = prev.TextLength;
+					prev.Field.IsFocused = true;
+				}
+			}
+			break;
+		}
+	}
+
+	public void OnHomeEndInput(KeyCode key)
+	{
+		if( logTrees_.Count > 0 )
+		{
+			if( key == KeyCode.Home )
+			{
+				Line line = logTrees_[0].TitleLine[0];
+				line.Field.IsFocused = true;
+				logTrees_[0].OnFocused(line);
+			}
+			else if( key == KeyCode.End )
+			{
+				Line line = logTrees_[logTrees_.Count - 1].TitleLine.LastVisibleLine;
+				line.Field.IsFocused = true;
+				logTrees_[logTrees_.Count - 1].OnFocused(line);
+			}
+		}
+	}
 
 	#endregion
 
@@ -90,57 +214,76 @@ public class LogNote : DiaryNoteBase
 	public override void UpdateLayoutElement()
 	{
 		float preferredHeight = 0.0f;
-		foreach( LogTree logTree in logTrees_ )
+		foreach( DateUI dateUI in dateUIlist_ )
 		{
-			logTree.UpdateLayoutElement();
-			preferredHeight += logTree.GetComponent<LayoutElement>().preferredHeight + 5;
-			if( logTree.GetComponentInParent<DateUI>() != null )
-			{
-				logTree.GetComponentInParent<DateUI>().GetComponent<LayoutElement>().preferredHeight = logTree.GetComponent<LayoutElement>().preferredHeight;
-				logTree.GetComponentInParent<DateUI>().GetComponent<ContentSizeFitter>().SetLayoutVertical();
-			}
+			preferredHeight += dateUI.UpdatePreferredHeight() + 5;
 		}
 		preferredHeight += 100;
 		layout_.preferredHeight = preferredHeight;
 		contentSizeFitter_.SetLayoutVertical();
 	}
 
+	public void OnFontSizeChanged()
+	{
+		foreach( LogTree logTree in logTrees_ )
+		{
+			logTree.RootLine.AdjustFontSizeRecursive(GameContext.Config.FontSize, GameContext.Config.HeightPerLine);
+			logTree.UpdateLayoutElement();
+		}
+		if( gameObject.activeInHierarchy )
+		{
+			UpdateLayoutElement();
+		}
+	}
+
 	#endregion
 
 
 	#region events
-
-	public void OnTreeNoteSelected()
-	{
-		scrollRect_.verticalScrollbar.value = targetScrollValue_;
-		LogTabButton.Text = TitleText;
-
-		foreach( LogTree logTree in logTrees_ )
-		{
-			if( EditedLogTreeDict.ContainsKey(logTree.File.FullName) )
-			{
-				logTree.ReloadFile();
-				EditedLogTreeDict.Remove(logTree.File.FullName);
-			}
-		}
-	}
-
+	
 	public void OnTreeNoteDeselected()
 	{
 		targetScrollValue_ = scrollRect_.verticalScrollbar.gameObject.activeInHierarchy ? scrollRect_.verticalScrollbar.value : 1.0f;
 	}
 
+	public override void SetNoteViewParam(NoteViewParam param)
+	{
+		scrollRect_.verticalScrollbar.value = param.LogNoteTargetScrollValue;
+		StartCoroutine(SetNoteViewParamCoroutine(param));
+	}
+
+	public override void CacheNoteViewParam(NoteViewParam param)
+	{
+		param.LogNoteTargetScrollValue = isOpended_ && scrollRect_.verticalScrollbar.gameObject.activeInHierarchy ? scrollRect_.verticalScrollbar.value : 1.0f;
+	}
+
+	IEnumerator SetNoteViewParamCoroutine(NoteViewParam param)
+	{
+		isDateUIlistUpdating_ = true;
+		foreach( DateUI dateUI in dateUIlist_ )
+		{
+			if( dateUI.Tree != null )
+			{
+				dateUI.Tree.SetPath(param.Path);
+			}
+			dateUI.UpdateLayout();
+			dateUI.UpdatePreferredHeight();
+			if( dateUI.Tree != null )
+			{
+				yield return new WaitForSeconds(GameContext.Config.LogNoteSetPathCoroutineInterval);
+			}
+		}
+		UpdateLayoutElement();
+		isDateUIlistUpdating_ = false;
+	}
+
 	public void OnAreaOpened()
 	{
-		if( endDate_ == today_ )
+		if( (today_ - endDate_).Days < 7 )
 		{
 			LoadMore();
 		}
 		GameContext.Window.UpdateVerticalLayout();
-		if( treeNote_.IsActive )
-		{
-			LogTabButton.Text = TitleText;
-		}
 	}
 
 	public void OnAreaClosed()
@@ -153,16 +296,12 @@ public class LogNote : DiaryNoteBase
 
 	#region file
 
-	public void Initialize(TreeNote treeNote)
+	public void SaveAllLogFilesToOneDirectory(DirectoryInfo directory)
 	{
-		treeNote_ = treeNote;
-
-		string directoryName = ToDirectoryName(treeNote_);
-		if( Directory.Exists(directoryName) == false )
-		{
-			Directory.CreateDirectory(directoryName);
-		}
 		string header = treeNote_.File.Name.Replace(".dtml", "");
+		SortedList<DateTime, string> logFileList_ = new SortedList<DateTime, string>();
+
+		string directoryName = String.Format("{0}/{1}.dones/", treeNote_.File.DirectoryName, treeNote_.File.Name.Replace(".dtml", ""));
 		foreach( string path in Directory.GetFiles(directoryName) )
 		{
 			// path would be like "dones-2017-01-01.dtml"
@@ -179,49 +318,75 @@ public class LogNote : DiaryNoteBase
 			}
 		}
 
-		today_ = DateTime.Now.Date;
-		endDate_ = today_;
-		todayTree_ = LoadLogTree(today_, ToFileName(treeNote_, today_));
-		if( logFileList_.ContainsKey(today_.Date) )
+		foreach( KeyValuePair<DateTime, string> pair in logFileList_ )
 		{
-			logFileList_.Remove(today_.Date);
+			FileInfo file = new FileInfo(String.Format("{0}/{1}.dones", directory.FullName, pair.Key.ToString("yyyy-MM-dd")));
+			
+			StreamWriter writer = new StreamWriter(file.FullName, append: file.Exists);
+			writer.WriteLine(header);
+
+			StreamReader reader = new StreamReader(new FileInfo(pair.Value).OpenRead());
+			string text = null;
+			while( (text = reader.ReadLine()) != null )
+			{
+				writer.Write("	");
+				writer.WriteLine(text);
+			}
+
+			writer.Flush();
+			writer.Close();
 		}
 	}
 
-	public override void LoadMore()
+	public void Initialize(TreeNote treeNote)
 	{
-		if( treeNote_.File == null ) return;
-		
+		treeNote_ = treeNote;
+
+		today_ = DateTime.Now.Date;
+		endDate_ = today_;
+		endDate_ = endDate_.AddDays(-1.0);
+		DateUI dateUI = Instantiate(ThisWeekDateUIPrefab, this.transform).GetComponent<DateUI>();
+		todayTree_ = LoadLogTree(today_, dateUI.transform, ToFileName(treeNote_, today_));
+		dateUI.Set(todayTree_, today_, today_, ToColor(today_));
+		logTrees_.Add(todayTree_);
+		dateUIlist_.Add(dateUI);
+	}
+
+	public void LoadMore()
+	{
+		DateTime date = endDate_;
 		int loadCount = GameContext.Config.LogLoadUnit;
-		while( logFileList_.Count > 0 && loadCount > 0 )
+		while( loadCount > 0 )
 		{
-			DateTime date = logFileList_.Last().Key;
-			LoadLogTree(date, logFileList_[date]);
+			GameObject selectedDateUIPrefab = (today_ - date).Days < (int)today_.DayOfWeek ? ThisWeekDateUIPrefab : (today_.Year == date.Year ? ThisYearDateUIPrefab : DateUIPrefab);
+			DateUI dateUI = Instantiate(selectedDateUIPrefab, this.transform).GetComponent<DateUI>();
+			LogTree logTree = null;
+			string filename = ToFileName(treeNote_, date);
+			if( File.Exists(filename) )
+			{
+				logTree = LoadLogTree(date, dateUI.transform, filename);
+				logTrees_.Add(logTree);
+			}
+			dateUI.Set(logTree, date, today_, ToColor(date));
+			dateUIlist_.Add(dateUI);
+
+			date = date.AddDays(-1.0);
 			--loadCount;
-			logFileList_.Remove(date);
-			endDate_ = date;
 		}
-		endLoad_ = logFileList_.Count == 0;
+		endDate_ = date;
 		UpdateLayoutElement();
 	}
 
-	public void AddDate(DateTime date)
-	{
-		LogTree logTree = LoadLogTree(date, ToFileName(treeNote_, date));
-		SetSortedIndex(logTree);
-	}
 
-	protected LogTree LoadLogTree(DateTime date, string filename)
+	protected LogTree LoadLogTree(DateTime date, Transform parent, string filename)
 	{
-		DateUI dateUI = Instantiate(DateUIPrefab.gameObject, this.transform).GetComponent<DateUI>();
-		LogTree logTree = Instantiate(LogTreePrefab.gameObject, dateUI.transform).GetComponent<LogTree>();
-		dateUI.Set(date, ToColor(date));
-		dateUI.SetEnableAddDateButtton(File.Exists(ToFileName(treeNote_, date.AddDays(-1.0))) == false);
+		LogTree logTree = Instantiate(LogTreePrefab.gameObject, parent).GetComponent<LogTree>();
 		logTree.Initialize(this, new ActionManagerProxy(actionManager_), heapManager_);
 		logTree.LoadLog(new FileInfo(filename), date);
+		logTree.SetPath(treeNote_.Tree.Path);
 		logTree.SubscribeKeyInput();
 		logTree.OnEdited += this.OnEdited;
-		logTrees_.Add(logTree);
+
 		return logTree;
 	}
 
@@ -229,10 +394,6 @@ public class LogNote : DiaryNoteBase
 	{
 		treeNote_.OnEdited(sender, e);
 		LogTree logTree = sender as LogTree;
-		if( EditedLogTreeDict.ContainsValue(logTree) == false )
-		{
-			EditedLogTreeDict.Add(logTree.File.FullName, logTree);
-		}
 	}
 
 	public void SetSortedIndex(LogTree logTree)
@@ -285,4 +446,19 @@ public class LogNote : DiaryNoteBase
 	}
 
 	#endregion
+
+
+
+	public static Color ToColor(DateTime date)
+	{
+		if( date.Date == DateTime.Now.Date ) return GameContext.Config.DoneColor;
+		else if( date.DayOfWeek == DayOfWeek.Sunday ) return GameContext.Config.AccentColor;
+		else if( date.DayOfWeek == DayOfWeek.Saturday ) return GameContext.Config.AccentColor;
+		else return GameContext.Config.TextColor;
+	}
+
+	public static string ToFileName(TreeNote treeNote, DateTime date)
+	{
+		return String.Format("{0}/log/{1}.dones", treeNote.File.DirectoryName, date.ToString("yyyy-MM-dd"));
+	}
 }
