@@ -2175,14 +2175,18 @@ public class Tree : MonoBehaviour
 	{
 		List<Text> textList = new List<Text>(GameContext.Window.TitleLine.GetComponentsInChildren<Text>(includeInactive: true));
 		List<UIMidairPrimitive> triangleList = new List<UIMidairPrimitive>(GameContext.Window.TitleLine.GetComponentsInChildren<UIMidairPrimitive>(includeInactive: true));
-
-		while( textList.Count < path_.Length )
+        
+        while ( textList.Count < path_.Length + 1 )
 		{
 			textList.Add(Instantiate(textList[0].gameObject, GameContext.Window.TitleLine.transform).GetComponent<Text>());
 			triangleList.Add(Instantiate(triangleList[0].gameObject, GameContext.Window.TitleLine.transform).GetComponent<UIMidairPrimitive>());
 		}
 
-		for( int i = 0; i < textList.Count; ++i )
+        textList.RemoveAt(0);// home ボタンを残す
+        triangleList[0].gameObject.SetActive(path_.Length > 0);
+        triangleList.RemoveAt(0);
+
+        for ( int i = 0; i < textList.Count; ++i )
 		{
 			textList[i].gameObject.SetActive(i < path_.Length);
 			triangleList[i].gameObject.SetActive(i < path_.Length - 1);
@@ -2204,11 +2208,11 @@ public class Tree : MonoBehaviour
 
 		if( path_.Length > 0 )
 		{
-			StartCoroutine(UpdateTextLengthCoroutine(textList[0].cachedTextGenerator));
+			StartCoroutine(UpdateTitleLineTextLengthCoroutine(textList[0].cachedTextGenerator));
 		}
 	}
 
-	IEnumerator UpdateTextLengthCoroutine(TextGenerator gen)
+	IEnumerator UpdateTitleLineTextLengthCoroutine(TextGenerator gen)
 	{
 		yield return new WaitWhile(() => gen.characterCount == 0);
 
@@ -2218,9 +2222,9 @@ public class Tree : MonoBehaviour
 		float x = 0;
 		float margin = 12;
 		float triangleWidth = 12;
-		for( int i = 0; i < path_.Length; ++i )
+		for( int i = 0; i < textList.Count; ++i )
 		{
-			float width = LineField.CalcTextRectLength(textList[i].cachedTextGenerator, path_[i].Length);
+			float width = LineField.CalcTextRectLength(textList[i].cachedTextGenerator, textList[i].text.Length);
 			textList[i].transform.localPosition = new Vector3(x, textList[i].transform.localPosition.y, 0);
 			x += width;
 			x += margin;
@@ -2283,12 +2287,9 @@ public class Tree : MonoBehaviour
 		{
 			titleLine_.Bind(this.gameObject);
 			foreach( Line child in titleLine_ )
-			{
-				if( child.Field == null )
-				{
-					child.FindBindingField();
-				}
-				child.Field.transform.SetParent(this.gameObject.transform);
+            {
+                child.FindBindingField();
+                child.Field.transform.SetParent(this.gameObject.transform);
 			}
 			titleLine_.UpdateFoldLayout();
 		}
