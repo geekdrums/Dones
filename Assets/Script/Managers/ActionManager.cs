@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using UnityEngine;
 
 public class ActionEventArgs : EventArgs
 {
@@ -16,14 +17,24 @@ public class ActionEventArgs : EventArgs
 
 public class ActionManager
 {
-	List<ActionBase> actions_ = new List<ActionBase>();
-	int currentIndex_ = -1;
+	List<ActionBase> undoActions_ = new List<ActionBase>();
+	List<ActionBase> redoActions_ = new List<ActionBase>();
+	int undoIndex_ = -1;
+	int redoIndex_ = -1;
+	Line titleLine_;
 	Stack<ChainAction> chainStack_ = new Stack<ChainAction>();
 
 	public event EventHandler<ActionEventArgs> Executed;
 	public event EventHandler ChainStarted;
 	public event EventHandler ChainEnded;
 	public bool IsChaining { get { return chainStack_.Count > 0; } }
+
+	public void SetTitleLine(Line titleLine)
+	{
+		titleLine_ = titleLine;
+		undoIndex_ = undoActions_.Count - 1;
+		redoIndex_ = redoActions_.Count - 1;
+	}
 
 	public void Execute(ActionBase action)
 	{
@@ -37,20 +48,41 @@ public class ActionManager
 		}
 		else
 		{
-			if( currentIndex_ + 1 < actions_.Count )
+			if( redoIndex_ >= 0 )
 			{
-				actions_.RemoveRange(currentIndex_ + 1, actions_.Count - (currentIndex_ + 1));
+                // 現在のtitleLine以下に関連するアクションは分岐してしまうのでRedoツリーから消す
+                redoActions_.RemoveAll((ActionBase a) => a.IsRelatedTo(titleLine_));
+				redoIndex_ = -1;
 			}
-			++currentIndex_;
-			actions_.Add(action);
+			undoActions_.Add(action);
+			undoIndex_ = undoActions_.Count - 1;
 		}
 	}
 
 	public void Undo()
 	{
-		if( 0 <= currentIndex_ && currentIndex_ < actions_.Count )
+		if( 0 <= undoIndex_ && undoIndex_ < undoActions_.Count )
 		{
-			ActionBase action = actions_[currentIndex_--];
+			ActionBase action = undoActions_[undoIndex_];
+            // undoツリーから、現在のtitleLine以下に関係するアクションを取得する
+			while( action.IsRelatedTo(titleLine_) == false )
+			{
+				if( undoIndex_ <= 0 )
+				{
+					return;
+				}
+				action = undoActions_[--undoIndex_];
+            }
+            if (action is ChainAction && titleLine_.IsChildOf((action as ChainAction).LeastCommonParentLine))
+            {
+                Debug.Log("can't undo " + action.ToString());
+                return;
+            }
+
+            --undoIndex_;
+			undoActions_.Remove(action);
+			redoActions_.Add(action);
+			redoIndex_ = redoActions_.Count - 1;
 			if( action is ChainAction )
 			{
 				OnChainStarted();
@@ -80,9 +112,27 @@ public class ActionManager
 
 	public void Redo()
 	{
-		if( currentIndex_ + 1 < actions_.Count )
+		if( 0 <= redoIndex_ && redoIndex_ < redoActions_.Count )
 		{
-			ActionBase action = actions_[++currentIndex_];
+			ActionBase action = redoActions_[redoIndex_];
+			while( action.IsRelatedTo(titleLine_) == false )
+			{
+				if( redoIndex_ <= 0 )
+				{
+					return;
+				}
+				action = redoActions_[--redoIndex_];
+            }
+            if (action is ChainAction && titleLine_.IsChildOf((action as ChainAction).LeastCommonParentLine))
+            {
+                Debug.Log("can't redo " + action.ToString());
+                return;
+            }
+
+            --redoIndex_;
+			redoActions_.Remove(action);
+			undoActions_.Add(action);
+			undoIndex_ = undoActions_.Count - 1;
 			if( action is ChainAction )
 			{
 				OnChainStarted();
@@ -112,8 +162,10 @@ public class ActionManager
 
 	public void Clear()
 	{
-		actions_.Clear();
-		currentIndex_ = -1;
+		undoActions_.Clear();
+		redoActions_.Clear();
+		undoIndex_ = -1;
+		redoIndex_ = -1;
 		chainStack_.Clear();
 	}
 
@@ -145,12 +197,14 @@ public class ActionManager
 			}
 			else
 			{
-				if( currentIndex_ + 1 < actions_.Count )
-				{
-					actions_.RemoveRange(currentIndex_ + 1, actions_.Count - (currentIndex_ + 1));
+				if( redoIndex_ >= 0 )
+                {
+                    redoActions_.RemoveAll((ActionBase a) => a.IsRelatedTo(titleLine_));
+                    redoIndex_ = -1;
 				}
-				++currentIndex_;
-				actions_.Add(lastChainAction);
+				undoActions_.Add(lastChainAction);
+				lastChainAction.CheckLeastCommonParent();
+				undoIndex_ = undoActions_.Count - 1;
 				OnChainEnded();
 			}
 		}

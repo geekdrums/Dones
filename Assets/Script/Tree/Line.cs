@@ -180,6 +180,7 @@ public class Line : IEnumerable<Line>
 		{
 			line_ = line;
 			CaretPos = line.Field.CaretPosision;
+			TargetLines = new Line[] { line_ };
 		}
 	}
 
@@ -600,7 +601,7 @@ public class Line : IEnumerable<Line>
 
 	#region Tree params
 
-	protected Line parent_;
+	protected Line parent_, oldParent_;
 	protected ReactiveCollection<Line> children_ = new ReactiveCollection<Line>();
 
 	public Line this[int index]
@@ -615,8 +616,20 @@ public class Line : IEnumerable<Line>
 			children_[index] = value;
 		}
 	}
-	public Line Parent { get { return parent_; } private set { parent_ = value; } }
-	public int Count { get { return children_.Count; } }
+	public Line Parent
+    {
+        get { return parent_; }
+        private set
+        {
+            oldParent_ = parent_;
+            parent_ = value;
+        }
+    }
+    public Line LastParent
+    {
+        get { return (parent_ != null ? parent_ : oldParent_); }
+    }
+    public int Count { get { return children_.Count; } }
 	public void Add(Line child)
 	{
 		Insert(Count, child);
@@ -633,7 +646,7 @@ public class Line : IEnumerable<Line>
 		{
 			children_.Insert(index, child);
 			child.Tree = Tree;
-			child.parent_ = this;
+			child.Parent = this;
 			if( oldParent != null )
 			{
 				oldParent.children_.Remove(child);
@@ -684,7 +697,7 @@ public class Line : IEnumerable<Line>
 		children_.Remove(child);
 		if( child.parent_ == this && child.Binding != null )
 		{
-			child.parent_ = null;
+			child.Parent = null;
 			child.OnLostParent();
 		}
 	}
@@ -716,43 +729,6 @@ public class Line : IEnumerable<Line>
 			Binding.transform.localPosition = CalcTargetPosition();
 			break;
 		}
-
-		/*
-		if( Tree == null )
-		{
-		}
-		else if( Field == null || Field.BindedLine != this )
-		{
-			if( BindState != EBindState.Unbind )
-			{
-				Debug.Log(String.Format("{0} | state is not Unbind, is {1}", Text, BindState.ToString()));
-			}
-			// Fieldがまだ無い、またはヒープに返して他のLineに使われた
-			Bind(Tree.FindBindingField());
-		}
-		else if( Field.BindedLine == this && Field.gameObject.activeSelf == false )
-		{
-			if( BindState != EBindState.WeakBind )
-			{
-				Debug.Log(String.Format("{0} | state is not WeakBind, is {1}", Text, BindState.ToString()));
-			}
-			// ヒープに返したが、他のものには使われていなかった
-			ReBind();
-		}
-		else // Field != null && Field.BindedLine == this && && Field.gameObject.activeSelf
-		{
-			if( BindState != EBindState.Bind )
-			{
-				Debug.Log(String.Format("{0} | state is not Bind, is {1}", Text, BindState.ToString()));
-			}
-			// 適切なFieldをもう持っている
-			if( Binding.transform.parent != Parent.Binding.transform )
-			{
-				Binding.transform.SetParent(Parent.Binding.transform, worldPositionStays: true);
-			}
-			AdjustLayout();
-		}
-		*/
 
 		foreach( Line child in this )
 		{
@@ -803,6 +779,85 @@ public class Line : IEnumerable<Line>
 			parent = parent.parent_;
 		}
 		return false;
+    }
+
+    public bool IsChildOrItselfOf(Line line)
+	{
+		if( line == this )
+		{
+			return true;
+		}
+		else
+		{
+			return IsChildOf(line);
+		}
+    }
+
+    public bool HasBeenChildOf(Line line)
+    {
+        Line parent = LastParent;
+        while (parent != null)
+        {
+            if (parent == line)
+                return true;
+
+            parent = parent.LastParent;
+        }
+        return false;
+    }
+
+    public bool HasBeenChildOrItselfOf(Line line)
+    {
+        if (line == this)
+        {
+            return true;
+        }
+        else
+        {
+            return HasBeenChildOf(line);
+        }
+    }
+
+    public static Line GetLeastCommonParent(params Line[] lines)
+	{
+		if( lines.Length == 0 )
+		{
+			return null;
+		}
+		else if( lines.Length == 1 )
+		{
+			return lines[0];
+		}
+
+		int minLevel = int.MaxValue;
+		Line minLevelLine = null;
+		foreach( Line line in lines )
+		{
+			int level = line.Level;
+			if( level < minLevel )
+			{
+				minLevel = level;
+				minLevelLine = line;
+			}
+		}
+
+		Line commonParent = minLevelLine;
+		bool findCommonParent = false;
+		do
+		{
+			findCommonParent = true;
+			foreach( Line line in lines )
+			{
+				if( line.HasBeenChildOrItselfOf(commonParent) == false )
+				{
+					findCommonParent = false;
+					commonParent = commonParent.LastParent;
+					break;
+				}
+			}
+		} while( findCommonParent == false && commonParent != null );
+
+		return commonParent;
 	}
 
 	#endregion
@@ -994,26 +1049,10 @@ public class Line : IEnumerable<Line>
 				line.Field.gameObject.SetActive(isChildVisible);
 			}
 		}
-		/*
-		if( isFolded_ )
+		if( isChildVisible )
 		{
-			foreach( Line line in children_ )
-			{
-				line.BackToHeap();
-				foreach( Line child in line.GetVisibleChildren() )
-				{
-					child.BackToHeap();
-				}
-			}
+			AdjustLayoutInChildren();
 		}
-		else
-		{
-			foreach( Line line in children_ )
-			{
-				line.FindBindingField();
-			}
-		}
-		*/
 	}
 
 	protected Vector3 CalcTargetPosition(Direction dir = Direction.XY)
@@ -1044,11 +1083,11 @@ public class Line : IEnumerable<Line>
 	{
 		get
 		{
-			if( parent_.IsTitleLine )
+			if( IsTitleLine )
 			{
-				return 0;
+				return -1;
 			}
-			return parent_.Level + 1;
+			return LastParent.Level + 1;
 		}
 	}
 
@@ -1056,11 +1095,11 @@ public class Line : IEnumerable<Line>
 	{
 		get
 		{
-			if( parent_.parent_ == null )
+			if(LastParent.parent_ == null )
 			{
 				return 0;
 			}
-			return parent_.LevelFromRoot + 1;
+			return LastParent.LevelFromRoot + 1;
 		}
 	}
 
@@ -1194,7 +1233,7 @@ public class Line : IEnumerable<Line>
 				{
 					return parent_[Index - 1].LastVisibleLine;
 				}
-				else if( parent_.parent_ != null )
+				else if( parent_.IsTitleLine == false )
 				{
 					return parent_;
 				}
@@ -1574,7 +1613,8 @@ public class Line : IEnumerable<Line>
 				textAction_.Text.Remove(0, CommentTag.Length);
 			}
 			FixTextInputAction();
-			Tree.ActionManager.Execute(new Action(
+			Tree.ActionManager.Execute(new LineAction(
+				targetLines: this,
 				execute: () =>
 				{
 					IsComment = true;

@@ -128,6 +128,10 @@ public class LineField : CustomInputField
 			}
 			tagTexts_.Clear();
 		}
+		else
+		{
+			SetHashTags(BindedLine.Tags);
+		}
 	}
 
 	public void SetHashTags(List<string> tags)
@@ -155,7 +159,6 @@ public class LineField : CustomInputField
 				tagText.Text = "#" + tag;
 				tagText.Rect.anchoredPosition = Vector2.zero;
 				tagText.gameObject.SetActive(isFocused == false);
-				tagText.TextComponent.fontStyle = BindedLine.IsBold ? FontStyle.Bold : FontStyle.Normal;
 				tagTexts_.Add(tagText);
 				OnTextLengthChanged();
 			}
@@ -218,17 +221,6 @@ public class LineField : CustomInputField
 		}
 	}
 
-	public void SetIsBold(bool isBold)
-	{
-		textComponent.fontStyle = isBold ? FontStyle.Bold : FontStyle.Normal;
-		foreach( TagText tagText in tagTexts_ )
-		{
-			tagText.TextComponent.fontStyle = isBold ? FontStyle.Bold : FontStyle.Normal;
-		}
-		OnTextLengthChanged();
-	}
-
-
 	protected Color GetDesiredTextColor()
 	{
 		if( BindedLine != null )
@@ -283,25 +275,13 @@ public class LineField : CustomInputField
 		if( checkMark_.gameObject.activeSelf )
 			checkMark_.SetPositionX(charLength);
 
-		float rectHeight = RectHeight;
 		foreach( TagText tagText in tagTexts_ )
 		{
 			int index = text.LastIndexOf(tagText.Text);
 			float x = GetTextRectLength(index - 1);
 			tagText.Rect.anchoredPosition = new Vector2(x + textComponent.rectTransform.offsetMin.x, 0);
 			float width = GetTextRectLength(index + tagText.Text.Length - 1) - x;
-			tagText.Rect.sizeDelta = new Vector2(width, rectHeight);
-		}
-	}
-
-	public void OnFontSizeChanged(int fontSize, float heightPerLine)
-	{
-		textComponent.fontSize = fontSize;
-		RectHeight = heightPerLine;
-		OnTextLengthChanged();
-		foreach( TagText tagText in tagTexts_ )
-		{
-			tagText.TextComponent.fontSize = fontSize;
+			tagText.Rect.sizeDelta = new Vector2(width, tagText.Rect.sizeDelta.y);
 		}
 	}
 
@@ -416,7 +396,7 @@ public class LineField : CustomInputField
 			compositionBugCount = 0;
 			foreach( Event maybeDuplicatedEvent in currentEvents )
 			{
-				if( maybeDuplicatedEvent.rawType == EventType.KeyDown )
+				if( maybeDuplicatedEvent.rawType == EventType.keyDown )
 				{
 					++compositionBugCount;
 				}
@@ -469,8 +449,7 @@ public class LineField : CustomInputField
 					{
 						DateTime now = DateTime.Now;
 						string oldText = text;
-						BindedLine.Tree.ActionManager.Execute(new LineAction(
-							targetLines: BindedLine,
+						BindedLine.Tree.ActionManager.Execute(new Action(
 							execute: () =>
 							{
 								Paste(now.ToString(GameContext.Config.TimeFormat));
@@ -488,8 +467,7 @@ public class LineField : CustomInputField
 					{
 						DateTime date = DateTime.Now;
 						string oldText = text;
-						BindedLine.Tree.ActionManager.Execute(new LineAction(
-							targetLines: BindedLine,
+						BindedLine.Tree.ActionManager.Execute(new Action(
 							execute: () =>
 							{
 								Paste(date.ToString(GameContext.Config.DateFormat));

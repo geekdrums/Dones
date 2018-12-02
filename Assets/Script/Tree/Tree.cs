@@ -448,8 +448,8 @@ public class Tree : MonoBehaviour
 		Line oldParent = oldSelectTop.Parent;
 		int oldIndex = oldSelectTop.Index;
 
-		List<Action> reparentActions = new List<Action>();
-		List<Action> deleteActions = new List<Action>();
+		List<LineAction> reparentActions = new List<LineAction>();
+		List<LineAction> deleteActions = new List<LineAction>();
 
 		foreach( Line line in GetSelectedOrFocusedLines(ascending: false) )
 		{
@@ -468,7 +468,7 @@ public class Tree : MonoBehaviour
 					if( prev == null ) prev = titleLine_;
 					Line lostParent = line;
 					bool wasFolded = prev.IsFolded;
-					reparentActions.Add(new Action(
+					reparentActions.Add(new LineAction(
 						execute: () =>
 						{
 							int startIndex = prev.Count;
@@ -503,7 +503,8 @@ public class Tree : MonoBehaviour
 			Line parent = line.Parent;
 			int index = line.Index;
 			Line layoutStart = null;
-			deleteActions.Add(new Action(
+			deleteActions.Add(new LineAction(
+				targetLines: line,
 				execute: () =>
 				{
 					layoutStart = line.NextVisibleLine;
@@ -530,17 +531,17 @@ public class Tree : MonoBehaviour
 				));
 		}
 		
-		foreach( Action action in reparentActions )
+		foreach( LineAction action in reparentActions )
 		{
 			actionManager_.Execute(action);
 		}
-		foreach( Action action in deleteActions )
+		foreach( LineAction action in deleteActions )
 		{
 			actionManager_.Execute(action);
 		}
 
 		// 選択解除
-		actionManager_.Execute(new Action(
+		actionManager_.Execute(new LineAction(
 			execute: () =>
 			{
 				selectedLines_.Clear();
@@ -556,7 +557,8 @@ public class Tree : MonoBehaviour
 
 		// （入力のために）新しい行を作る
 		Line newLine = new Line();
-		actionManager_.Execute(new Action(
+		actionManager_.Execute(new LineAction(
+			targetLines: newLine,
 			execute: () =>
 			{
 				oldParent.Insert(oldIndex, newLine);
@@ -709,7 +711,8 @@ public class Tree : MonoBehaviour
 			{
 				Line oldParent = line.Parent;
 				Line newParent = line.Parent[index - 1];
-				actionManager_.Execute(new Action(
+				actionManager_.Execute(new LineAction(
+					targetLines: line,
 					execute: () =>
 					{
 						newParent.Add(line);
@@ -735,16 +738,18 @@ public class Tree : MonoBehaviour
 		// 逆順で下から処理
 		foreach( Line line in GetSelectedOrFocusedLines(ascending: false) )
 		{
-			if( line.Parent.Parent != null && ( line.Parent.Field.IsSelected == false || line.Parent.Level <= 0 ) && line.IsComment == false )
+			if( line.Parent.IsTitleLine == false && ( line.Parent.Field.IsSelected == false || line.Parent.Level <= 0 ) && line.IsComment == false )
 			{
 				int index = line.Index;
+				Line targetLine = line;
 				Line oldParent = line.Parent;
 				Line newParent = line.Parent.Parent;
-				actionManager_.Execute(new Action(
+				actionManager_.Execute(new LineAction(
+					targetLines: targetLine,
 					execute: () =>
 					{
-						Line layoutStart = line.Parent[index + 1];
-						newParent.Insert(line.Parent.Index + 1, line);
+						Line layoutStart = targetLine.Parent[index + 1];
+						newParent.Insert(targetLine.Parent.Index + 1, targetLine);
 						if( layoutStart != null && layoutStart.Field.IsSelected == false )
 						{
 							layoutStart.Parent.AdjustLayoutRecursive(layoutStart.Index);
@@ -752,7 +757,7 @@ public class Tree : MonoBehaviour
 					},
 					undo: () =>
 					{
-						oldParent.Insert(index, line);
+						oldParent.Insert(index, targetLine);
 						oldParent.AdjustLayoutRecursive(index);
 					}
 					));
@@ -780,7 +785,8 @@ public class Tree : MonoBehaviour
 	public void Done(Line targetLine)
 	{
 		List<string> removeTags = new List<string>();
-		actionManager_.Execute(new Action(
+		actionManager_.Execute(new LineAction(
+			targetLines: targetLine,
 			execute: () =>
 			{
 				targetLine.IsDone = !targetLine.IsDone;
@@ -846,13 +852,15 @@ public class Tree : MonoBehaviour
 	{
 		if( focusedLine_ != null && GameContext.Window.TagIncrementalDialog.IsActive )
 		{
+			// タグのインクリメンタルサーチで選択した時の場合
 			string selectedTag = GameContext.Window.TagIncrementalDialog.GetSelectedTag();
 			if( selectedTag != null )
 			{
 				Line line = focusedLine_;
 				string caretTag = Line.GetTagInCaretPosition(line.Text, line.Field.CaretPosision);
 				int oldCaretPos = line.Field.CaretPosision;
-				actionManager_.Execute(new Action(
+				actionManager_.Execute(new LineAction(
+					targetLines: line,
 					execute: () =>
 					{
 						line.Field.CaretPosision = 0;
@@ -886,7 +894,8 @@ public class Tree : MonoBehaviour
 		if( caretPos == 0 && target.TextLength > 0 )
 		{
 			// 行頭でEnterしたので行の上にLineを追加
-			actionManager_.Execute(new Action(
+			actionManager_.Execute(new LineAction(
+				targetLines: newline,
 				execute: () =>
 				{
 					parent.Insert(index, newline);
@@ -920,8 +929,9 @@ public class Tree : MonoBehaviour
 				insertIndex = 0;
 			}
 
-			actionManager_.Execute(new Action(
-				execute: () =>
+			actionManager_.Execute(new LineAction(
+				targetLines: new Line[] { target, newline },
+                execute: () =>
 				{
 					target.Text = subString;
 					newline.Text += newString;
@@ -956,72 +966,79 @@ public class Tree : MonoBehaviour
 
 			if( prev.Parent == line.Parent && prev.TextLength == 0 )
 			{
+				// 前のテキストが無いので前のラインを消せばOK
 				Line parent = prev.Parent;
 				int index = prev.Index;
-				actionManager_.Execute(new Action(
-				   execute: () =>
-				   {
-					   parent.Remove(prev);
-					   RequestLayout(line);
-				   },
-				   undo: () =>
-				   {
-					   parent.Insert(index, prev);
-					   RequestLayout(line);
-				   }
-				   ));
+				actionManager_.Execute(new LineAction(
+					targetLines: prev,
+					execute: () =>
+					{
+						parent.Remove(prev);
+						RequestLayout(line);
+					},
+					undo: () =>
+					{
+						parent.Insert(index, prev);
+						RequestLayout(line);
+					}
+					));
 			}
 			else if( prev.Parent == line.Parent && line.TextLength == 0 && line.Count == 0 )
 			{
+				// 選択ラインのテキストが無いので選択ラインを消せばOK
 				Line parent = line.Parent;
 				int index = line.Index;
 				Line layoutStart = line.NextVisibleLine;
-				actionManager_.Execute(new Action(
-				   execute: () =>
-				   {
-					   parent.Remove(line);
-					   RequestLayout(layoutStart);
-					   prev.Field.CaretPosision = prev.TextLength;
-					   prev.Field.IsFocused = true;
-				   },
-				   undo: () =>
-				   {
-					   parent.Insert(index, line);
-					   RequestLayout(layoutStart);
-					   line.Field.CaretPosision = 0;
-					   line.Field.IsFocused = true;
-				   }
-				   ));
+				actionManager_.Execute(new LineAction(
+					targetLines: line,
+					execute: () =>
+					{
+						parent.Remove(line);
+						RequestLayout(layoutStart);
+						prev.Field.CaretPosision = prev.TextLength;
+						prev.Field.IsFocused = true;
+					},
+					undo: () =>
+					{
+						parent.Insert(index, line);
+						RequestLayout(layoutStart);
+						line.Field.CaretPosision = 0;
+						line.Field.IsFocused = true;
+					}
+					));
 			}
 			else
 			{
+				// 選択もその前もテキストがあるのでテキスト合体が必要
 				actionManager_.StartChain();
 				Line parent = line.Parent;
 				int index = line.Index;
 
 				// テキスト合体してキャレット移動
 				string oldText = prev.Text;
-				actionManager_.Execute(new Action(
-				   execute: () =>
-				   {
-					   prev.Field.CaretPosision = prev.TextLength;
-					   prev.Text += line.Text;
-					   prev.Field.IsFocused = true;
-				   },
-				   undo: () =>
-				   {
-					   prev.Text = oldText;
-					   line.Field.CaretPosision = 0;
-					   line.Field.IsFocused = true;
-				   }
-				   ));
+				actionManager_.Execute(new LineAction(
+					targetLines: prev,
+					execute: () =>
+					{
+						prev.Field.CaretPosision = prev.TextLength;
+						prev.Text += line.Text;
+						prev.Field.IsFocused = true;
+					},
+					undo: () =>
+					{
+						prev.Text = oldText;
+						line.Field.CaretPosision = 0;
+						line.Field.IsFocused = true;
+					}
+					));
 
 				// 子供がいたら親を変更
 				if( line.Count > 0 )
 				{
 					List<Line> children = new List<Line>(line);
-					actionManager_.Execute(new Action(
-						execute: () =>
+					actionManager_.Execute(new LineAction(
+                        targetLines: children.ToArray(),
+                        execute: () =>
 						{
 							line.IsFolded = false;
 							prev.IsFolded = false;
@@ -1043,7 +1060,8 @@ public class Tree : MonoBehaviour
 
 				// 削除
 				Line layoutStart = line.NextVisibleLine;
-				actionManager_.Execute(new Action(
+				actionManager_.Execute(new LineAction(
+                    targetLines: line,
 					execute: () =>
 					{
 						line.Parent.Remove(line);
@@ -1080,42 +1098,47 @@ public class Tree : MonoBehaviour
 
 			if( next.Parent == line.Parent && next.TextLength == 0 )
 			{
+				// 次のテキストが無いので次のラインを消せばOK
 				Line parent = next.Parent;
 				int index = next.Index;
-				actionManager_.Execute(new Action(
-				   execute: () =>
-				   {
-					   parent.Remove(next);
-					   parent.AdjustLayoutRecursive(index);
-				   },
-				   undo: () =>
-				   {
-					   parent.Insert(index, next);
-					   parent.AdjustLayoutRecursive(index + 1);
-				   }
-				   ));
+				actionManager_.Execute(new LineAction(
+					targetLines: next,
+					execute: () =>
+					{
+						parent.Remove(next);
+						parent.AdjustLayoutRecursive(index);
+					},
+					undo: () =>
+					{
+						parent.Insert(index, next);
+						parent.AdjustLayoutRecursive(index + 1);
+					}
+					));
 			}
 			else if( next.Parent == line.Parent && line.TextLength == 0 )
 			{
+				// 選択ラインのテキストが無いので選択ラインを消せばOK
 				Line parent = line.Parent;
 				int index = line.Index;
-				actionManager_.Execute(new Action(
-				   execute: () =>
-				   {
-					   parent.Remove(line);
-					   RequestLayout(next);
-					   next.Field.IsFocused = true;
-				   },
-				   undo: () =>
-				   {
-					   parent.Insert(index, line);
-					   RequestLayout(next);
-					   line.Field.IsFocused = true;
-				   }
-				   ));
+				actionManager_.Execute(new LineAction(
+					targetLines: line,
+					execute: () =>
+					{
+						parent.Remove(line);
+						RequestLayout(next);
+						next.Field.IsFocused = true;
+					},
+					undo: () =>
+					{
+						parent.Insert(index, line);
+						RequestLayout(next);
+						line.Field.IsFocused = true;
+					}
+					));
 			}
 			else
 			{
+				// 選択もその次もテキストがあるのでテキスト合体が必要
 				actionManager_.StartChain();
 				Line parent = next.Parent;
 				int index = next.Index;
@@ -1123,23 +1146,25 @@ public class Tree : MonoBehaviour
 				// テキスト合体
 				string oldText = line.Text;
 				int oldCaret = line.Field.CaretPosision;
-				actionManager_.Execute(new Action(
-				   execute: () =>
-				   {
-					   line.Text += next.Text;
-				   },
-				   undo: () =>
-				   {
-					   line.Field.CaretPosision = oldCaret;
-					   line.Text = oldText;
-				   }
-				   ));
+				actionManager_.Execute(new LineAction(
+					targetLines: line,
+					execute: () =>
+					{
+						line.Text += next.Text;
+					},
+					undo: () =>
+					{
+						line.Field.CaretPosision = oldCaret;
+						line.Text = oldText;
+					}
+					));
 
 				// 子供がいたら親を変更
 				if( next.Count > 0 )
 				{
 					List<Line> children = new List<Line>(next);
-					actionManager_.Execute(new Action(
+					actionManager_.Execute(new LineAction(
+                        targetLines: children.ToArray(),
 						execute: () =>
 						{
 							next.IsFolded = false;
@@ -1164,8 +1189,10 @@ public class Tree : MonoBehaviour
 						));
 				}
 
+				// 削除
 				Line layoutStart = next.NextVisibleLine;
-				actionManager_.Execute(new Action(
+				actionManager_.Execute(new LineAction(
+                    targetLines: next,
 					execute: () =>
 					{
 						parent.Remove(next);
@@ -1212,7 +1239,8 @@ public class Tree : MonoBehaviour
 				Line dest = (key == KeyCode.DownArrow ? src.NextSiblingLine : src.PrevSiblingLine);
 				if( dest != null )
 				{
-					actionManager_.Execute(new Action(
+					actionManager_.Execute(new LineAction(
+						targetLines: new Line[] { src, dest },
 						execute: () =>
 						{
 							src.Parent.Insert(dest.Index, src);
@@ -1411,7 +1439,8 @@ public class Tree : MonoBehaviour
 			
 			Line targetLine = line;
 			bool hasExistTag = existTag != null && targetLine.Tags.Contains(existTag);
-			actionManager_.Execute(new Action(
+			actionManager_.Execute(new LineAction(
+				targetLines: targetLine,
 				execute: () =>
 				{
 					if( hasExistTag )
@@ -1441,7 +1470,8 @@ public class Tree : MonoBehaviour
 		foreach( Line line in GetSelectedOrFocusedLines() )
 		{
 			Line targetLine = line;
-			actionManager_.Execute(new Action(
+			actionManager_.Execute(new LineAction(
+				targetLines: targetLine,
 				execute: () =>
 				{
 					targetLine.IsBold = !targetLine.IsBold;
@@ -1517,11 +1547,16 @@ public class Tree : MonoBehaviour
 		Line pasteStart = null;
 		if( HasSelection )
 		{
+			// 選択範囲がある場合は、そこが消されて入力用の新しいLineが返される
 			pasteStart = DeleteSelection();
 		}
 
 		string[] cilpboardLines = Clipboard.Split(LineSeparator, System.StringSplitOptions.None);
+
+		// 1行目はカーソル位置に挿入するなど、それ以降とは違う処理が入るので最初に対応
 		string pasteText = cilpboardLines[0];
+
+		// Levelは相対的な値として貼り付けたいので、先頭行のレベルを基本として保存しておく
 		int currentLevel = 0;
 		while( pasteText.StartsWith(Line.TabString) )
 		{
@@ -1529,9 +1564,10 @@ public class Tree : MonoBehaviour
 			pasteText = pasteText.Remove(0, 1);
 		}
 		
+		// 1行目の貼り付け。
 		if( cilpboardLines.Length == 1 )
 		{
-			// paste for current focused line
+			// 1行しかないなら、選択行にそのままPasteする
 			if( pasteStart == null )
 			{
 				pasteStart = focusedLine_;
@@ -1541,7 +1577,8 @@ public class Tree : MonoBehaviour
 			string oldText = pasteStart.Text;
 			string oldTag = pasteStart.GetTagStrings();
 			int oldCaretPos = pasteStart.Field.CaretPosision;
-			actionManager_.Execute(new Action(
+			actionManager_.Execute(new LineAction(
+				targetLines: pasteStart.Parent,
 				execute: () =>
 				{
 					if( loadTag )
@@ -1571,7 +1608,7 @@ public class Tree : MonoBehaviour
 		}
 		else
 		{
-			// paste mutiple lines.
+			// 2行以上あるなら、空白の選択行またはその直前にPaste開始用の行を用意する
 			if( focusedLine_.Text == "" )
 			{
 				pasteStart = focusedLine_;
@@ -1581,8 +1618,9 @@ public class Tree : MonoBehaviour
 				Line pasteParent = focusedLine_.Parent;
 				int pasteIndex = focusedLine_.Index;
 				pasteStart = new Line();
-				actionManager_.Execute(new Action(
-					execute: () =>
+				actionManager_.Execute(new LineAction(
+                    targetLines: pasteStart,
+                    execute: () =>
 					{
 						pasteParent.Insert(pasteIndex, pasteStart);
 					},
@@ -1593,8 +1631,10 @@ public class Tree : MonoBehaviour
 					));
 			}
 			
+			// 最初の行を貼り付け
 			Line layoutStart = pasteStart.NextVisibleLine;
-			actionManager_.Execute(new Action(
+			actionManager_.Execute(new LineAction(
+				targetLines: pasteStart,
 				execute: () =>
 				{
 					string beforeRefText = pasteText;
@@ -1616,6 +1656,7 @@ public class Tree : MonoBehaviour
 				));
 		}
 
+		// 2行目以降を貼り付け
 		int oldLevel = currentLevel;
 		int startLevel = pasteStart.Level;
 		Line parent = pasteStart.Parent;
@@ -1659,7 +1700,8 @@ public class Tree : MonoBehaviour
 				insertIndex = brother.Index + 1;
 			}
 
-			actionManager_.Execute(new Action(
+			actionManager_.Execute(new LineAction(
+				targetLines: line,
 				execute: () =>
 				{
 					insertParent.Insert(insertIndex, line);
@@ -1760,7 +1802,7 @@ public class Tree : MonoBehaviour
 		if( line.IsFolded != isFolded )
 		{
 			Line layoutStart = line.NextSiblingOrUnkleLine;
-			actionManager_.Execute(new Action(
+			actionManager_.Execute(new LineAction(
 				execute: () =>
 				{
 					line.IsFolded = isFolded;
@@ -1794,7 +1836,7 @@ public class Tree : MonoBehaviour
 				{
 					Line unfoldLine = line;
 					Line layoutStart = line.NextVisibleLine;
-					actionManager_.Execute(new Action(
+					actionManager_.Execute(new LineAction(
 						execute: () =>
 						{
 							unfoldLine.IsFolded = false;
@@ -1810,7 +1852,7 @@ public class Tree : MonoBehaviour
 				line = line.NextVisibleLine;
 			}
 
-			actionManager_.Execute(new Action(
+			actionManager_.Execute(new LineAction(
 				execute: () =>
 				{
 					isAllFolded_ = false;
@@ -1839,7 +1881,7 @@ public class Tree : MonoBehaviour
 			{
 				Line foldLine = line;
 				Line layoutStart = line.NextSiblingOrUnkleLine;
-				actionManager_.Execute(new Action(
+				actionManager_.Execute(new LineAction(
 					execute: () =>
 					{
 						foldLine.IsFolded = true;
@@ -1853,7 +1895,7 @@ public class Tree : MonoBehaviour
 					));
 			}
 
-			actionManager_.Execute(new Action(
+			actionManager_.Execute(new LineAction(
 				execute: () =>
 				{
 					isAllFolded_ = true;
@@ -2085,6 +2127,7 @@ public class Tree : MonoBehaviour
 
 	#endregion
 
+
 	#region path
 
 	public Line GetLineFromPath(TreePath path)
@@ -2118,13 +2161,14 @@ public class Tree : MonoBehaviour
 
 	public void SetRootPath()
 	{
-		SetPath(rootLine_);
+		path_ = new TreePath();
+		SetTitleLine(rootLine_);
 	}
 
 	public void SetPath(TreePath path)
 	{
 		path_ = path;
-		SetPath(GetLineFromPath(path));
+		SetTitleLine(GetLineFromPath(path));
 	}
 
 	void UpdateTitleLine()
@@ -2188,7 +2232,7 @@ public class Tree : MonoBehaviour
 		}
 	}
 
-	public void SetPath(Line line)
+	void SetTitleLine(Line line)
 	{
 		if( ownerNote_ is TreeNote )
 		{
@@ -2232,7 +2276,6 @@ public class Tree : MonoBehaviour
 				child.Field.transform.SetParent(oldTitleLineObject.transform);
 			}
 			oldTitleLine.UpdateFoldLayout();
-			oldTitleLine.AdjustLayoutInChildren();
 		}
 
 		// 新しいTitleLine以下をTreeの下に移動する
@@ -2248,7 +2291,6 @@ public class Tree : MonoBehaviour
 				child.Field.transform.SetParent(this.gameObject.transform);
 			}
 			titleLine_.UpdateFoldLayout();
-			titleLine_.AdjustLayoutInChildren();
 		}
 
 		focusedLine_ = null;

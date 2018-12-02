@@ -370,7 +370,8 @@ public class TagList : MonoBehaviour, IEnumerable<TagParent>
 				Line line = taggedLine.BindedLine;
 				string oldTag = taggedLine.Parent.Tag;
 				string newTag = tagParents_[desiredIndex].Tag;
-				line.Tree.ActionManager.Execute(new Action(
+				line.Tree.ActionManager.Execute(new LineAction(
+					targetLines: line,
 					execute: () =>
 					{
 						line.RemoveTag(oldTag);

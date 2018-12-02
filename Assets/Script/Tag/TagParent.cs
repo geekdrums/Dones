@@ -174,7 +174,8 @@ public class TagParent : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDra
 		case KeyCode.Backspace:
 		case KeyCode.Delete:
 			Line line = selectedLine_.BindedLine;
-			selectedLine_.BindedLine.Tree.ActionManager.Execute(new Action(
+			selectedLine_.BindedLine.Tree.ActionManager.Execute(new LineAction(
+				targetLines: line,
 				execute: () =>
 				{
 					line.RemoveTag(Tag);
