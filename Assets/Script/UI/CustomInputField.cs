@@ -148,7 +148,7 @@ public class CustomInputField : InputField, IColoredObject
 	{
 		bool myDrag = IsActive() &&
 			   IsInteractable() &&
-			   eventData.button == PointerEventData.InputButton.Left &&
+			   (eventData.button == PointerEventData.InputButton.Left || eventData.button == PointerEventData.InputButton.Right) &&
 			   m_TextComponent != null &&
 			   m_Keyboard == null;
 

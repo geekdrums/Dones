@@ -30,6 +30,7 @@ public class Window : MonoBehaviour
 	public TabButton HomeTabButton;
 	public GameObject NoteParent;
 	public GameObject LogNoteParent;
+	public ContextMenu ContextMenu;
 
 	public RectTransform TreeNoteTransform;
 	public RectTransform LogNoteTransform;

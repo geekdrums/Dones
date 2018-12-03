@@ -90,7 +90,7 @@ public class Tree : MonoBehaviour
 	public Line TitleLine { get { return titleLine_; } }
 	public TreePath Path { get { return path_; } }
 
-	public string TitleText { get { return titleLine_ != null ? titleLine_.Text: ""; } }
+	public string TitleText { get { return titleLine_ != null ? titleLine_.Text : ""; } }
 	public override string ToString() { return TitleText; }
 
 
@@ -151,6 +151,10 @@ public class Tree : MonoBehaviour
 	void Update()
 	{
 		if( rootLine_ == null ) return;
+		if( GameContext.Window.ContextMenu.gameObject.activeInHierarchy )
+		{
+			return;
+		}
 
 		bool ctrl = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
 		bool shift = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
@@ -167,7 +171,7 @@ public class Tree : MonoBehaviour
 			}
 			else if( Input.GetKeyDown(KeyCode.C) )
 			{
-				Copy();
+				Copy(withformat: (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)) == false);
 			}
 			else if( Input.GetKeyDown(KeyCode.X) )
 			{
@@ -353,6 +357,10 @@ public class Tree : MonoBehaviour
 		{
 			selectionStartLine_ = selectionEndLine_ = null;
 		}
+		else if( Input.GetMouseButtonUp(1) )
+		{
+			GameContext.Window.ContextMenu.Open(Input.mousePosition);
+		}
 	}
 
 	protected virtual void OnDisable()
@@ -430,7 +438,7 @@ public class Tree : MonoBehaviour
 			line = line.NextVisibleLine;
 		}
 	}
-	
+
 
 	/// <summary>
 	/// 選択部分を消して、新たに入力可能となった行を返す
@@ -469,6 +477,7 @@ public class Tree : MonoBehaviour
 					Line lostParent = line;
 					bool wasFolded = prev.IsFolded;
 					reparentActions.Add(new LineAction(
+						targetLines: lostChildren.ToArray(),
 						execute: () =>
 						{
 							int startIndex = prev.Count;
@@ -530,7 +539,7 @@ public class Tree : MonoBehaviour
 				}
 				));
 		}
-		
+
 		foreach( LineAction action in reparentActions )
 		{
 			actionManager_.Execute(action);
@@ -679,25 +688,24 @@ public class Tree : MonoBehaviour
 	protected void OnThrottleInput(KeyCode key)
 	{
 		if( focusedLine_ == null ) return;
-		
+
 		switch( key )
 		{
-		case KeyCode.Return:
-			OnEnterInput();
-			break;
-		case KeyCode.Backspace:
-			OnBackspaceInput();
-			break;
-		case KeyCode.Delete:
-			OnDeleteInput();
-			break;
-		case KeyCode.DownArrow:
-		case KeyCode.UpArrow:
-		case KeyCode.RightArrow:
-		case KeyCode.LeftArrow:
-			if( Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift) ) OnShiftArrowInput(key);
-			else OnArrowInput(key);
-			break;
+			case KeyCode.Return:
+				OnEnterInput();
+				break;
+			case KeyCode.Backspace:
+				OnBackspaceInput();
+				break;
+			case KeyCode.Delete:
+				OnDeleteInput();
+				break;
+			case KeyCode.DownArrow:
+			case KeyCode.UpArrow:
+			case KeyCode.RightArrow:
+			case KeyCode.LeftArrow:
+				OnArrowInput(key);
+				break;
 		}
 	}
 
@@ -738,7 +746,7 @@ public class Tree : MonoBehaviour
 		// 逆順で下から処理
 		foreach( Line line in GetSelectedOrFocusedLines(ascending: false) )
 		{
-			if( line.Parent.IsTitleLine == false && ( line.Parent.Field.IsSelected == false || line.Parent.Level <= 0 ) && line.IsComment == false )
+			if( line.Parent.IsTitleLine == false && (line.Parent.Field.IsSelected == false || line.Parent.Level <= 0) && line.IsComment == false )
 			{
 				int index = line.Index;
 				Line targetLine = line;
@@ -765,8 +773,8 @@ public class Tree : MonoBehaviour
 		}
 		actionManager_.EndChain();
 	}
-	
-	protected virtual void OnCtrlSpaceInput()
+
+	public void OnCtrlSpaceInput()
 	{
 		if( focusedLine_ == null ) return;
 
@@ -780,6 +788,12 @@ public class Tree : MonoBehaviour
 			}
 		}
 		actionManager_.EndChain();
+	}
+
+	public void OnCtrlShiftSpaceInput()
+	{
+		// todo 履歴にだけ追加してDone状態にはしない
+		OnCtrlSpaceInput();
 	}
 
 	public void Done(Line targetLine)
@@ -931,7 +945,7 @@ public class Tree : MonoBehaviour
 
 			actionManager_.Execute(new LineAction(
 				targetLines: new Line[] { target, newline },
-                execute: () =>
+				execute: () =>
 				{
 					target.Text = subString;
 					newline.Text += newString;
@@ -1037,8 +1051,8 @@ public class Tree : MonoBehaviour
 				{
 					List<Line> children = new List<Line>(line);
 					actionManager_.Execute(new LineAction(
-                        targetLines: children.ToArray(),
-                        execute: () =>
+						targetLines: children.ToArray(),
+						execute: () =>
 						{
 							line.IsFolded = false;
 							prev.IsFolded = false;
@@ -1061,7 +1075,7 @@ public class Tree : MonoBehaviour
 				// 削除
 				Line layoutStart = line.NextVisibleLine;
 				actionManager_.Execute(new LineAction(
-                    targetLines: line,
+					targetLines: line,
 					execute: () =>
 					{
 						line.Parent.Remove(line);
@@ -1164,7 +1178,7 @@ public class Tree : MonoBehaviour
 				{
 					List<Line> children = new List<Line>(next);
 					actionManager_.Execute(new LineAction(
-                        targetLines: children.ToArray(),
+						targetLines: children.ToArray(),
 						execute: () =>
 						{
 							next.IsFolded = false;
@@ -1192,7 +1206,7 @@ public class Tree : MonoBehaviour
 				// 削除
 				Line layoutStart = next.NextVisibleLine;
 				actionManager_.Execute(new LineAction(
-                    targetLines: next,
+					targetLines: next,
 					execute: () =>
 					{
 						parent.Remove(next);
@@ -1220,6 +1234,16 @@ public class Tree : MonoBehaviour
 			}
 		}
 
+		bool ctrl = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
+		bool shift = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+		bool alt = Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt);
+
+		if( shift && ctrl == false )
+		{
+			OnShiftArrowInput(key);
+			return;
+		}
+
 		// 選択があれば解除
 		if( HasSelection )
 		{
@@ -1230,99 +1254,89 @@ public class Tree : MonoBehaviour
 
 		switch( key )
 		{
-		case KeyCode.DownArrow:
-		case KeyCode.UpArrow:
-			if( Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt) )
-			{
-				// 上下の兄弟と交換
-				Line src = focusedLine_;
-				Line dest = (key == KeyCode.DownArrow ? src.NextSiblingLine : src.PrevSiblingLine);
-				if( dest != null )
+			case KeyCode.DownArrow:
+			case KeyCode.UpArrow:
+				if( alt )
 				{
-					actionManager_.Execute(new LineAction(
-						targetLines: new Line[] { src, dest },
-						execute: () =>
-						{
-							src.Parent.Insert(dest.Index, src);
-							dest.AdjustLayout();
-							ownerNote_.ScrollTo(src);
-						}
-						));
+					OnAltArrowInput(key);
 				}
-			}
-			else if( Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl) )
-			{
-				if( focusedLine_.Count > 0 && (key == KeyCode.UpArrow) != focusedLine_.IsFolded )
+				else if( ctrl )
 				{
-					OnFoldUpdated(focusedLine_, key == KeyCode.UpArrow);
-				}
-				else
-				{
-					Line newFocus = key == KeyCode.UpArrow ? focusedLine_.Parent : focusedLine_.NextSiblingOrUnkleLine;
-					if( newFocus != null && newFocus != titleLine_ )
+					if( shift )
 					{
-						newFocus.Field.IsFocused = true;
-						OnFocused(newFocus);
+						OnCtrlShiftArrowInput(key);
+					}
+					else if( focusedLine_.Count > 0 && (key == KeyCode.UpArrow) != focusedLine_.IsFolded )
+					{
+						OnCtrlArrowInput(key);
+					}
+					else
+					{
+						Line newFocus = key == KeyCode.UpArrow ? focusedLine_.Parent : focusedLine_.LastVisibleLine;
+						if( newFocus != null && newFocus != titleLine_ )
+						{
+							newFocus.Field.IsFocused = true;
+							OnFocused(newFocus);
+						}
 					}
 				}
-			}
-			else
-			{
-				// フォーカスを上下に移動
-				Line line = (key == KeyCode.DownArrow ? focusedLine_.NextVisibleLine : focusedLine_.PrevVisibleLine);
-				if( line != null )
-				{
-					focusedLine_.Field.IsFocused = false;
-					line.Field.IsFocused = true;
-				}
 				else
 				{
-					OnOverflowArrowInput(key);
+					// フォーカスを上下に移動
+					Line line = (key == KeyCode.DownArrow ? focusedLine_.NextVisibleLine : focusedLine_.PrevVisibleLine);
+					if( line != null )
+					{
+						focusedLine_.Field.IsFocused = false;
+						line.Field.IsFocused = true;
+					}
+					else
+					{
+						OnOverflowArrowInput(key);
+					}
 				}
-			}
-			break;
-		case KeyCode.RightArrow:
-			// カーソル位置が最後ならフォーカス移動
-			if( focusedLine_.Field.CaretPosision >= focusedLine_.TextLength )
-			{
-				Line next = focusedLine_.NextVisibleLine;
-				if( next != null )
+				break;
+			case KeyCode.RightArrow:
+				// カーソル位置が最後ならフォーカス移動
+				if( focusedLine_.Field.CaretPosision >= focusedLine_.TextLength )
 				{
-					focusedLine_.Field.IsFocused = false;
-					next.Field.CaretPosision = 0;
-					next.Field.IsFocused = true;
+					Line next = focusedLine_.NextVisibleLine;
+					if( next != null )
+					{
+						focusedLine_.Field.IsFocused = false;
+						next.Field.CaretPosision = 0;
+						next.Field.IsFocused = true;
+					}
+					else
+					{
+						OnOverflowArrowInput(key);
+					}
+					if( GameContext.Window.TagIncrementalDialog.IsActive )
+					{
+						GameContext.Window.TagIncrementalDialog.Close();
+					}
 				}
-				else
+				break;
+			case KeyCode.LeftArrow:
+				// カーソル位置が最初ならフォーカス移動
+				if( focusedLine_.Field.CaretPosision <= 0 )
 				{
-					OnOverflowArrowInput(key);
+					Line prev = focusedLine_.PrevVisibleLine;
+					if( prev != null )
+					{
+						focusedLine_.Field.IsFocused = false;
+						prev.Field.CaretPosision = prev.TextLength;
+						prev.Field.IsFocused = true;
+					}
+					else
+					{
+						OnOverflowArrowInput(key);
+					}
+					if( GameContext.Window.TagIncrementalDialog.IsActive )
+					{
+						GameContext.Window.TagIncrementalDialog.Close();
+					}
 				}
-				if( GameContext.Window.TagIncrementalDialog.IsActive )
-				{
-					GameContext.Window.TagIncrementalDialog.Close();
-				}
-			}
-			break;
-		case KeyCode.LeftArrow:
-			// カーソル位置が最初ならフォーカス移動
-			if( focusedLine_.Field.CaretPosision <= 0 )
-			{
-				Line prev = focusedLine_.PrevVisibleLine;
-				if( prev != null )
-				{
-					focusedLine_.Field.IsFocused = false;
-					prev.Field.CaretPosision = prev.TextLength;
-					prev.Field.IsFocused = true;
-				}
-				else
-				{
-					OnOverflowArrowInput(key);
-				}
-				if( GameContext.Window.TagIncrementalDialog.IsActive )
-				{
-					GameContext.Window.TagIncrementalDialog.Close();
-				}
-			}
-			break;
+				break;
 		}
 	}
 
@@ -1347,39 +1361,78 @@ public class Tree : MonoBehaviour
 
 		switch( key )
 		{
-		case KeyCode.DownArrow:
-		case KeyCode.UpArrow:
-			// 選択行を上下に追加または削除
-			int sign = key == KeyCode.DownArrow ? 1 : -1;
-			Line line = (sign > 0 ? selectionEndLine_.NextVisibleLine : selectionEndLine_.PrevVisibleLine);
-			if( line != null && HasSelection )
-			{
-				if( SelectionSign * sign > 0 ) UpdateSelection(selectionEndLine_, false);
-				selectionEndLine_ = line;
-				if( SelectionSign * sign < 0 ) UpdateSelection(line, true);
-			}
-			UpdateSelection(selectionStartLine_, true);
-			break;
-		case KeyCode.RightArrow:
-			// shift + →で今の行を選択
-			if( focusedLine_.Field.IsSelected == false && focusedLine_.Field.CaretPosision >= focusedLine_.TextLength )
-			{
-				UpdateSelection(focusedLine_, true);
-			}
-			break;
-		case KeyCode.LeftArrow:
-			// shift + ←でも今の行を選択
-			if( focusedLine_.Field.IsSelected == false && focusedLine_.Field.CaretPosision <= 0 )
-			{
-				UpdateSelection(focusedLine_, true);
-			}
-			else if( selectedLines_.Count == 1 && selectedLines_.Values[0] == focusedLine_ )
-			{
-				ClearSelection();
-				focusedLine_.Field.SetSelection(0, focusedLine_.TextLength);
-			}
-			break;
+			case KeyCode.DownArrow:
+			case KeyCode.UpArrow:
+				// 選択行を上下に追加または削除
+				int sign = key == KeyCode.DownArrow ? 1 : -1;
+				Line line = (sign > 0 ? selectionEndLine_.NextVisibleLine : selectionEndLine_.PrevVisibleLine);
+				if( line != null && HasSelection )
+				{
+					if( SelectionSign * sign > 0 ) UpdateSelection(selectionEndLine_, false);
+					selectionEndLine_ = line;
+					if( SelectionSign * sign < 0 ) UpdateSelection(line, true);
+				}
+				UpdateSelection(selectionStartLine_, true);
+				break;
+			case KeyCode.RightArrow:
+				// shift + →で今の行を選択
+				if( focusedLine_.Field.IsSelected == false && focusedLine_.Field.CaretPosision >= focusedLine_.TextLength )
+				{
+					UpdateSelection(focusedLine_, true);
+				}
+				break;
+			case KeyCode.LeftArrow:
+				// shift + ←でも今の行を選択
+				if( focusedLine_.Field.IsSelected == false && focusedLine_.Field.CaretPosision <= 0 )
+				{
+					UpdateSelection(focusedLine_, true);
+				}
+				else if( selectedLines_.Count == 1 && selectedLines_.Values[0] == focusedLine_ )
+				{
+					ClearSelection();
+					focusedLine_.Field.SetSelection(0, focusedLine_.TextLength);
+				}
+				break;
 		}
+	}
+
+	public void OnAltArrowInput(KeyCode key)
+	{
+		// 上下の兄弟と交換
+		Line src = focusedLine_;
+		Line dest = (key == KeyCode.DownArrow ? src.NextSiblingLine : src.PrevSiblingLine);
+		if( dest != null )
+		{
+			actionManager_.Execute(new LineAction(
+				targetLines: new Line[] { src, dest },
+				execute: () =>
+				{
+					src.Parent.Insert(dest.Index, src);
+					dest.AdjustLayout();
+					ownerNote_.ScrollTo(src);
+				}
+				));
+		}
+	}
+
+	public void OnCtrlArrowInput(KeyCode key)
+	{
+		// 折りたたみor展開
+		OnFoldUpdated(focusedLine_, key == KeyCode.UpArrow);
+	}
+
+	public void OnCtrlShiftArrowInput(KeyCode key)
+	{
+		// すべて折りたたみor展開
+		bool isFolded = (key == KeyCode.UpArrow);
+
+		actionManager_.StartChain();
+		OnFoldUpdated(focusedLine_, isFolded);
+		foreach( Line line in focusedLine_.GetAllChildren() )
+		{
+			OnFoldUpdated(line, isFolded);
+		}
+		actionManager_.EndChain();
 	}
 
 	protected virtual void OnCtrlDInput()
@@ -1394,7 +1447,7 @@ public class Tree : MonoBehaviour
 		{
 			existTag = focusedLine_.Tags[focusedLine_.Tags.Count - 1];
 			int existIndex = -1;
-			for( int i=0; i< GameContext.TagList.Count; ++i )
+			for( int i = 0; i < GameContext.TagList.Count; ++i )
 			{
 				if( GameContext.TagList[i].Tag == existTag )
 				{
@@ -1436,7 +1489,7 @@ public class Tree : MonoBehaviour
 		foreach( Line line in GetSelectedOrFocusedLines() )
 		{
 			if( line.IsDone || line.Tags.Contains(newtag) ) continue;
-			
+
 			Line targetLine = line;
 			bool hasExistTag = existTag != null && targetLine.Tags.Contains(existTag);
 			actionManager_.Execute(new LineAction(
@@ -1514,11 +1567,11 @@ public class Tree : MonoBehaviour
 	}
 	public static string[] LineSeparator = new string[] { System.Environment.NewLine };
 
-	protected void Copy()
+	public void Copy(bool withformat = true)
 	{
 		if( HasSelection )
 		{
-			bool appendTag = (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)) == false;
+			bool appendTag = withformat;
 			int ignoreLevel = selectedLines_.Values[0].Level;
 			StringBuilder clipboardLines = new StringBuilder();
 			foreach( Line line in selectedLines_.Values )
@@ -1536,7 +1589,7 @@ public class Tree : MonoBehaviour
 		}
 	}
 
-	protected void Paste()
+	public void Paste()
 	{
 		if( focusedLine_ == null )
 			return;
@@ -1563,7 +1616,7 @@ public class Tree : MonoBehaviour
 			++currentLevel;
 			pasteText = pasteText.Remove(0, 1);
 		}
-		
+
 		// 1行目の貼り付け。
 		if( cilpboardLines.Length == 1 )
 		{
@@ -1619,8 +1672,8 @@ public class Tree : MonoBehaviour
 				int pasteIndex = focusedLine_.Index;
 				pasteStart = new Line();
 				actionManager_.Execute(new LineAction(
-                    targetLines: pasteStart,
-                    execute: () =>
+					targetLines: pasteStart,
+					execute: () =>
 					{
 						pasteParent.Insert(pasteIndex, pasteStart);
 					},
@@ -1630,7 +1683,7 @@ public class Tree : MonoBehaviour
 					}
 					));
 			}
-			
+
 			// 最初の行を貼り付け
 			Line layoutStart = pasteStart.NextVisibleLine;
 			actionManager_.Execute(new LineAction(
@@ -1720,11 +1773,11 @@ public class Tree : MonoBehaviour
 		actionManager_.EndChain();
 	}
 
-	protected void Cut()
+	public void Cut()
 	{
 		if( HasSelection )
 		{
-			Copy();
+			Copy(withformat: (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)) == false);
 			DeleteSelection();
 		}
 	}
@@ -1733,7 +1786,7 @@ public class Tree : MonoBehaviour
 
 
 	#region events
-	
+
 	public GameObject FindBindingField()
 	{
 		LineField field = heapManager_.Instantiate(heapParentObject_.transform);
@@ -1790,6 +1843,11 @@ public class Tree : MonoBehaviour
 
 	public void OnFocusEnded(Line line)
 	{
+		if( GameContext.Window.ContextMenu.gameObject.activeInHierarchy )
+		{
+			return;
+		}
+
 		if( line == focusedLine_ )
 		{
 			focusedLine_.FixTextInputAction();
@@ -1799,125 +1857,23 @@ public class Tree : MonoBehaviour
 
 	public void OnFoldUpdated(Line line, bool isFolded)
 	{
-		if( line.IsFolded != isFolded )
+		if( line.Count > 0 && line.IsFolded != isFolded )
 		{
 			Line layoutStart = line.NextSiblingOrUnkleLine;
 			actionManager_.Execute(new LineAction(
+				targetLines: line,
 				execute: () =>
 				{
-					line.IsFolded = isFolded;
-					line.Field.IsFocused = true;
+					line.IsFolded = !line.IsFolded;
 					RequestLayout(layoutStart);
 				},
 				undo: () =>
 				{
-					line.IsFolded = !isFolded;
-					line.Field.IsFocused = true;
+					line.IsFolded = !line.IsFolded;
 					RequestLayout(layoutStart);
 				}
 				));
 		}
-	}
-
-	protected void OnAllFoldUpdated(bool isAllFolded)
-	{
-		if( focusedLine_ == null ) return;
-
-		ClearSelection();
-
-		actionManager_.StartChain();
-		if( isAllFolded == false )
-		{
-			// unfold all
-			Line line = titleLine_[0];
-			while( line != null )
-			{
-				if( line.Count > 0 && line.IsFolded )
-				{
-					Line unfoldLine = line;
-					Line layoutStart = line.NextVisibleLine;
-					actionManager_.Execute(new LineAction(
-						execute: () =>
-						{
-							unfoldLine.IsFolded = false;
-							RequestLayout(layoutStart);
-						},
-						undo: () =>
-						{
-							unfoldLine.IsFolded = true;
-							RequestLayout(layoutStart);
-						}
-						));
-				}
-				line = line.NextVisibleLine;
-			}
-
-			actionManager_.Execute(new LineAction(
-				execute: () =>
-				{
-					isAllFolded_ = false;
-				},
-				undo: () =>
-				{
-					isAllFolded_ = true;
-				}
-				));
-		}
-		else
-		{
-			// fold all
-			Line addLine = titleLine_.LastVisibleLine;
-			List<Line> foldLines = new List<Line>();
-			while( addLine != null )
-			{
-				if( addLine.Count > 0 && addLine.IsFolded == false )
-				{
-					foldLines.Add(addLine);
-				}
-				addLine = addLine.PrevVisibleLine;
-			}
-
-			foreach( Line line in foldLines )
-			{
-				Line foldLine = line;
-				Line layoutStart = line.NextSiblingOrUnkleLine;
-				actionManager_.Execute(new LineAction(
-					execute: () =>
-					{
-						foldLine.IsFolded = true;
-						RequestLayout(layoutStart);
-					},
-					undo: () =>
-					{
-						foldLine.IsFolded = false;
-						RequestLayout(layoutStart);
-					}
-					));
-			}
-
-			actionManager_.Execute(new LineAction(
-				execute: () =>
-				{
-					isAllFolded_ = true;
-				},
-				undo: () =>
-				{
-					isAllFolded_ = false;
-				}
-				));
-
-			if( focusedLine_ != null )
-			{
-				Line newFocusLine = focusedLine_;
-				while( newFocusLine.Parent.IsFolded )
-				{
-					newFocusLine = newFocusLine.Parent;
-				}
-				newFocusLine.Field.IsFocused = true;
-				OnFocused(newFocusLine);
-			}
-		}
-		actionManager_.EndChain();
 	}
 
 	public void OnDeleteKeyConsumed()
@@ -1953,7 +1909,7 @@ public class Tree : MonoBehaviour
 	protected void RequestLayout(Line line)
 	{
 		if( line == null || line.Parent == null ) return;
-		
+
 		if( suspendLayoutCount_ > 0 )
 		{
 			if( requestLayoutLines_.Contains(line) == false )
@@ -2019,7 +1975,7 @@ public class Tree : MonoBehaviour
 
 	public void SaveAllTreeInOneFile(StringBuilder builder)
 	{
-		builder.AppendLine(rootLine_.Text.Replace(".dtml",""));
+		builder.AppendLine(rootLine_.Text.Replace(".dtml", ""));
 		foreach( Line line in rootLine_.GetAllChildren() )
 		{
 			builder.Append("	");
@@ -2171,22 +2127,28 @@ public class Tree : MonoBehaviour
 		SetTitleLine(GetLineFromPath(path));
 	}
 
-	void UpdateTitleLine()
+	void UpdateTitleLinePath()
 	{
 		List<Text> textList = new List<Text>(GameContext.Window.TitleLine.GetComponentsInChildren<Text>(includeInactive: true));
 		List<UIMidairPrimitive> triangleList = new List<UIMidairPrimitive>(GameContext.Window.TitleLine.GetComponentsInChildren<UIMidairPrimitive>(includeInactive: true));
-        
-        while ( textList.Count < path_.Length + 1 )
+
+		while( textList.Count < path_.Length + 1 )
 		{
 			textList.Add(Instantiate(textList[0].gameObject, GameContext.Window.TitleLine.transform).GetComponent<Text>());
 			triangleList.Add(Instantiate(triangleList[0].gameObject, GameContext.Window.TitleLine.transform).GetComponent<UIMidairPrimitive>());
 		}
 
-        textList.RemoveAt(0);// home ボタンを残す
-        triangleList[0].gameObject.SetActive(path_.Length > 0);
-        triangleList.RemoveAt(0);
+		UnityEngine.UI.Button button = textList[0].GetComponent<UnityEngine.UI.Button>();
+		button.onClick.RemoveAllListeners();
+		button.onClick.AddListener(() =>
+		{
+			GameContext.Window.HomeTabButton.OnClick();
+		});
+		textList.RemoveAt(0);// home ボタンを残す
+		triangleList[0].gameObject.SetActive(path_.Length > 0);
+		triangleList.RemoveAt(0);
 
-        for ( int i = 0; i < textList.Count; ++i )
+		for( int i = 0; i < textList.Count; ++i )
 		{
 			textList[i].gameObject.SetActive(i < path_.Length);
 			triangleList[i].gameObject.SetActive(i < path_.Length - 1);
@@ -2195,13 +2157,13 @@ public class Tree : MonoBehaviour
 				bool isLastPath = i == path_.Length - 1;
 				textList[i].text = path_[i];
 				textList[i].color = (isLastPath ? GameContext.Config.TextColor : GameContext.Config.DoneTextColor);
-				UnityEngine.UI.Button button = textList[i].GetComponent<UnityEngine.UI.Button>();
+				button = textList[i].GetComponent<UnityEngine.UI.Button>();
 				button.enabled = isLastPath == false;
 				button.onClick.RemoveAllListeners();
 				int length = i + 1;
-				button.onClick.AddListener(() => 
+				button.onClick.AddListener(() =>
 				{
-					GameContext.Window.AddTab(GetLineFromPath(path_.GetPartialPath(length)));
+					GameContext.Window.AddTab(path_.GetPartialPath(length));
 				});
 			}
 		}
@@ -2228,7 +2190,7 @@ public class Tree : MonoBehaviour
 			textList[i].transform.localPosition = new Vector3(x, textList[i].transform.localPosition.y, 0);
 			x += width;
 			x += margin;
-			if( i <triangleList.Count )
+			if( i < triangleList.Count )
 			{
 				triangleList[i].transform.localPosition = new Vector3(x, triangleList[i].transform.localPosition.y, 0);
 				x += triangleWidth;
@@ -2240,7 +2202,7 @@ public class Tree : MonoBehaviour
 	{
 		if( ownerNote_ is TreeNote )
 		{
-			UpdateTitleLine();
+			UpdateTitleLinePath();
 		}
 
 		// Bindされてなければ（Foldされている状態なら）親までたどってBindする
@@ -2251,21 +2213,21 @@ public class Tree : MonoBehaviour
 			{
 				switch( unbidedLine.BindState )
 				{
-				case Line.EBindState.Bind:
-					unbidedLine = null;
-					break;
-				case Line.EBindState.Unbind:
-					unbidedLine.Bind(FindBindingField());
-					unbidedLine = unbidedLine.Parent;
-					break;
-				case Line.EBindState.WeakBind:
-					unbidedLine.ReBind();
-					unbidedLine = unbidedLine.Parent;
-					break;
+					case Line.EBindState.Bind:
+						unbidedLine = null;
+						break;
+					case Line.EBindState.Unbind:
+						unbidedLine.Bind(FindBindingField());
+						unbidedLine = unbidedLine.Parent;
+						break;
+					case Line.EBindState.WeakBind:
+						unbidedLine.ReBind();
+						unbidedLine = unbidedLine.Parent;
+						break;
 				}
 			}
 		}
-		
+
 		Line oldTitleLine = titleLine_;
 		GameObject oldTitleLineObject = titleLineObject_;
 		titleLine_ = line;
@@ -2287,9 +2249,9 @@ public class Tree : MonoBehaviour
 		{
 			titleLine_.Bind(this.gameObject);
 			foreach( Line child in titleLine_ )
-            {
-                child.FindBindingField();
-                child.Field.transform.SetParent(this.gameObject.transform);
+			{
+				child.FindBindingField();
+				child.Field.transform.SetParent(this.gameObject.transform);
 			}
 			titleLine_.UpdateFoldLayout();
 		}
