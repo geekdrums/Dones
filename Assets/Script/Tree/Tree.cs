@@ -2127,84 +2127,8 @@ public class Tree : MonoBehaviour
 		SetTitleLine(GetLineFromPath(path));
 	}
 
-	void UpdateTitleLinePath()
+	protected void SetTitleLine(Line line)
 	{
-		List<Text> textList = new List<Text>(GameContext.Window.TitleLine.GetComponentsInChildren<Text>(includeInactive: true));
-		List<UIMidairPrimitive> triangleList = new List<UIMidairPrimitive>(GameContext.Window.TitleLine.GetComponentsInChildren<UIMidairPrimitive>(includeInactive: true));
-
-		while( textList.Count < path_.Length + 1 )
-		{
-			textList.Add(Instantiate(textList[0].gameObject, GameContext.Window.TitleLine.transform).GetComponent<Text>());
-			triangleList.Add(Instantiate(triangleList[0].gameObject, GameContext.Window.TitleLine.transform).GetComponent<UIMidairPrimitive>());
-		}
-
-		UnityEngine.UI.Button button = textList[0].GetComponent<UnityEngine.UI.Button>();
-		button.onClick.RemoveAllListeners();
-		button.onClick.AddListener(() =>
-		{
-			GameContext.Window.HomeTabButton.OnClick();
-		});
-		textList.RemoveAt(0);// home ボタンを残す
-		triangleList[0].gameObject.SetActive(path_.Length > 0);
-		triangleList.RemoveAt(0);
-
-		for( int i = 0; i < textList.Count; ++i )
-		{
-			textList[i].gameObject.SetActive(i < path_.Length);
-			triangleList[i].gameObject.SetActive(i < path_.Length - 1);
-			if( i < path_.Length )
-			{
-				bool isLastPath = i == path_.Length - 1;
-				textList[i].text = path_[i];
-				textList[i].color = (isLastPath ? GameContext.Config.TextColor : GameContext.Config.DoneTextColor);
-				button = textList[i].GetComponent<UnityEngine.UI.Button>();
-				button.enabled = isLastPath == false;
-				button.onClick.RemoveAllListeners();
-				int length = i + 1;
-				button.onClick.AddListener(() =>
-				{
-					GameContext.Window.AddTab(path_.GetPartialPath(length));
-				});
-			}
-		}
-
-		if( path_.Length > 0 )
-		{
-			StartCoroutine(UpdateTitleLineTextLengthCoroutine(textList[0].cachedTextGenerator));
-		}
-	}
-
-	IEnumerator UpdateTitleLineTextLengthCoroutine(TextGenerator gen)
-	{
-		yield return new WaitWhile(() => gen.characterCount == 0);
-
-		List<Text> textList = new List<Text>(GameContext.Window.TitleLine.GetComponentsInChildren<Text>());
-		List<UIMidairPrimitive> triangleList = new List<UIMidairPrimitive>(GameContext.Window.TitleLine.GetComponentsInChildren<UIMidairPrimitive>());
-
-		float x = 0;
-		float margin = 12;
-		float triangleWidth = 12;
-		for( int i = 0; i < textList.Count; ++i )
-		{
-			float width = LineField.CalcTextRectLength(textList[i].cachedTextGenerator, textList[i].text.Length);
-			textList[i].transform.localPosition = new Vector3(x, textList[i].transform.localPosition.y, 0);
-			x += width;
-			x += margin;
-			if( i < triangleList.Count )
-			{
-				triangleList[i].transform.localPosition = new Vector3(x, triangleList[i].transform.localPosition.y, 0);
-				x += triangleWidth;
-			}
-		}
-	}
-
-	void SetTitleLine(Line line)
-	{
-		if( ownerNote_ is TreeNote )
-		{
-			UpdateTitleLinePath();
-		}
-
 		// Bindされてなければ（Foldされている状態なら）親までたどってBindする
 		if( line != null && line.BindState != Line.EBindState.Bind )
 		{

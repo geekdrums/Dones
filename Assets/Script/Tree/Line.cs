@@ -540,7 +540,7 @@ public class Line : IEnumerable<Line>
 		}
 		else
 		{
-			Tree = Binding.GetComponent<Tree>();
+			Tree = Binding.GetComponentInParent<Tree>();
 		}
 	}
 

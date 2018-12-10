@@ -34,34 +34,35 @@ public class LogTree : Tree
 	public void AddLog(Line line)
 	{
 		SuspendLayout();
+
+		// todo rootLineに限らず、入力用のLineを用意できるように方法を変える
 		if( rootLine_.Count == 1 && rootLine_[0].Text == "" )
 		{
 			rootLine_.Remove(rootLine_[0]);
 		}
-
-		bool needSetPath = false;
+		
 		if( titleLine_ == null )
 		{
-			needSetPath = true;
-			SetRootPath();
+			CreateTitleLine();
 		}
 
 		// clone & stack parents
-		Stack<Line> cloneLines = new Stack<Line>();
+		Stack<Line> cloneAncestors = new Stack<Line>();
 		Line cloneLine = line.Clone();
-		cloneLines.Push(cloneLine);
+		cloneAncestors.Push(cloneLine);
 		Line originalParent = line.Parent;
-		while( originalParent.Parent != null )
+		while( originalParent.IsTitleLine == false )
 		{
 			Line cloneParent = originalParent.Clone();
 			cloneParent.IsDone = false;
-			cloneLines.Push(cloneParent);
+			cloneParent.IsFolded = false;
+			cloneAncestors.Push(cloneParent);
 			originalParent = originalParent.Parent;
 		}
 
 		// search for same parents
-		Line addLine = cloneLines.Pop();
-		Line addParent = rootLine_;
+		Line addLine = cloneAncestors.Pop();
+		Line addParent = titleLine_;
 		bool found = true;
 		while( found && addLine != null )
 		{
@@ -72,9 +73,9 @@ public class LogTree : Tree
 				{
 					found = true;
 					addParent = child;
-					if( cloneLines.Count > 0 )
+					if( cloneAncestors.Count > 0 )
 					{
-						addLine = cloneLines.Pop();
+						addLine = cloneAncestors.Pop();
 					}
 					else
 					{
@@ -93,9 +94,9 @@ public class LogTree : Tree
 			addParent.Add(addLine);
 			RequestLayout(addParent.NextSiblingLine);
 			addParent = addLine;
-			while( cloneLines.Count > 0 )
+			while( cloneAncestors.Count > 0 )
 			{
-				addLine = cloneLines.Pop();
+				addLine = cloneAncestors.Pop();
 				addParent.Add(addLine);
 				addParent = addLine;
 			}
@@ -106,11 +107,6 @@ public class LogTree : Tree
 		RequestLayout(addParent.NextSiblingOrUnkleLine);
 		ResumeLayout();
 		IsEdited = true;
-		if( needSetPath )
-		{
-			SetPath(path_);
-			GetComponentInParent<DateUI>().UpdateLayout();
-		}
 	}
 	
 	void AddLogChildRecursive(Line original, Line cloneParent)
@@ -126,6 +122,39 @@ public class LogTree : Tree
 					AddLogChildRecursive(originalChild, cloneChild);
 				}
 			}
+		}
+	}
+
+	void CreateTitleLine()
+	{
+		// path_に対応するtitleLine_が存在していないので、さかのぼってCloneLineを生成する
+		if( titleLine_ == null )
+		{
+			Line line = rootLine_;
+			for( int i = 0; i < path_.Length; ++i )
+			{
+				string lineStr = path_[i];
+				bool find = false;
+				foreach( Line child in line )
+				{
+					if( child.TextWithoutHashTags == lineStr )
+					{
+						line = child;
+						find = true;
+						break;
+					}
+				}
+				if( find == false )
+				{
+					Line originalLine = OwnerLogNote.TreeNote.Tree.GetLineFromPath(path_.GetPartialPath(i + 1));
+					Line cloneLine = originalLine.Clone();
+					cloneLine.IsDone = false;
+					cloneLine.IsFolded = false;
+					line.Add(cloneLine);
+					line = cloneLine;
+				}
+			}
+			SetTitleLine(line);
 		}
 	}
 
@@ -190,6 +219,11 @@ public class LogTree : Tree
 						Line nextParent = removeParent.Parent;
 						RequestLayout(removeParent.NextSiblingOrUnkleLine);
 						removeParent.Parent.Remove(removeParent);
+						if( removeParent.IsTitleLine )
+						{
+							titleLine_ = null;
+							titleLineObject_ = null;
+						}
 						removeParent = nextParent;
 					}
 					else

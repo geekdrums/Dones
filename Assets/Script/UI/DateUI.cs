@@ -99,7 +99,7 @@ public class DateUI : MonoBehaviour {
 
 	public void UpdateLayout()
 	{
-		if( logTree_ != null && logTree_.TitleLine != null )
+		if( (logTree_ != null && logTree_.TitleLine != null) || date_ == GameContext.Window.LogNote.Today )
 		{
 			MonthText.gameObject.SetActive(true);
 			DayText.gameObject.SetActive(true);
@@ -122,7 +122,7 @@ public class DateUI : MonoBehaviour {
 		if( logTree_ != null && logTree_.TitleLine != null )
 		{
 			logTree_.UpdateLayoutElement();
-			PreferredHeight = logTree_.Layout.preferredHeight;
+			PreferredHeight = logTree_.Layout.preferredHeight + 10;
 			contentSizeFitter_.SetLayoutVertical();
 		}
 

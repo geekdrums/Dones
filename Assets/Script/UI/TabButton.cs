@@ -196,10 +196,10 @@ public class TabButton : UnityEngine.UI.Button, IDragHandler, IBeginDragHandler,
 		if( BindedNote is TreeNote )
 		{
 			TreeNote treeNote = BindedNote as TreeNote;
-			Background = isSelected_ ? (treeNote.LogNote.IsFullArea ? GameContext.Config.DoneColor : GameContext.Config.ThemeColor) : Color.white;
+			Background = isSelected_ ? GameContext.Config.ThemeColor : Color.white;
 			if( isSelected_ )
 			{
-				OwnerTabGroup.SplitBar.SetColor(treeNote.LogNote.IsFullArea ? GameContext.Config.DoneColor : GameContext.Config.ThemeColor);
+				OwnerTabGroup.SplitBar.SetColor(GameContext.Config.ThemeColor);
 			}
 		}
 		if( textComponent_ != null && GameContext.Config != null )

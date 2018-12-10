@@ -28,15 +28,7 @@ public class Window : MonoBehaviour
 
 	public GameObject TabParent;
 	public TabButton HomeTabButton;
-	public GameObject NoteParent;
-	public GameObject LogNoteParent;
 	public ContextMenu ContextMenu;
-
-	public RectTransform TreeNoteTransform;
-	public RectTransform LogNoteTransform;
-	public LogNoteTabButton LogTabButton;
-	public GameObject OpenLogNoteButton;
-	public GameObject CloseLogNoteButton;
 	
 	public ModalDialog ModalDialog;
 	public TagIncrementalDialog TagIncrementalDialog;
@@ -253,7 +245,6 @@ public class Window : MonoBehaviour
 		Note.LoadNote(treeFile_.FullName);
 		HomeTabButton.Bind(Note);
 		MainTabGroup.OnTabCreated(HomeTabButton);
-		HomeTabButton.IsSelected = true;
 	}
 
 	void LoadLog()
@@ -276,22 +267,6 @@ public class Window : MonoBehaviour
 		MainTabGroup.UpdateTabLayout();
 	}
 
-	public void OpenLogNote()
-	{
-		if( MainTabGroup.ActiveTreeNote != null )
-		{
-			MainTabGroup.ActiveTreeNote.OpenLogNote();
-		}
-	}
-
-	public void CloseLogNote()
-	{
-		if( MainTabGroup.ActiveTreeNote != null )
-		{
-			MainTabGroup.ActiveTreeNote.CloseLogNote();
-		}
-	}
-
 	#endregion
 
 
@@ -299,44 +274,11 @@ public class Window : MonoBehaviour
 
 	public void UpdateVerticalLayout()
 	{
-		float logNoteRatio = 0;
-		float height = MainTabGroup.NoteAreaTransform.rect.height;
 		TreeNote treeNote = MainTabGroup.ActiveTreeNote;
-		LogNote logNote = null;
 		if( treeNote != null )
 		{
-			logNote = treeNote.LogNote;
-			LogTabButton.transform.parent.gameObject.SetActive(logNote.IsOpended && logNote.IsFullArea == false);
-
-			logNoteRatio = logNote.IsOpended ? logNote.OpenRatio : 0.0f;
-			
-			if( logNote.IsFullArea )
-			{
-				OpenLogNoteButton.SetActive(false);
-				CloseLogNoteButton.SetActive(true);
-			}
-			else if( logNote.IsOpended == false )
-			{
-				OpenLogNoteButton.SetActive(true);
-				CloseLogNoteButton.SetActive(false);
-			}
-			MainTabGroup.ActiveTab.UpdateColor();
-		}
-		else
-		{
-			OpenLogNoteButton.SetActive(false);
-			CloseLogNoteButton.SetActive(false);
-			LogTabButton.transform.parent.gameObject.SetActive(false);
-		}
-
-		TreeNoteTransform.sizeDelta = new Vector2(TreeNoteTransform.sizeDelta.x, height * (1.0f - logNoteRatio) - (logNoteRatio > 0.0f ? GameContext.Config.LogNoteHeaderMargin : 0.0f));
-		LogNoteTransform.sizeDelta = new Vector2(LogNoteTransform.sizeDelta.x, height * logNoteRatio);
-		LogNoteTransform.anchoredPosition = new Vector2(LogNoteTransform.anchoredPosition.x, -height + LogNoteTransform.sizeDelta.y);
-
-		if( treeNote != null )
-		{
-			treeNote.CheckScrollbarEnabled();
-			logNote.CheckScrollbarEnabled();
+			treeNote.UpdateVerticalLayout();
+			treeNote.LogNote.UpdateVerticalLayout();
 		}
 	}
 
@@ -392,6 +334,8 @@ public class Window : MonoBehaviour
 		{
 			AddTab(new TreePath(tabparam.Path), select: false);
 		}
+		// todo 選んでいるのがあったらここで選ぶ
+		HomeTabButton.IsSelected = true;
 
 		UnityEngine.Screen.SetResolution(settingXml.Screen.Width, settingXml.Screen.Height, settingXml.Screen.IsFulllScreen);
 

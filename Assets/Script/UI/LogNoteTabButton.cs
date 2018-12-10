@@ -6,11 +6,11 @@ using UnityEngine.EventSystems;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
-public class LogNoteTabButton : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDragHandler
+public class LogNoteTabButton : MonoBehaviour//, IDragHandler, IBeginDragHandler, IEndDragHandler
 {
 	#region params
 
-	public TreeNote OwnerNote { get; set; }
+	public LogNote OwnerNote;
 	
 	public string Text
 	{
@@ -50,63 +50,9 @@ public class LogNoteTabButton : MonoBehaviour, IDragHandler, IBeginDragHandler, 
 
 	public void Close()
 	{
-		DoClose();
+		OwnerNote.Minimize();
 	}
 
-	void DoClose()
-	{
-		OwnerNote.LogNote.IsOpended = false;
-	}
-
-	void CloseConfirmCallback(ModalDialog.DialogResult result)
-	{
-		switch( result )
-		{
-		case ModalDialog.DialogResult.Yes:
-			if( OwnerNote != null )
-			{
-				OwnerNote.LogNote.SaveLog();
-			}
-			DoClose();
-			break;
-		case ModalDialog.DialogResult.No:
-			if( OwnerNote != null )
-			{
-				OwnerNote.LogNote.ReloadLog();
-			}
-			DoClose();
-			break;
-		case ModalDialog.DialogResult.Cancel:
-			// do nothing
-			break;
-		}
-	}
-
-
-	#endregion
-
-
-	#region drag
-
-	public void OnBeginDrag(PointerEventData eventData)
-	{
-	}
-
-	public void OnDrag(PointerEventData eventData)
-	{
-		if( OwnerNote != null )
-		{
-			OwnerNote.OnLogSplitLineDragging(this, eventData);
-		}
-	}
-
-	public void OnEndDrag(PointerEventData eventData)
-	{
-		if( OwnerNote != null )
-		{
-			OwnerNote.OnLogSplitLineEndDrag(this, eventData);
-		}
-	}
 
 	#endregion
 }

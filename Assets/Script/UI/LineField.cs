@@ -252,10 +252,6 @@ public class LineField : CustomInputField
 			{
 				return GameContext.Config.DoneTextColor;
 			}
-			//else if( BindedLine.IsOnList )
-			//{
-			//	return GameContext.Config.ShortLineColor;
-			//}
 			else if( BindedLine.IsLinkText )
 			{
 				return GameContext.Config.ThemeColor;

@@ -51,10 +51,10 @@ public class TreeNote : Note
 		bool shift = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
 		bool alt = Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt);
 		bool ctrlOnly = ctrl && !alt && !shift;
-		
+
 		if( ctrlOnly && Input.GetKeyDown(KeyCode.L) )
 		{
-			LogNote.IsOpended = !LogNote.IsOpended;
+			LogNote.ChangeOpenState();
 		}
 	}
 
@@ -64,6 +64,21 @@ public class TreeNote : Note
 	{
 		Line line = sender as Line;
 		LogNote.OnDoneChanged(line);
+	}
+
+	#endregion
+
+
+	#region layout
+
+	public void UpdateVerticalLayout()
+	{
+		RectTransform treeNoteTransform = scrollRect_.GetComponent<RectTransform>();
+
+		float totalAreaHight = GameContext.Window.MainTabGroup.NoteAreaTransform.rect.height;
+		treeNoteTransform.sizeDelta = new Vector2(treeNoteTransform.sizeDelta.x, totalAreaHight - LogNote.Height - GameContext.Config.LogNoteHeaderMargin);
+
+		CheckScrollbarEnabled();
 	}
 
 	#endregion
@@ -80,8 +95,6 @@ public class TreeNote : Note
 
 		tree_.SubscribeKeyInput();
 		LogNote.SubscribeKeyInput();
-
-		GameContext.Window.LogTabButton.OwnerNote = this;
 	}
 
 	public override void Deactivate()
@@ -94,16 +107,90 @@ public class TreeNote : Note
 	public override void SetNoteViewParam(NoteViewParam param)
 	{
 		Tree.SetPath(param.Path);
+		UpdateTitleLine(param.Path);
+
+		LogNote.SetNoteViewParam(param);
+		LogNote.UpdateTitleLine(param.Path);
+
 		actionManager_.SetTitleLine(Tree.TitleLine);
 		scrollRect_.verticalScrollbar.value = param.TargetScrollValue;
-		LogNote.SetNoteViewParam(param);
 	}
-
 
 	public override void CacheNoteViewParam(NoteViewParam param)
 	{
 		base.CacheNoteViewParam(param);
 		LogNote.CacheNoteViewParam(param);
+	}
+
+	void UpdateTitleLine(TreePath path)
+	{
+		List<Text> textList = new List<Text>(GameContext.Window.TitleLine.GetComponentsInChildren<Text>(includeInactive: true));
+		List<UIMidairPrimitive> triangleList = new List<UIMidairPrimitive>(GameContext.Window.TitleLine.GetComponentsInChildren<UIMidairPrimitive>(includeInactive: true));
+
+		while( textList.Count < path.Length + 1 )
+		{
+			textList.Add(Instantiate(textList[0].gameObject, GameContext.Window.TitleLine.transform).GetComponent<Text>());
+			triangleList.Add(Instantiate(triangleList[0].gameObject, GameContext.Window.TitleLine.transform).GetComponent<UIMidairPrimitive>());
+		}
+
+		UnityEngine.UI.Button button = textList[0].GetComponent<UnityEngine.UI.Button>();
+		button.onClick.RemoveAllListeners();
+		button.onClick.AddListener(() =>
+		{
+			GameContext.Window.HomeTabButton.OnClick();
+		});
+		textList.RemoveAt(0);// home ボタンを残す
+		triangleList[0].gameObject.SetActive(path.Length > 0);
+		triangleList.RemoveAt(0);
+
+		for( int i = 0; i < textList.Count; ++i )
+		{
+			textList[i].gameObject.SetActive(i < path.Length);
+			triangleList[i].gameObject.SetActive(i < path.Length - 1);
+			if( i < path.Length )
+			{
+				bool isLastPath = i == path.Length - 1;
+				textList[i].text = path[i];
+				textList[i].color = (isLastPath ? GameContext.Config.TextColor : GameContext.Config.DoneTextColor);
+				button = textList[i].GetComponent<UnityEngine.UI.Button>();
+				button.enabled = isLastPath == false;
+				button.onClick.RemoveAllListeners();
+				int length = i + 1;
+				button.onClick.AddListener(() =>
+				{
+					GameContext.Window.AddTab(path.GetPartialPath(length));
+				});
+			}
+		}
+
+		if( path.Length > 0 )
+		{
+			StartCoroutine(UpdateTitleLineTextLengthCoroutine(textList[0].cachedTextGenerator));
+		}
+	}
+
+	IEnumerator UpdateTitleLineTextLengthCoroutine(TextGenerator gen)
+	{
+		yield return new WaitWhile(() => gen.characterCount == 0);
+
+		List<Text> textList = new List<Text>(GameContext.Window.TitleLine.GetComponentsInChildren<Text>());
+		List<UIMidairPrimitive> triangleList = new List<UIMidairPrimitive>(GameContext.Window.TitleLine.GetComponentsInChildren<UIMidairPrimitive>());
+
+		float x = 0;
+		float margin = 12;
+		float triangleWidth = 12;
+		for( int i = 0; i < textList.Count; ++i )
+		{
+			float width = LineField.CalcTextRectLength(textList[i].cachedTextGenerator, textList[i].text.Length);
+			textList[i].transform.localPosition = new Vector3(x, textList[i].transform.localPosition.y, 0);
+			x += width;
+			x += margin;
+			if( i < triangleList.Count )
+			{
+				triangleList[i].transform.localPosition = new Vector3(x, triangleList[i].transform.localPosition.y, 0);
+				x += triangleWidth;
+			}
+		}
 	}
 
 	public override void Destroy()
@@ -142,64 +229,6 @@ public class TreeNote : Note
 		LogNote.OnFontSizeChanged();
 		UpdateLayoutElement();
 		CheckScrollbarEnabled();
-	}
-
-	#endregion
-
-
-	#region logtab
-
-	public void OnLogSplitLineDragging(object sender, PointerEventData eventData)
-	{
-		RectTransform logNoteTransform = GameContext.Window.LogNoteTransform;
-		RectTransform treeNoteTransform = GameContext.Window.TreeNoteTransform;
-		logNoteTransform.anchoredPosition += new Vector2(0, eventData.delta.y);
-		float height = GameContext.Window.MainTabGroup.NoteAreaTransform.rect.height;
-		if( logNoteTransform.anchoredPosition.y < -height )
-		{
-			logNoteTransform.anchoredPosition = new Vector2(logNoteTransform.anchoredPosition.x, -height);
-		}
-		else if( logNoteTransform.anchoredPosition.y > 0 )
-		{
-			logNoteTransform.anchoredPosition = new Vector2(logNoteTransform.anchoredPosition.x, 0);
-		}
-		logNoteTransform.sizeDelta = new Vector2(logNoteTransform.sizeDelta.x, logNoteTransform.anchoredPosition.y + height);
-		LogNote.OpenRatio = logNoteTransform.sizeDelta.y / height;
-
-		treeNoteTransform.sizeDelta = new Vector2(treeNoteTransform.sizeDelta.x, height * (1.0f - LogNote.OpenRatio) - GameContext.Config.LogNoteHeaderMargin);
-
-		CheckScrollbarEnabled();
-		LogNote.CheckScrollbarEnabled();
-	}
-
-	public void OnLogSplitLineEndDrag(object sender, PointerEventData eventData)
-	{
-		if( LogNote.OpenRatio <= 0 )
-		{
-			LogNote.IsOpended = false;
-		}
-		else if( LogNote.OpenRatio >= 1 )
-		{
-			GameContext.Window.UpdateVerticalLayout();
-		}
-	}
-
-	public void OpenLogNote()
-	{
-		if( LogNote.IsOpended == false )
-		{
-			LogNote.IsOpended = true;
-		}
-		GameContext.Window.UpdateVerticalLayout();
-	}
-
-	public void CloseLogNote()
-	{
-		if( LogNote.IsOpended )
-		{
-			LogNote.OpenRatio = 0.0f;
-			LogNote.IsOpended = false;
-		}
 	}
 
 	#endregion
