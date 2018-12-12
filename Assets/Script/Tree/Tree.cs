@@ -54,7 +54,7 @@ public class Tree : MonoBehaviour
 				Line lastLine = titleLine_.LastVisibleLine;
 				if( lastLine != null && lastLine.Field != null )
 				{
-					return -(lastLine.TargetAbsolutePosition.y - this.transform.position.y) + GameContext.Config.HeightPerLine * 1.5f;
+					return -(lastLine.TargetAbsolutePosition.y - this.transform.position.y) + GameContext.Config.HeightPerLine * 2.0f;
 				}
 			}
 			return 0;

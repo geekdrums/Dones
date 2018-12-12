@@ -277,8 +277,8 @@ public class Window : MonoBehaviour
 		TreeNote treeNote = MainTabGroup.ActiveTreeNote;
 		if( treeNote != null )
 		{
-			treeNote.UpdateVerticalLayout();
 			treeNote.LogNote.UpdateVerticalLayout();
+			treeNote.UpdateVerticalLayout();
 		}
 	}
 

@@ -31,7 +31,7 @@ public class LogTree : Tree
 
 	#region add / remove log
 
-	public void AddLog(Line line)
+	public bool AddLog(Line line)
 	{
 		SuspendLayout();
 
@@ -107,6 +107,7 @@ public class LogTree : Tree
 		RequestLayout(addParent.NextSiblingOrUnkleLine);
 		ResumeLayout();
 		IsEdited = true;
+		return addLine != null;
 	}
 	
 	void AddLogChildRecursive(Line original, Line cloneParent)
@@ -158,7 +159,7 @@ public class LogTree : Tree
 		}
 	}
 
-	public void RemoveLog(Line line)
+	public bool RemoveLog(Line line)
 	{
 		SuspendLayout();
 		// stack parents
@@ -241,6 +242,8 @@ public class LogTree : Tree
 		}
 		ResumeLayout();
 		IsEdited = true;
+
+		return removeLine != null;
 	}
 
 	bool RemoveLogChildRecursive(Line removeLine)

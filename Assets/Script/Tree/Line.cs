@@ -768,6 +768,19 @@ public class Line : IEnumerable<Line>
 		return new TreePath(path);
 	}
 
+	public int GetNumDoneLines()
+	{
+		int sum = 0;
+		foreach( Line line in GetAllChildren() )
+		{
+			if( line.IsDone )
+			{
+				sum++;
+			}
+		}
+		return sum;
+	}
+
 	public bool IsChildOf(Line line)
 	{
 		Line parent = parent_;

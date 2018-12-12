@@ -24,11 +24,14 @@ public class LogNote : Note
 
 	public GameObject LogTreePrefab;
 	public GameObject DateUIPrefab;
+	public GameObject DoneMark;
 
 	public UnityEngine.UI.Button MaximizeButton;
 	public UnityEngine.UI.Button MinimizeButton;
 	public UnityEngine.UI.Button ResetToDefaultButton;
+
 	public Text TitleText;
+	public UIMidairPrimitive TitleArrow;
 
 	public bool IsEdited
 	{
@@ -45,11 +48,15 @@ public class LogNote : Note
 
 	public OpenState State { get { return openState_; } }
 	OpenState openState_ = OpenState.Default;
+	OpenState oldOpenState_ = OpenState.Default;
 
 	public float Height { get { return scrollRect_.GetComponent<RectTransform>().sizeDelta.y; } }
 
 	List<LogTree> logTrees_ = new List<LogTree>();
 	List<DateUI> dateUIlist_ = new List<DateUI>();
+
+	List<UIMidairPrimitive> doneMarks_ = new List<UIMidairPrimitive>();
+	int numTodayDones_ = 0;
 
 	public DateTime Today { get { return today_; } }
 	DateTime today_;
@@ -70,6 +77,7 @@ public class LogNote : Note
 		base.Awake();
 		today_ = DateTime.Now.Date;
 		endDate_ = today_;
+		doneMarks_.Add(DoneMark.GetComponent<UIMidairPrimitive>());
 	}
 
 	protected override void Update()
@@ -96,15 +104,45 @@ public class LogNote : Note
 		{
 			if( line.IsDone )
 			{
-				TodayTree.AddLog(line);
+				if( todayTree_.AddLog(line) )
+				{
+					numTodayDones_++;
+				}
 			}
 			else
 			{
-				TodayTree.RemoveLog(line);
+				if( todayTree_.RemoveLog(line) )
+				{
+					numTodayDones_--;
+				}
+			}
+			OnDoneCountChanged();
+		}
+	}
+
+	private void OnDoneCountChanged()
+	{
+		int l = Math.Max(numTodayDones_, doneMarks_.Count);
+		for( int i = 0; i < l; ++i )
+		{
+			if( i < numTodayDones_ )
+			{
+				if( i >= doneMarks_.Count )
+				{
+					doneMarks_.Add(Instantiate(DoneMark, DoneMark.transform.parent).GetComponent<UIMidairPrimitive>());
+				}
+				doneMarks_[i].gameObject.SetActive(true);
+			}
+			else
+			{
+				if( i < doneMarks_.Count )
+				{
+					doneMarks_[i].gameObject.SetActive(false);
+				}
 			}
 		}
 	}
-	
+
 	public void SubscribeKeyInput()
 	{
 		foreach( LogTree logTree in logTrees_ )
@@ -195,42 +233,82 @@ public class LogNote : Note
 
 	public void Maximize()
 	{
-		openState_ = OpenState.Maximize;
+		SetOpenState(OpenState.Maximize);
 		UpdateVerticalLayout();
 		treeNote_.UpdateVerticalLayout();
 
 		MaximizeButton.gameObject.SetActive(false);
 		MinimizeButton.gameObject.SetActive(true);
+		MinimizeButton.GetComponent<RectTransform>().anchoredPosition = new Vector2(0, 0);
 		ResetToDefaultButton.gameObject.SetActive(true);
+		ResetToDefaultButton.GetComponent<RectTransform>().anchoredPosition = new Vector2(25, 0);
+		DoneMark.transform.parent.gameObject.SetActive(false);
 
 		float totalAreaHight = GameContext.Window.MainTabGroup.NoteAreaTransform.rect.height;
 		while( layout_.preferredHeight < totalAreaHight )
 		{
 			LoadMore();
 		}
+		TitleArrow.Angle = 180;
+		TitleArrow.SetColor(GameContext.Config.ToggleOpenedColor);
+		TitleArrow.RecalculatePolygon();
 	}
 
 	public void Minimize()
 	{
-		openState_ = OpenState.Minimize;
+		SetOpenState(OpenState.Minimize);
 		UpdateVerticalLayout();
 		treeNote_.UpdateVerticalLayout();
 
-		MaximizeButton.gameObject.SetActive(false);
+		MaximizeButton.gameObject.SetActive(true);
+		MaximizeButton.GetComponent<RectTransform>().anchoredPosition = new Vector2(25, 0);
+		ResetToDefaultButton.gameObject.SetActive(true);
+		ResetToDefaultButton.GetComponent<RectTransform>().anchoredPosition = new Vector2(0, 0);
 		MinimizeButton.gameObject.SetActive(false);
-		ResetToDefaultButton.gameObject.SetActive(false);
+		DoneMark.transform.parent.gameObject.SetActive(true);
+		TitleArrow.Angle = -90;
+		TitleArrow.SetColor(GameContext.Config.DoneColor);
+		TitleArrow.RecalculatePolygon();
 	}
 
 	public void ResetToDefault()
 	{
-		openState_ = OpenState.Default;
+		SetOpenState(OpenState.Default);
 		UpdateLayoutElement();
 		UpdateVerticalLayout();
 		treeNote_.UpdateVerticalLayout();
 
 		MaximizeButton.gameObject.SetActive(true);
+		MaximizeButton.GetComponent<RectTransform>().anchoredPosition = new Vector2(25, 0);
 		MinimizeButton.gameObject.SetActive(true);
+		MinimizeButton.GetComponent<RectTransform>().anchoredPosition = new Vector2(0, 0);
 		ResetToDefaultButton.gameObject.SetActive(false);
+		DoneMark.transform.parent.gameObject.SetActive(false);
+		TitleArrow.Angle = 180;
+		TitleArrow.SetColor(GameContext.Config.ToggleOpenedColor);
+		TitleArrow.RecalculatePolygon();
+	}
+
+	private void SetOpenState(OpenState state)
+	{
+		oldOpenState_ = openState_;
+		openState_ = state;
+	}
+
+	public void BackToLastOpenState()
+	{
+		switch( oldOpenState_ )
+		{
+			case OpenState.Default:
+				ResetToDefault();
+				break;
+			case OpenState.Minimize:
+				Minimize();
+				break;
+			case OpenState.Maximize:
+				Maximize();
+				break;
+		}
 	}
 
 	public void ChangeOpenState()
@@ -264,7 +342,7 @@ public class LogNote : Note
 				logNoteAreaHight = dateUIlist_[0].UpdatePreferredHeight() + 5;
 				break;
 			case OpenState.Maximize:
-				logNoteAreaHight = totalAreaHight;
+				logNoteAreaHight = totalAreaHight - 30;
 				break;
 		}
 		logNoteTransform.anchoredPosition = new Vector2(logNoteTransform.anchoredPosition.x, -(totalAreaHight - logNoteAreaHight));
@@ -333,6 +411,16 @@ public class LogNote : Note
 	public override void SetNoteViewParam(NoteViewParam param)
 	{
 		scrollRect_.verticalScrollbar.value = param.LogNoteTargetScrollValue;
+
+		if( todayTree_ != null )
+		{
+			todayTree_.SetPath(param.Path);
+		}
+		dateUIlist_[0].UpdateLayout();
+		dateUIlist_[0].UpdatePreferredHeight();
+		numTodayDones_ = todayTree_.TitleLine != null ? todayTree_.TitleLine.GetNumDoneLines() : 0;
+		OnDoneCountChanged();
+
 		StartCoroutine(SetNoteViewParamCoroutine(param));
 	}
 
@@ -358,6 +446,10 @@ public class LogNote : Note
 		isDateUIlistLoading_ = true;
 		foreach( DateUI dateUI in dateUIlist_ )
 		{
+			if( dateUI.Tree == todayTree_ )
+			{
+				continue;
+			}
 			if( dateUI.Tree != null )
 			{
 				dateUI.Tree.SetPath(param.Path);
@@ -487,6 +579,7 @@ public class LogNote : Note
 		if( openState_ == OpenState.Default && logTree == todayTree_ )
 		{
 			UpdateVerticalLayout();
+			treeNote_.UpdateVerticalLayout();
 		}
 	}
 
