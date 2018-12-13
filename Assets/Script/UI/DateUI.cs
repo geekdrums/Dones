@@ -62,12 +62,13 @@ public class DateUI : MonoBehaviour {
 	void SetDate(DateTime date, DateTime today)
 	{
 		date_ = date;
-		if( (today - date).Days < (int)today.DayOfWeek )
+		/*if( (today - date).Days < (int)today.DayOfWeek )
 		{
 			MonthText.text = date.ToString("M/d");
 			DateText.text = date.ToString("ddd");
 		}
-		else if( date.Year == today.Year )
+		else */
+		if( date.Year == today.Year )
 		{
 			MonthText.text = date.ToString("M/");
 			DayText.text = date.ToString("dd").TrimStart('0');//なぜか"d"だと6/26/2017みたいにフルで出力されるので。。

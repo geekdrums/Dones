@@ -104,34 +104,40 @@ public class LogNote : Note
 		{
 			if( line.IsDone )
 			{
-				if( todayTree_.AddLog(line) )
-				{
-					numTodayDones_++;
-				}
+				todayTree_.AddLog(line);
 			}
 			else
 			{
-				if( todayTree_.RemoveLog(line) )
-				{
-					numTodayDones_--;
-				}
+				todayTree_.RemoveLog(line);
 			}
-			OnDoneCountChanged();
+			UpdateDoneCount();
 		}
 	}
 
-	private void OnDoneCountChanged()
+	private void UpdateDoneCount()
 	{
+		int oldNumDones = numTodayDones_;
+		numTodayDones_ = todayTree_.TitleLine != null ? todayTree_.TitleLine.GetNumDoneLines() : 0;
 		int l = Math.Max(numTodayDones_, doneMarks_.Count);
 		for( int i = 0; i < l; ++i )
 		{
 			if( i < numTodayDones_ )
 			{
-				if( i >= doneMarks_.Count )
+				while( i >= doneMarks_.Count )
 				{
 					doneMarks_.Add(Instantiate(DoneMark, DoneMark.transform.parent).GetComponent<UIMidairPrimitive>());
 				}
 				doneMarks_[i].gameObject.SetActive(true);
+				if( oldNumDones < numTodayDones_ && i == 0 )
+				{
+					doneMarks_[i].transform.localScale = Vector3.zero;
+					AnimManager.AddAnim(doneMarks_[i], Vector3.one * 1.5f, ParamType.Scale, AnimType.Time, 0.1f);
+					AnimManager.AddAnim(doneMarks_[i], Vector3.one * 1.0f, ParamType.Scale, AnimType.Time, 0.05f, 0.1f);
+				}
+				else
+				{
+					doneMarks_[i].transform.localScale = Vector3.one;
+				}
 			}
 			else
 			{
@@ -259,6 +265,7 @@ public class LogNote : Note
 		SetOpenState(OpenState.Minimize);
 		UpdateVerticalLayout();
 		treeNote_.UpdateVerticalLayout();
+		UpdateDoneCount();
 
 		MaximizeButton.gameObject.SetActive(true);
 		MaximizeButton.GetComponent<RectTransform>().anchoredPosition = new Vector2(25, 0);
@@ -418,8 +425,7 @@ public class LogNote : Note
 		}
 		dateUIlist_[0].UpdateLayout();
 		dateUIlist_[0].UpdatePreferredHeight();
-		numTodayDones_ = todayTree_.TitleLine != null ? todayTree_.TitleLine.GetNumDoneLines() : 0;
-		OnDoneCountChanged();
+		UpdateDoneCount();
 
 		StartCoroutine(SetNoteViewParamCoroutine(param));
 	}
@@ -576,10 +582,17 @@ public class LogNote : Note
 	{
 		treeNote_.OnEdited(sender, e);
 		LogTree logTree = sender as LogTree;
-		if( openState_ == OpenState.Default && logTree == todayTree_ )
+		if( logTree == todayTree_ )
 		{
-			UpdateVerticalLayout();
-			treeNote_.UpdateVerticalLayout();
+			if( openState_ == OpenState.Default )
+			{
+				UpdateVerticalLayout();
+				treeNote_.UpdateVerticalLayout();
+			}
+			else if( openState_ == OpenState.Minimize )
+			{
+				UpdateDoneCount();
+			}
 		}
 	}
 
