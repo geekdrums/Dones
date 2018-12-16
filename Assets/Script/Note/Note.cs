@@ -29,6 +29,9 @@ public class Note : MonoBehaviour
 	protected LayoutElement layout_;
 	protected ContentSizeFitter contentSizeFitter_;
 	protected ScrollRect scrollRect_;
+	protected RectTransform scrollRectTransform_;
+
+	public Rect Rect { get { return new Rect((Vector2)scrollRectTransform_.position + scrollRectTransform_.rect.position, scrollRectTransform_.rect.size); } }
 
 	public float TargetScrollValue { get { return targetScrollValue_; } }
 	protected float targetScrollValue_ = 1.0f;
@@ -42,6 +45,7 @@ public class Note : MonoBehaviour
 		layout_ = GetComponentInParent<LayoutElement>();
 		contentSizeFitter_ = GetComponentInParent<ContentSizeFitter>();
 		scrollRect_ = GetComponentInParent<ScrollRect>();
+		scrollRectTransform_ = scrollRect_.GetComponent<RectTransform>();
 		heapManager_.Initialize(LineHeapCount, LinePrefab, useFromFirst: true); // lastのほうにFoldされたLineとかが溜まっていくので、Reviveする可能性が高いため0番目のフリーな要素から使っていく
 	}
 
@@ -63,7 +67,7 @@ public class Note : MonoBehaviour
 
 	public virtual void ScrollTo(Line targetLine)
 	{
-		float scrollHeight = scrollRect_.GetComponent<RectTransform>().rect.height;
+		float scrollHeight = scrollRectTransform_.rect.height;
 		float targetAbsolutePositionY = targetLine.TargetAbsolutePosition.y;
 		float targetHeight = -(targetAbsolutePositionY - this.transform.position.y);
 		float heightPerLine = GameContext.Config.HeightPerLine;
@@ -103,7 +107,6 @@ public class Note : MonoBehaviour
 	public virtual void Activate()
 	{
 		this.gameObject.SetActive(true);
-		GameContext.CurrentActionManager = actionManager_;
 		UpdateLayoutElement();
 	}
 

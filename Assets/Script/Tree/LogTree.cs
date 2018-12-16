@@ -22,9 +22,18 @@ public class LogTree : Tree
 	public DateTime Date { get { return date_; } }
 	DateTime date_;
 
-	public LayoutElement Layout { get { return layout_; } }
-	LayoutElement layout_;
-	ContentSizeFitter contentSizeFitter_;
+	public Rect Rect
+	{
+		get
+		{
+			if( rectTransform_ == null )
+			{
+				rectTransform_ = GetComponent<RectTransform>();
+			}
+			return new Rect((Vector2)rectTransform_.position + rectTransform_.rect.position, rectTransform_.rect.size);
+		}
+	}
+	RectTransform rectTransform_;
 
 	#endregion
 
@@ -290,34 +299,6 @@ public class LogTree : Tree
 	protected override void OnCtrlDInput()
 	{
 
-	}
-
-	#endregion
-
-
-	#region layout
-
-	public void UpdateLayoutElement()
-	{
-		if( layout_ == null )
-		{
-			layout_ = GetComponent<LayoutElement>();
-			contentSizeFitter_ = GetComponent<ContentSizeFitter>();
-		}
-
-		if( suspendLayoutCount_ <= 0 && titleLine_ != null )
-		{
-			Line lastLine = titleLine_.LastVisibleLine;
-			if( lastLine != null && lastLine.Field != null )
-			{
-				layout_.preferredHeight = Math.Max(GameContext.Config.MinLogTreeHeight, -(lastLine.TargetAbsolutePosition.y - this.transform.position.y) + GameContext.Config.HeightPerLine * 1.0f);
-				contentSizeFitter_.SetLayoutVertical();
-			}
-		}
-		else
-		{
-			layout_.preferredHeight = 0;
-		}
 	}
 
 	#endregion

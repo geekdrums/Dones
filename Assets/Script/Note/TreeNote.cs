@@ -20,6 +20,8 @@ public class TreeNote : Note
 	public Tree Tree { get { return tree_; } }
 	protected Tree tree_;
 
+	protected Tree focusedTree_;
+
 	public bool IsEdited { get { return tree_.IsEdited; } }
 	public FileInfo File { get { return tree_ != null ? tree_.File : null; } }
 
@@ -56,6 +58,52 @@ public class TreeNote : Note
 		{
 			LogNote.ChangeOpenState();
 		}
+		
+		if( Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1) )
+		{
+			focusedTree_ = null;
+			Vector2 mousePosition = Input.mousePosition;
+			if( Rect.Contains(mousePosition) )
+			{
+				Tree.OnTreeFocused(mousePosition);
+				focusedTree_ = Tree;
+			}
+			else
+			{
+				Rect logNoteRect = LogNote.Rect;
+				if( logNoteRect.Contains(mousePosition) )
+				{
+					foreach( LogTree logTree in LogNote.LogTrees )
+					{
+						Rect logTreeRect = logTree.Rect;
+						if( logTreeRect.Contains(mousePosition) )
+						{
+							logTree.OnTreeFocused(mousePosition);
+							focusedTree_ = logTree;
+							break;
+						}
+						else if( logNoteRect.Contains(logTreeRect.position) == false )
+						{
+							break;
+						}
+					}
+				}
+			}
+		}
+
+		if( focusedTree_ != null && focusedTree_.RootLine != null )
+		{
+			focusedTree_.UpdateKeyboardInput(ctrl, shift, alt);
+
+			if( GameContext.Window.ContextMenu.gameObject.activeInHierarchy == false )
+			{
+				focusedTree_.UpdateMouseInput(ctrl, shift, alt);
+			}
+			if( Input.GetMouseButtonUp(1) )
+			{
+				GameContext.Window.ContextMenu.Open(focusedTree_, Input.mousePosition);
+			}
+		}
 	}
 
 	#region event
@@ -73,10 +121,8 @@ public class TreeNote : Note
 
 	public void UpdateVerticalLayout()
 	{
-		RectTransform treeNoteTransform = scrollRect_.GetComponent<RectTransform>();
-
 		float totalAreaHight = GameContext.Window.MainTabGroup.NoteAreaTransform.rect.height;
-		treeNoteTransform.sizeDelta = new Vector2(treeNoteTransform.sizeDelta.x, totalAreaHight - LogNote.Height - GameContext.Config.LogNoteHeaderMargin);
+		scrollRectTransform_.sizeDelta = new Vector2(scrollRectTransform_.sizeDelta.x, totalAreaHight - LogNote.Rect.size.y - GameContext.Config.LogNoteHeaderMargin);
 
 		CheckScrollbarEnabled();
 	}
@@ -89,12 +135,19 @@ public class TreeNote : Note
 	public override void Activate()
 	{
 		base.Activate();
+		GameContext.CurrentActionManager = actionManager_;
 
 		LogNote.gameObject.SetActive(true);
 		LogNote.UpdateLayoutElement();
 
 		tree_.SubscribeKeyInput();
 		LogNote.SubscribeKeyInput();
+
+		focusedTree_ = Tree;
+		if( Tree.TitleLine != null && Tree.TitleLine.Count > 0 )
+		{
+			Tree.TitleLine[0].Field.Select();
+		}
 	}
 
 	public override void Deactivate()
@@ -110,7 +163,7 @@ public class TreeNote : Note
 		UpdateTitleLine(param.Path);
 
 		LogNote.SetNoteViewParam(param);
-		LogNote.UpdateTitleLine(param.Path);
+		LogNote.UpdateTitleText(param.Path);
 
 		actionManager_.SetTitleLine(Tree.TitleLine);
 		scrollRect_.verticalScrollbar.value = param.TargetScrollValue;
@@ -240,7 +293,7 @@ public class TreeNote : Note
 	{
 		if( gameObject.activeInHierarchy )
 		{
-			layout_.preferredHeight = tree_.PreferredHeight;
+			layout_.preferredHeight = tree_.GetPreferredHeight();
 			contentSizeFitter_.SetLayoutVertical();
 		}
 	}

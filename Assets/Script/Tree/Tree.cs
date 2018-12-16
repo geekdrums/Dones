@@ -45,21 +45,6 @@ public class Tree : MonoBehaviour
 	protected bool isAllFolded_ = false;
 	protected List<Line> requestLayoutLines_ = new List<Line>();
 	protected int suspendLayoutCount_ = 0;
-	public float PreferredHeight
-	{
-		get
-		{
-			if( suspendLayoutCount_ <= 0 && titleLine_ != null && gameObject.activeInHierarchy )
-			{
-				Line lastLine = titleLine_.LastVisibleLine;
-				if( lastLine != null && lastLine.Field != null )
-				{
-					return -(lastLine.TargetAbsolutePosition.y - this.transform.position.y) + GameContext.Config.HeightPerLine * 2.0f;
-				}
-			}
-			return 0;
-		}
-	}
 
 
 	// file
@@ -146,23 +131,27 @@ public class Tree : MonoBehaviour
 
 
 	#region unity events
-
-	// Update is called once per frame
-	void Update()
+	
+	public void OnTreeFocused(Vector2 mousePosition)
 	{
-		if( rootLine_ == null ) return;
-		if( GameContext.Window.ContextMenu.gameObject.activeInHierarchy )
+		if( titleLine_ != null )
+		{
+			Line line = titleLine_.LastVisibleLine;
+			if( line != null && line.Field != null && mousePosition.y < line.Field.RectY )
+			{
+				line.Field.Select();
+			}
+		}
+		GameContext.CurrentActionManager = (ActionManager)actionManager_;
+	}
+
+	public void UpdateKeyboardInput(bool ctrl, bool shift, bool alt)
+	{
+		if( focusedLine_ == null && HasSelection == false )
 		{
 			return;
 		}
 
-		bool ctrl = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
-		bool shift = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
-		bool alt = Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt);
-		bool ctrlOnly = ctrl && !alt && !shift;
-
-
-		// keyboard input
 		if( ctrl )
 		{
 			if( Input.GetKeyDown(KeyCode.V) )
@@ -256,8 +245,10 @@ public class Tree : MonoBehaviour
 		{
 			wasCtrlDPushed_ = false;
 		}
+	}
 
-		// mouse input
+	public void UpdateMouseInput(bool ctrl, bool shift, bool alt)
+	{
 		if( Input.GetMouseButtonDown(0) )
 		{
 			if( shift )
@@ -357,11 +348,8 @@ public class Tree : MonoBehaviour
 		{
 			selectionStartLine_ = selectionEndLine_ = null;
 		}
-		else if( Input.GetMouseButtonUp(1) )
-		{
-			GameContext.Window.ContextMenu.Open(Input.mousePosition);
-		}
 	}
+
 
 	protected virtual void OnDisable()
 	{
@@ -1936,6 +1924,19 @@ public class Tree : MonoBehaviour
 			}
 			requestLayoutLines_.Clear();
 		}
+	}
+
+	public float GetPreferredHeight()
+	{
+		if( suspendLayoutCount_ <= 0 && titleLine_ != null && gameObject.activeInHierarchy )
+		{
+			Line lastLine = titleLine_.LastVisibleLine;
+			if( lastLine != null && lastLine.Field != null )
+			{
+				return -(lastLine.TargetAbsolutePosition.y - this.transform.position.y) + GameContext.Config.HeightPerLine * 2.0f;
+			}
+		}
+		return 0;
 	}
 
 	#endregion

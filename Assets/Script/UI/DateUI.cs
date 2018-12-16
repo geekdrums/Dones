@@ -20,7 +20,7 @@ public class DateUI : MonoBehaviour {
 		{
 			if( layoutElement_ == null )
 			{
-				layoutElement_ = GetComponentInChildren<LayoutElement>();
+				layoutElement_ = GetComponent<LayoutElement>();
 				contentSizeFitter_ = GetComponent<ContentSizeFitter>();
 			}
 			return layoutElement_.preferredHeight;
@@ -29,7 +29,7 @@ public class DateUI : MonoBehaviour {
 		{
 			if( layoutElement_ == null )
 			{
-				layoutElement_ = GetComponentInChildren<LayoutElement>();
+				layoutElement_ = GetComponent<LayoutElement>();
 				contentSizeFitter_ = GetComponent<ContentSizeFitter>();
 			}
 			layoutElement_.preferredHeight = value;
@@ -40,6 +40,8 @@ public class DateUI : MonoBehaviour {
 
 	public LogTree Tree { get { return logTree_; } }
 	LogTree logTree_;
+
+	bool isToday_ = false;
 
 	// Use this for initialization
 	void Start () {
@@ -53,8 +55,8 @@ public class DateUI : MonoBehaviour {
 
 	public void Set(LogTree tree, DateTime date, DateTime today, Color color)
 	{
-		SetTree(tree);
 		SetDate(date, today);
+		SetTree(tree);
 		SetColor(color);
 		gameObject.name = "Date " + date.ToString("yyyy/MM/dd");
 	}
@@ -62,6 +64,7 @@ public class DateUI : MonoBehaviour {
 	void SetDate(DateTime date, DateTime today)
 	{
 		date_ = date;
+		isToday_ = (date == today);
 		/*if( (today - date).Days < (int)today.DayOfWeek )
 		{
 			MonthText.text = date.ToString("M/d");
@@ -83,6 +86,12 @@ public class DateUI : MonoBehaviour {
 		WeekDayText.text = date.ToString("ddd");
 	}
 
+	void SetTree(LogTree tree)
+	{
+		logTree_ = tree;
+		OnTreeTitleLineChanged();
+	}
+
 	void SetColor(Color color)
 	{
 		MonthText.color = color;
@@ -92,21 +101,14 @@ public class DateUI : MonoBehaviour {
 		GetComponentInChildren<Image>().color = color;
 	}
 
-	void SetTree(LogTree tree)
+	public void OnTreeTitleLineChanged()
 	{
-		logTree_ = tree;
-		UpdateLayout();
-	}
-
-	public void UpdateLayout()
-	{
-		if( (logTree_ != null && logTree_.TitleLine != null) || date_ == GameContext.Window.LogNote.Today )
+		if( (logTree_ != null && logTree_.TitleLine != null) || isToday_ )
 		{
 			MonthText.gameObject.SetActive(true);
 			DayText.gameObject.SetActive(true);
 			WeekDayText.gameObject.SetActive(true);
 			DateText.gameObject.SetActive(false);
-			PreferredHeight = 100;
 		}
 		else
 		{
@@ -114,18 +116,21 @@ public class DateUI : MonoBehaviour {
 			DayText.gameObject.SetActive(false);
 			WeekDayText.gameObject.SetActive(false);
 			DateText.gameObject.SetActive(true);
-			PreferredHeight = 30;
 		}
 	}
 
-	public float UpdatePreferredHeight()
+	public float UpdateLayoutElement()
 	{
-		if( logTree_ != null && logTree_.TitleLine != null )
+		if( (logTree_ != null && logTree_.TitleLine != null) || isToday_ )
 		{
-			logTree_.UpdateLayoutElement();
-			PreferredHeight = logTree_.Layout.preferredHeight + 10;
-			contentSizeFitter_.SetLayoutVertical();
+			PreferredHeight = Math.Max(100, logTree_.GetPreferredHeight() + 10);
 		}
+		else
+		{
+			PreferredHeight = 30;
+		}
+
+		contentSizeFitter_.SetLayoutVertical();
 
 		return PreferredHeight;
 	}

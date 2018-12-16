@@ -7,7 +7,6 @@ using UnityEngine.EventSystems;
 public class ContextMenu : MonoBehaviour {
 
 
-    public Tree Tree;
 
 	public Button NewTabButton;
 	public Button DoneButton;
@@ -21,6 +20,7 @@ public class ContextMenu : MonoBehaviour {
 	public Button FoldAllButton;
 	public Button UnfoldAllButton;
 
+	Tree tree_;
 	bool isOpening_;
 
 	// Use this for initialization
@@ -40,23 +40,25 @@ public class ContextMenu : MonoBehaviour {
 		}
 	}
 
-	public void Open(Vector3 position)
+	public void Open(Tree tree, Vector3 position)
 	{
+		tree_ = tree;
+
 		gameObject.SetActive(true);
 		transform.position = position;
 		isOpening_ = true;
 
-		NewTabButton			.interactable = Tree.HasSelection == false && Tree.FocusedLine != null;
-		DoneButton				.interactable = Tree.FocusedLine != null;
-		RepeatDoneButton		.interactable = Tree.FocusedLine != null;
-		AddTagButton			.interactable = Tree.FocusedLine != null;
-		CopyButton				.interactable = Tree.HasSelection;
+		NewTabButton			.interactable = tree_.HasSelection == false && tree_.FocusedLine != null;
+		DoneButton				.interactable = tree_.FocusedLine != null;
+		RepeatDoneButton		.interactable = tree_.FocusedLine != null;
+		AddTagButton			.interactable = tree_.FocusedLine != null;
+		CopyButton				.interactable = tree_.FocusedLine != null || tree_.HasSelection;
 		PasteButton				.interactable = Tree.Clipboard != null && Tree.Clipboard != "";
-		CopyWithoutFormatButton	.interactable = Tree.HasSelection;
-		FoldButton				.interactable = Tree.FocusedLine != null;
-		UnfoldButton			.interactable = Tree.FocusedLine != null;
-		FoldAllButton			.interactable = Tree.FocusedLine != null;
-		UnfoldAllButton			.interactable = Tree.FocusedLine != null;
+		CopyWithoutFormatButton	.interactable = tree_.FocusedLine != null || tree_.HasSelection;
+		FoldButton				.interactable = tree_.FocusedLine != null;
+		UnfoldButton			.interactable = tree_.FocusedLine != null;
+		FoldAllButton			.interactable = tree_.FocusedLine != null;
+		UnfoldAllButton			.interactable = tree_.FocusedLine != null;
 	}
 
 	public void Close()
@@ -67,81 +69,81 @@ public class ContextMenu : MonoBehaviour {
 
 	public void OnClickNewTab()
     {
-        if( Tree.HasSelection == false && Tree.FocusedLine != null )
+        if( tree_.HasSelection == false && tree_.FocusedLine != null )
         {
-            GameContext.Window.AddTab(Tree.FocusedLine);
+            GameContext.Window.AddTab(tree_.FocusedLine);
 		}
 		Close();
 	}
 
     public void OnClickDone()
     {
-		if( Tree.FocusedLine != null )
+		if( tree_.FocusedLine != null )
 		{
-			Tree.OnCtrlSpaceInput();
+			tree_.OnCtrlSpaceInput();
 		}
 		Close();
 	}
 
 	public void OnClickRepeatDone()
 	{
-		if( Tree.FocusedLine != null )
+		if( tree_.FocusedLine != null )
 		{
-			Tree.OnCtrlShiftSpaceInput();
+			tree_.OnCtrlShiftSpaceInput();
 		}
 		Close();
 	}
 
 	public void OnClickCopy()
     {
-        Tree.Copy(withformat: true);
+        tree_.Copy(withformat: true);
 		Close();
 	}
 
     public void OnClickCopyWithoutFormat()
     {
-        Tree.Copy(withformat: false);
+        tree_.Copy(withformat: false);
 		Close();
 	}
 
     public void OnClickPaste()
     {
-        Tree.Paste();
+        tree_.Paste();
 		Close();
 	}
 
 	public void OnClickFold()
 	{
-		if( Tree.FocusedLine != null )
+		if( tree_.FocusedLine != null )
 		{
-			Tree.OnCtrlArrowInput(KeyCode.UpArrow);
+			tree_.OnCtrlArrowInput(KeyCode.UpArrow);
 		}
 		Close();
 	}
 
 	public void OnClickUnfold()
 	{
-		if( Tree.FocusedLine != null )
+		if( tree_.FocusedLine != null )
 		{
-			Tree.OnCtrlArrowInput(KeyCode.DownArrow);
+			tree_.OnCtrlArrowInput(KeyCode.DownArrow);
 		}
 		Close();
 	}
 
 	public void OnClickFoldAll()
 	{
-		if( Tree.FocusedLine != null )
+		if( tree_.FocusedLine != null )
 		{
-			Tree.OnCtrlShiftArrowInput(KeyCode.UpArrow);
+			tree_.OnCtrlShiftArrowInput(KeyCode.UpArrow);
 		}
 		Close();
 	}
 
 	public void OnClickUnfoldAll()
 	{
-		if( Tree.FocusedLine != null )
+		if( tree_.FocusedLine != null )
 		{
-			Tree.OnCtrlShiftArrowInput(KeyCode.DownArrow);
+			tree_.OnCtrlShiftArrowInput(KeyCode.DownArrow);
 		}
 		Close();
 	}

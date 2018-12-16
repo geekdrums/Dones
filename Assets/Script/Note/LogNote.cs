@@ -22,6 +22,8 @@ public class LogNote : Note
 		Maximize,
 	}
 
+	#region editor params
+
 	public GameObject LogTreePrefab;
 	public GameObject DateUIPrefab;
 	public GameObject DoneMark;
@@ -33,6 +35,14 @@ public class LogNote : Note
 	public Text TitleText;
 	public UIMidairPrimitive TitleArrow;
 
+	#endregion
+
+
+	#region properties
+
+	public TreeNote TreeNote { get { return treeNote_; } }
+	public OpenState State { get { return openState_; } }
+	public IEnumerable<LogTree> LogTrees { get { return logTrees_.AsEnumerable<LogTree>(); } }
 	public bool IsEdited
 	{
 		get
@@ -46,32 +56,36 @@ public class LogNote : Note
 		}
 	}
 
-	public OpenState State { get { return openState_; } }
+	#endregion
+
+
+	#region private params
+
+	TreeNote treeNote_;
+	LogTree todayTree_;
+	DateUI todayUI_;
+
+	DateTime today_;
+	DateTime endDate_;
+
 	OpenState openState_ = OpenState.Default;
 	OpenState oldOpenState_ = OpenState.Default;
-
-	public float Height { get { return scrollRect_.GetComponent<RectTransform>().sizeDelta.y; } }
-
+	
 	List<LogTree> logTrees_ = new List<LogTree>();
 	List<DateUI> dateUIlist_ = new List<DateUI>();
 
 	List<UIMidairPrimitive> doneMarks_ = new List<UIMidairPrimitive>();
 	int numTodayDones_ = 0;
 
-	public DateTime Today { get { return today_; } }
-	DateTime today_;
-	DateTime endDate_;
-	
-	public LogTree TodayTree { get { return todayTree_; } }
-	private LogTree todayTree_;
+	int suspendLayoutCount_;
+	bool isDateUIlistLoading_ = false;
 
-	public TreeNote TreeNote { get { return treeNote_; } }
-	TreeNote treeNote_;
+	#endregion
 
-	private int suspendLayoutCount_;
 
-	private bool isDateUIlistLoading_ = false;
-	
+
+	#region unity functions
+
 	protected override void Awake()
 	{
 		base.Awake();
@@ -94,13 +108,14 @@ public class LogNote : Note
 		}
 	}
 
-
+	#endregion
+	
 
 	#region input
 
 	public void OnDoneChanged(Line line)
 	{
-		if( TodayTree != null )
+		if( todayTree_ != null )
 		{
 			if( line.IsDone )
 			{
@@ -114,7 +129,7 @@ public class LogNote : Note
 		}
 	}
 
-	private void UpdateDoneCount()
+	void UpdateDoneCount()
 	{
 		int oldNumDones = numTodayDones_;
 		numTodayDones_ = todayTree_.TitleLine != null ? todayTree_.TitleLine.GetNumDoneLines() : 0;
@@ -336,8 +351,6 @@ public class LogNote : Note
 
 	public void UpdateVerticalLayout()
 	{
-		RectTransform logNoteTransform = scrollRect_.GetComponent<RectTransform>();
-
 		float totalAreaHight = GameContext.Window.MainTabGroup.NoteAreaTransform.rect.height;
 		float logNoteAreaHight = 0;
 		switch( openState_ )
@@ -346,14 +359,14 @@ public class LogNote : Note
 				logNoteAreaHight = 0;
 				break;
 			case OpenState.Default:
-				logNoteAreaHight = dateUIlist_[0].UpdatePreferredHeight() + 5;
+				logNoteAreaHight = Math.Min(totalAreaHight / 2, todayUI_.UpdateLayoutElement() + 5);
 				break;
 			case OpenState.Maximize:
 				logNoteAreaHight = totalAreaHight - 30;
 				break;
 		}
-		logNoteTransform.anchoredPosition = new Vector2(logNoteTransform.anchoredPosition.x, -(totalAreaHight - logNoteAreaHight));
-		logNoteTransform.sizeDelta = new Vector2(logNoteTransform.sizeDelta.x, logNoteAreaHight);
+		scrollRectTransform_.anchoredPosition = new Vector2(scrollRectTransform_.anchoredPosition.x, -(totalAreaHight - logNoteAreaHight));
+		scrollRectTransform_.sizeDelta = new Vector2(scrollRectTransform_.sizeDelta.x, logNoteAreaHight);
 
 		CheckScrollbarEnabled();
 	}
@@ -383,13 +396,13 @@ public class LogNote : Note
 		float preferredHeight = 0.0f;
 		if( openState_ == OpenState.Default )
 		{
-			preferredHeight += dateUIlist_[0].UpdatePreferredHeight() + 5;
+			preferredHeight += todayUI_.UpdateLayoutElement() + 5;
 		}
 		else
 		{
 			foreach( DateUI dateUI in dateUIlist_ )
 			{
-				preferredHeight += dateUI.UpdatePreferredHeight() + 5;
+				preferredHeight += dateUI.UpdateLayoutElement() + 5;
 			}
 			preferredHeight += 100;
 		}
@@ -402,7 +415,6 @@ public class LogNote : Note
 		foreach( LogTree logTree in logTrees_ )
 		{
 			logTree.RootLine.AdjustFontSizeRecursive(GameContext.Config.FontSize, GameContext.Config.HeightPerLine);
-			logTree.UpdateLayoutElement();
 		}
 		if( gameObject.activeInHierarchy )
 		{
@@ -418,19 +430,21 @@ public class LogNote : Note
 	public override void SetNoteViewParam(NoteViewParam param)
 	{
 		scrollRect_.verticalScrollbar.value = param.LogNoteTargetScrollValue;
+		// todo どうする！？
+		// actionManager_.SetTitleLine(???.TitleLine);
 
 		if( todayTree_ != null )
 		{
 			todayTree_.SetPath(param.Path);
+			todayUI_.OnTreeTitleLineChanged();
 		}
-		dateUIlist_[0].UpdateLayout();
-		dateUIlist_[0].UpdatePreferredHeight();
+		todayUI_.UpdateLayoutElement();
 		UpdateDoneCount();
 
 		StartCoroutine(SetNoteViewParamCoroutine(param));
 	}
 
-	public void UpdateTitleLine(TreePath path)
+	public void UpdateTitleText(TreePath path)
 	{
 		TitleText.text = ( path.Length > 0 ? path[path.Length - 1] : "Home" ) + ".dones";
 	}
@@ -459,9 +473,9 @@ public class LogNote : Note
 			if( dateUI.Tree != null )
 			{
 				dateUI.Tree.SetPath(param.Path);
+				dateUI.OnTreeTitleLineChanged();
 			}
-			dateUI.UpdateLayout();
-			dateUI.UpdatePreferredHeight();
+			dateUI.UpdateLayoutElement();
 			if( dateUI.Tree != null )
 			{
 				yield return new WaitForSeconds(GameContext.Config.LogNoteSetPathCoroutineInterval);
@@ -527,11 +541,11 @@ public class LogNote : Note
 
 		SuspendLayout();
 		{
-			DateUI dateUI = Instantiate(DateUIPrefab, this.transform).GetComponent<DateUI>();
-			todayTree_ = LoadLogTree(today_, dateUI.transform, ToFileName(treeNote_, today_));
-			dateUI.Set(todayTree_, today_, today_, ToColor(today_));
+			todayUI_ = Instantiate(DateUIPrefab, this.transform).GetComponent<DateUI>();
+			todayTree_ = LoadLogTree(today_, todayUI_.transform, ToFileName(treeNote_, today_));
+			todayUI_.Set(todayTree_, today_, today_, ToColor(today_));
 			logTrees_.Add(todayTree_);
-			dateUIlist_.Add(dateUI);
+			dateUIlist_.Add(todayUI_);
 		}
 		ResumeLayout();
 
@@ -545,8 +559,6 @@ public class LogNote : Note
 		int loadCount = GameContext.Config.LogLoadUnit;
 		while( loadCount > 0 )
 		{
-			// 日にちの近さによってUI変える仕様、逆にわかりにくいのでボツ
-			// GameObject selectedDateUIPrefab = (today_ - date).Days < (int)today_.DayOfWeek ? ThisWeekDateUIPrefab : (today_.Year == date.Year ? ThisYearDateUIPrefab : DateUIPrefab);
 			DateUI dateUI = Instantiate(DateUIPrefab, this.transform).GetComponent<DateUI>();
 			LogTree logTree = null;
 			string filename = ToFileName(treeNote_, date);
