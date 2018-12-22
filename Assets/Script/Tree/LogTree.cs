@@ -26,11 +26,19 @@ public class LogTree : Tree
 	{
 		get
 		{
+			return new Rect((Vector2)RectTransform.position + RectTransform.rect.position, RectTransform.rect.size);
+		}
+	}
+
+	public RectTransform RectTransform
+	{
+		get
+		{
 			if( rectTransform_ == null )
 			{
 				rectTransform_ = GetComponent<RectTransform>();
 			}
-			return new Rect((Vector2)rectTransform_.position + rectTransform_.rect.position, rectTransform_.rect.size);
+			return rectTransform_;
 		}
 	}
 	RectTransform rectTransform_;
@@ -44,12 +52,11 @@ public class LogTree : Tree
 	{
 		SuspendLayout();
 
-		// todo rootLineに限らず、入力用のLineを用意できるように方法を変える
-		if( rootLine_.Count == 1 && rootLine_[0].Text == "" )
+		if( titleLine_ != null && titleLine_.Count == 1 && titleLine_[0].Text == "" )
 		{
-			rootLine_.Remove(rootLine_[0]);
+			titleLine_.Remove(titleLine_[0]);
 		}
-		
+
 		if( titleLine_ == null )
 		{
 			CreateTitleLine();
@@ -156,6 +163,11 @@ public class LogTree : Tree
 				}
 				if( find == false )
 				{
+					if( line.Count == 1 && line[0].Text == "" )
+					{
+						line.Remove(line[0]);
+					}
+
 					Line originalLine = OwnerLogNote.TreeNote.Tree.GetLineFromPath(path_.GetPartialPath(i + 1));
 					Line cloneLine = originalLine.Clone();
 					cloneLine.IsDone = false;
@@ -301,6 +313,21 @@ public class LogTree : Tree
 
 	}
 
+	public override void OnTreeFocused(Vector2 mousePosition)
+	{
+		if( titleLine_ == null )
+		{
+			CreateTitleLine();
+		}
+
+		if( titleLine_.Count == 0 )
+		{
+			titleLine_.Add(new Line());
+		}
+
+		base.OnTreeFocused(mousePosition);
+	}
+
 	#endregion
 
 
@@ -362,6 +389,27 @@ public class LogTree : Tree
 
 			OwnerLogNote.SetSortedIndex(this);
 		}
+	}
+
+	#endregion
+
+
+	#region
+
+	public Line GetOriginalLine(Line line)
+	{
+		// cloneされた（Originalが存在する）lineまで親をたどっていく
+		Line cloneLine = line;
+		while( cloneLine != null && cloneLine.IsClone == false )
+		{
+			cloneLine = cloneLine.Parent;
+		}
+
+		if( cloneLine != null )
+		{
+			return OwnerLogNote.TreeNote.Tree.GetLineFromPath(cloneLine.GetTreePath());
+		}
+		return null;
 	}
 
 	#endregion

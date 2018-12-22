@@ -14,13 +14,24 @@ public abstract class ActionBase
 
     public virtual bool IsRelatedTo(Line titleLine)
     {
-        foreach (Line line in TargetLines)
-        {
-            if (line.HasBeenChildOrItselfOf(titleLine))
-            {
-                return true;
-            }
-        }
+		foreach( Line line in TargetLines )
+		{
+			Line targetLine = line;
+
+			if( line.Tree is LogTree )
+			{
+				targetLine = (line.Tree as LogTree).GetOriginalLine(line);
+				if( targetLine == null )
+				{
+					continue;
+				}
+			}
+
+			if( targetLine.HasBeenChildOrItselfOf(titleLine) )
+			{
+				return true;
+			}
+		}
         return false;
     }
 	

@@ -132,6 +132,11 @@ public class DateUI : MonoBehaviour {
 
 		contentSizeFitter_.SetLayoutVertical();
 
+		if( logTree_ != null )
+		{
+			logTree_.RectTransform.sizeDelta = new Vector2(logTree_.RectTransform.sizeDelta.x, PreferredHeight);
+		}
+
 		return PreferredHeight;
 	}
 }

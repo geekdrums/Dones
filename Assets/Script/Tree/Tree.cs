@@ -132,7 +132,7 @@ public class Tree : MonoBehaviour
 
 	#region unity events
 	
-	public void OnTreeFocused(Vector2 mousePosition)
+	public virtual void OnTreeFocused(Vector2 mousePosition)
 	{
 		if( titleLine_ != null )
 		{

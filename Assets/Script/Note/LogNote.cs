@@ -430,8 +430,7 @@ public class LogNote : Note
 	public override void SetNoteViewParam(NoteViewParam param)
 	{
 		scrollRect_.verticalScrollbar.value = param.LogNoteTargetScrollValue;
-		// todo どうする！？
-		// actionManager_.SetTitleLine(???.TitleLine);
+		actionManager_.SetTitleLine(treeNote_.Tree.TitleLine);
 
 		if( todayTree_ != null )
 		{

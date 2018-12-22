@@ -819,17 +819,17 @@ public class Line : IEnumerable<Line>
         return false;
     }
 
-    public bool HasBeenChildOrItselfOf(Line line)
-    {
-        if (line == this)
-        {
-            return true;
-        }
-        else
-        {
-            return HasBeenChildOf(line);
-        }
-    }
+	public bool HasBeenChildOrItselfOf(Line line)
+	{
+		if( line == this )
+		{
+			return true;
+		}
+		else
+		{
+			return HasBeenChildOf(line);
+		}
+	}
 
     public static Line GetLeastCommonParent(params Line[] lines)
 	{
