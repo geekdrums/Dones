@@ -1974,12 +1974,18 @@ public class Tree : MonoBehaviour
 		IsEdited = false;
 	}
 
-	public void SaveAllTreeInOneFile(StringBuilder builder)
+	public void SaveAllTreeInOneFile(StringBuilder builder, string title)
 	{
-		builder.AppendLine(rootLine_.Text.Replace(".dtml", ""));
+		if( title != "" )
+		{
+			builder.AppendLine(title);
+		}
 		foreach( Line line in rootLine_.GetAllChildren() )
 		{
-			builder.Append("	");
+			if( title != "" )
+			{
+				builder.Append("	");
+			}
 			line.AppendStringTo(builder, appendTag: true);
 		}
 	}

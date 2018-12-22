@@ -320,8 +320,8 @@ public class Window : MonoBehaviour
 		public int Width { get; set; }
 		[XmlAttribute("Height")]
 		public int Height { get; set; }
-		[XmlAttribute("IsFulllScreen")]
-		public bool IsFulllScreen { get; set; }
+		[XmlAttribute("IsMaximized")]
+		public bool IsMaximized { get; set; }
 	}
 
 
@@ -335,7 +335,7 @@ public class Window : MonoBehaviour
 		XmlSerializer serializer = new XmlSerializer(typeof(SettingXML));
 		SettingXML settingXml = (SettingXML)serializer.Deserialize(new StreamReader(settingFile_.OpenRead()));
 
-		UnityEngine.Screen.SetResolution(settingXml.Screen.Width, settingXml.Screen.Height, settingXml.Screen.IsFulllScreen);
+		UnityEngine.Screen.SetResolution(settingXml.Screen.Width, settingXml.Screen.Height, settingXml.Screen.IsMaximized ? FullScreenMode.MaximizedWindow : FullScreenMode.Windowed);
 
 		foreach(TabViewParam tabparam in settingXml.TabParams )
 		{
@@ -385,7 +385,7 @@ public class Window : MonoBehaviour
 		setting.Screen = new ScreenSetting();
 		setting.Screen.Width = UnityEngine.Screen.width;
 		setting.Screen.Height = UnityEngine.Screen.height;
-		setting.Screen.IsFulllScreen = UnityEngine.Screen.fullScreen;
+		setting.Screen.IsMaximized = (UnityEngine.Screen.fullScreenMode == FullScreenMode.MaximizedWindow);
 
 		setting.IsTagListOpened = GameContext.TagList.IsOpened;
 		setting.LogNoteOpenState = LogNote.State;
@@ -399,10 +399,52 @@ public class Window : MonoBehaviour
 
 	void SaveAllTreeInOneFile()
 	{
-		StringBuilder builder = new StringBuilder();
-		foreach( TreeNote treeNote in MainTabGroup.TreeNotes )
+		string[] paths = new string[]
 		{
-			treeNote.Tree.SaveAllTreeInOneFile(builder);
+			"C:\\Users\\geekdrums\\Dropbox\\Dones\\Archive\\note.dtml",
+			"C:\\Users\\geekdrums\\Dropbox\\Dones\\Archive\\daily.dtml",
+			"C:\\Users\\geekdrums\\Dropbox\\Dones\\Archive\\dones.dtml",
+			"C:\\Users\\geekdrums\\Dropbox\\Dones\\Archive\\todo.dtml",
+			"C:\\Users\\geekdrums\\Dropbox\\Dones\\Archive\\input.dtml",
+			"C:\\Users\\geekdrums\\Dropbox\\Dones\\Archive\\Work.dtml",
+			"C:\\Users\\geekdrums\\Dropbox\\Dones\\Archive\\VQNote.dtml",
+			"C:\\Users\\geekdrums\\Dropbox\\Dones\\Archive\\SQNote4.dtml",
+			"C:\\Users\\geekdrums\\Dropbox\\Dones\\Archive\\interactiveMusic.dtml",
+			"C:\\Users\\geekdrums\\Dropbox\\Dones\\Archive\\gamedesign.dtml",
+			"C:\\Users\\geekdrums\\Dropbox\\Dones\\Archive\\LudumDare.dtml",
+		};
+
+		string[] titles = new string[]
+		{
+			"",
+			"Daily",
+			"Dones",
+			"ToDo",
+			"Input",
+			"Work",
+			"VQNote",
+			"SQNote",
+			"InteractiveMusic",
+			"GameDesign",
+			"LudumDare",
+		};
+
+		List<TreeNote> treeNotes = new List<TreeNote>();
+		StringBuilder builder = new StringBuilder();
+		for( int i = 0; i < paths.Length; ++i )
+		{
+			TabButton tab = Instantiate(TabButtonPrefab.gameObject, TabParent.transform).GetComponent<TabButton>();
+			TreeNote treeNote = Instantiate(Note.gameObject, Note.transform.parent).GetComponent<TreeNote>();
+			LogNote logNote = Instantiate(LogNote.gameObject, LogNote.transform.parent).GetComponent<LogNote>();
+			treeNote.LogNote = logNote;
+			logNote.TreeNote = treeNote;
+
+			tab.Bind(Note);
+			MainTabGroup.OnTabCreated(tab);
+			treeNote.LoadNote(paths[i]);
+
+			treeNotes.Add(treeNote);
+			treeNote.Tree.SaveAllTreeInOneFile(builder, titles[i]);
 		}
 
 		FileInfo file = new FileInfo(System.Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + "/Dones/tree.dtml");
@@ -412,13 +454,9 @@ public class Window : MonoBehaviour
 		writer.Close();
 
 		DirectoryInfo logDirectory = new DirectoryInfo(System.Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + "/Dones/log");
-		if( Directory.Exists(logDirectory.FullName) == false )
+		for( int i = 0; i < treeNotes.Count; ++i )
 		{
-			Directory.CreateDirectory(logDirectory.FullName);
-		}
-		foreach( TreeNote treeNote in MainTabGroup.TreeNotes )
-		{
-			treeNote.LogNote.SaveAllLogFilesToOneDirectory(logDirectory);
+			treeNotes[i].LogNote.SaveAllLogFilesToOneDirectory(logDirectory, titles[i]);
 		}
 	}
 

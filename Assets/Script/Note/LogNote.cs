@@ -40,7 +40,7 @@ public class LogNote : Note
 
 	#region properties
 
-	public TreeNote TreeNote { get { return treeNote_; } }
+	public TreeNote TreeNote { get { return treeNote_; } set { treeNote_ = value; } }
 	public OpenState State { get { return openState_; } }
 	public IEnumerable<LogTree> LogTrees { get { return logTrees_.AsEnumerable<LogTree>(); } }
 	public bool IsEdited
@@ -505,7 +505,7 @@ public class LogNote : Note
 
 	#region file
 
-	public void SaveAllLogFilesToOneDirectory(DirectoryInfo directory)
+	public void SaveAllLogFilesToOneDirectory(DirectoryInfo directory, string title)
 	{
 		string header = treeNote_.File.Name.Replace(".dtml", "");
 		SortedList<DateTime, string> logFileList_ = new SortedList<DateTime, string>();
@@ -532,13 +532,19 @@ public class LogNote : Note
 			FileInfo file = new FileInfo(String.Format("{0}/{1}.dones", directory.FullName, pair.Key.ToString("yyyy-MM-dd")));
 			
 			StreamWriter writer = new StreamWriter(file.FullName, append: file.Exists);
-			writer.WriteLine(header);
+			if( title != "" )
+			{
+				writer.WriteLine(title);
+			}
 
 			StreamReader reader = new StreamReader(new FileInfo(pair.Value).OpenRead());
 			string text = null;
 			while( (text = reader.ReadLine()) != null )
 			{
-				writer.Write("	");
+				if( title != "" )
+				{
+					writer.Write("	");
+				}
 				writer.WriteLine(text);
 			}
 
