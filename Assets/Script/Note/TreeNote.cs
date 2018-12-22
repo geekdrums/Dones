@@ -82,7 +82,7 @@ public class TreeNote : Note
 							focusedTree_ = logTree;
 							break;
 						}
-						else if( logNoteRect.Contains(logTreeRect.position) == false )
+						else if( logNoteRect.yMin > logTreeRect.yMax )
 						{
 							break;
 						}
