@@ -17,8 +17,8 @@ public class LogNote : Note
 {
 	public enum OpenState
 	{
-		Minimize,
 		Default,
+		Minimize,
 		Maximize,
 	}
 

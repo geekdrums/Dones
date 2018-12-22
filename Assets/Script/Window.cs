@@ -223,7 +223,7 @@ public class Window : MonoBehaviour
 			{
 				if( existTab.ViewParam.Path.Equals(path) )
 				{
-					existTab.IsSelected = true;
+					existTab.IsSelected = select;
 					return;
 				}
 			}
@@ -297,8 +297,14 @@ public class Window : MonoBehaviour
 		[XmlElement("Screen")]
 		public ScreenSetting Screen { get; set; }
 
+		[XmlElement("SelectedTabIndex")]
+		public int SelectedTabIndex { get; set; }
+
 		[XmlElement("taglist")]
 		public bool IsTagListOpened { get; set; }
+
+		[XmlElement("LogNote")]
+		public LogNote.OpenState LogNoteOpenState { get; set; }
 	}
 
 	public class TabViewParam
@@ -326,18 +332,16 @@ public class Window : MonoBehaviour
 			return;
 		}
 
-
 		XmlSerializer serializer = new XmlSerializer(typeof(SettingXML));
 		SettingXML settingXml = (SettingXML)serializer.Deserialize(new StreamReader(settingFile_.OpenRead()));
+
+		UnityEngine.Screen.SetResolution(settingXml.Screen.Width, settingXml.Screen.Height, settingXml.Screen.IsFulllScreen);
 
 		foreach(TabViewParam tabparam in settingXml.TabParams )
 		{
 			AddTab(new TreePath(tabparam.Path), select: false);
 		}
-		// todo 選んでいるのがあったらここで選ぶ
-		HomeTabButton.IsSelected = true;
-
-		UnityEngine.Screen.SetResolution(settingXml.Screen.Width, settingXml.Screen.Height, settingXml.Screen.IsFulllScreen);
+		MainTabGroup[settingXml.SelectedTabIndex].IsSelected = true;
 
 		if( settingXml.IsTagListOpened )
 		{
@@ -346,6 +350,11 @@ public class Window : MonoBehaviour
 		else
 		{
 			GameContext.TagList.Close();
+		}
+
+		if( settingXml.LogNoteOpenState == LogNote.OpenState.Minimize )
+		{
+			LogNote.Minimize();
 		}
 	}
 
@@ -371,6 +380,7 @@ public class Window : MonoBehaviour
 				setting.TabParams.Add(tabparam);
 			}
 		}
+		setting.SelectedTabIndex = MainTabGroup.IndexOf(MainTabGroup.ActiveTab);
 
 		setting.Screen = new ScreenSetting();
 		setting.Screen.Width = UnityEngine.Screen.width;
@@ -378,6 +388,7 @@ public class Window : MonoBehaviour
 		setting.Screen.IsFulllScreen = UnityEngine.Screen.fullScreen;
 
 		setting.IsTagListOpened = GameContext.TagList.IsOpened;
+		setting.LogNoteOpenState = LogNote.State;
 
 		StreamWriter writer = new StreamWriter(settingFile_.FullName);
 		XmlSerializer serializer = new XmlSerializer(typeof(SettingXML));

@@ -18,7 +18,6 @@ public class Note : MonoBehaviour
 	#region editor params
 
 	public LineField LinePrefab;
-	public int LineHeapCount = 30;
 
 	#endregion
 
@@ -46,7 +45,7 @@ public class Note : MonoBehaviour
 		contentSizeFitter_ = GetComponentInParent<ContentSizeFitter>();
 		scrollRect_ = GetComponentInParent<ScrollRect>();
 		scrollRectTransform_ = scrollRect_.GetComponent<RectTransform>();
-		heapManager_.Initialize(LineHeapCount, LinePrefab, useFromFirst: true); // lastのほうにFoldされたLineとかが溜まっていくので、Reviveする可能性が高いため0番目のフリーな要素から使っていく
+		heapManager_.Initialize(GameContext.Config.LineHeapCount, LinePrefab, useFromFirst: true); // lastのほうにFoldされたLineとかが溜まっていくので、Reviveする可能性が高いため0番目のフリーな要素から使っていく
 	}
 
 

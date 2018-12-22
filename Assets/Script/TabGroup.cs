@@ -283,6 +283,11 @@ public class TabGroup : MonoBehaviour, IEnumerable<TabButton>
 		}
 	}
 
+	public int IndexOf(TabButton tab)
+	{
+		return tabButtons_.IndexOf(tab);
+	}
+
 	#endregion
 
 }

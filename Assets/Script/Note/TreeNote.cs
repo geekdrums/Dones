@@ -160,7 +160,7 @@ public class TreeNote : Note
 	public override void SetNoteViewParam(NoteViewParam param)
 	{
 		Tree.SetPath(param.Path);
-		UpdateTitleLine(param.Path);
+		UpdateTreePathList(param.Path);
 
 		LogNote.SetNoteViewParam(param);
 		LogNote.UpdateTitleText(param.Path);
@@ -175,7 +175,7 @@ public class TreeNote : Note
 		LogNote.CacheNoteViewParam(param);
 	}
 
-	void UpdateTitleLine(TreePath path)
+	void UpdateTreePathList(TreePath path)
 	{
 		List<Text> textList = new List<Text>(GameContext.Window.TitleLine.GetComponentsInChildren<Text>(includeInactive: true));
 		List<UIMidairPrimitive> triangleList = new List<UIMidairPrimitive>(GameContext.Window.TitleLine.GetComponentsInChildren<UIMidairPrimitive>(includeInactive: true));

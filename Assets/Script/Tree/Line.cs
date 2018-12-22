@@ -712,21 +712,30 @@ public class Line : IEnumerable<Line>
 
 		switch( BindState )
 		{
-		case EBindState.Unbind:
-			// Fieldがまだ無い、またはヒープに返して他のLineに使われた
-			Bind(Tree.FindBindingField());
-			break;
-		case EBindState.WeakBind:
-			// ヒープに返したが、他のものには使われていなかった
-			ReBind();
-			break;
-		case EBindState.Bind:
-			// 適切なFieldをもう持っている
-			if( Binding.transform.parent != Parent.Binding.transform )
+			case EBindState.Unbind:
 			{
-				Binding.transform.SetParent(Parent.Binding.transform);
+				// Fieldがまだ無い、またはヒープに返して他のLineに使われた
+				Bind(Tree.FindBindingField());
 			}
-			Binding.transform.localPosition = CalcTargetPosition();
+			break;
+			case EBindState.WeakBind:
+			{
+				// ヒープに返したが、他のものには使われていなかった
+				ReBind();
+			}
+			break;
+			case EBindState.Bind:
+			{
+				// 適切なFieldをもう持っている
+				if( Binding.transform.parent != Parent.Binding.transform )
+				{
+					Binding.transform.SetParent(Parent.Binding.transform);
+				}
+				if( Field != null )
+				{
+					Field.transform.localPosition = CalcTargetPosition();
+				}
+			}
 			break;
 		}
 
@@ -1030,16 +1039,16 @@ public class Line : IEnumerable<Line>
 			Vector3 target = children_[0].CalcTargetPosition();
 			for( int i = 0; i < Count; ++i )
 			{
-				if( children_[i].Binding != null )
+				if( children_[i].Field != null )
 				{
 					children_[i].TargetPosition = target;
 					if( withAnim )
 					{
-						AnimManager.AddAnim(children_[i].Binding, target, ParamType.Position, AnimType.Time, GameContext.Config.AnimTime);
+						AnimManager.AddAnim(children_[i].Field, target, ParamType.Position, AnimType.Time, GameContext.Config.AnimTime);
 					}
 					else
 					{
-						children_[i].Binding.transform.localPosition = target;
+						children_[i].Field.transform.localPosition = target;
 					}
 				}
 				target.y -= (1 + children_[i].VisibleChildCount) * GameContext.Config.HeightPerLine;

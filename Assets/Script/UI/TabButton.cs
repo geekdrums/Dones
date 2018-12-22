@@ -23,7 +23,6 @@ public class TabButton : UnityEngine.UI.Button, IDragHandler, IBeginDragHandler,
 			{
 				isSelected_ = value;
 				transition = isSelected_ ? Transition.None : Transition.ColorTint;
-				UpdateColor();
 
 				if( isSelected_ )
 				{
@@ -38,6 +37,7 @@ public class TabButton : UnityEngine.UI.Button, IDragHandler, IBeginDragHandler,
 					BindedNote.CacheNoteViewParam(ViewParam);
 				}
 			}
+			UpdateColor();
 		}
 	}
 	bool isSelected_ = false;
