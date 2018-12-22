@@ -61,6 +61,7 @@ public class TreeNote : Note
 		
 		if( Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1) )
 		{
+			Tree oldFocusedTree = focusedTree_;
 			focusedTree_ = null;
 			Vector2 mousePosition = Input.mousePosition;
 			if( Rect.Contains(mousePosition) )
@@ -88,6 +89,11 @@ public class TreeNote : Note
 						}
 					}
 				}
+			}
+
+			if( oldFocusedTree != null && oldFocusedTree != focusedTree_ )
+			{
+				oldFocusedTree.UpdateMouseInput(ctrl, shift, alt);
 			}
 		}
 
