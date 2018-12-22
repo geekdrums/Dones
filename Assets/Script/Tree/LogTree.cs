@@ -318,6 +318,7 @@ public class LogTree : Tree
 		if( titleLine_ == null )
 		{
 			CreateTitleLine();
+			GetComponentInParent<DateUI>().OnTreeTitleLineChanged();
 		}
 
 		if( titleLine_.Count == 0 )

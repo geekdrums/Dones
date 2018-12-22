@@ -269,6 +269,7 @@ public class LogNote : Note
 		while( layout_.preferredHeight < totalAreaHight )
 		{
 			LoadMore();
+			UpdateLayoutElement();
 		}
 		TitleArrow.Angle = 180;
 		TitleArrow.SetColor(GameContext.Config.ToggleOpenedColor);
@@ -463,12 +464,10 @@ public class LogNote : Note
 	IEnumerator SetNoteViewParamCoroutine(NoteViewParam param)
 	{
 		isDateUIlistLoading_ = true;
-		foreach( DateUI dateUI in dateUIlist_ )
+		int count = GameContext.Config.LogNoteSetPathCoroutineCount;
+		for( int i = 1; i < dateUIlist_.Count; ++i )
 		{
-			if( dateUI.Tree == todayTree_ )
-			{
-				continue;
-			}
+			DateUI dateUI = dateUIlist_[i];
 			if( dateUI.Tree != null )
 			{
 				dateUI.Tree.SetPath(param.Path);
@@ -477,10 +476,27 @@ public class LogNote : Note
 			dateUI.UpdateLayoutElement();
 			if( dateUI.Tree != null )
 			{
-				yield return new WaitForSeconds(GameContext.Config.LogNoteSetPathCoroutineInterval);
+				if( count > 0 )
+				{
+					--count;
+				}
+				else
+				{
+					yield return new WaitForSeconds(GameContext.Config.LogNoteSetPathCoroutineInterval);
+				}
 			}
 		}
+
 		UpdateLayoutElement();
+		if( openState_ == OpenState.Maximize )
+		{
+			float totalAreaHight = GameContext.Window.MainTabGroup.NoteAreaTransform.rect.height;
+			while( layout_.preferredHeight < totalAreaHight )
+			{
+				LoadMore();
+			}
+		}
+
 		isDateUIlistLoading_ = false;
 	}
 
@@ -577,7 +593,7 @@ public class LogNote : Note
 	}
 
 
-	protected LogTree LoadLogTree(DateTime date, Transform parent, string filename)
+	public LogTree LoadLogTree(DateTime date, Transform parent, string filename)
 	{
 		LogTree logTree = Instantiate(LogTreePrefab.gameObject, parent).GetComponent<LogTree>();
 		logTree.Initialize(this, new ActionManagerProxy(actionManager_), heapManager_);

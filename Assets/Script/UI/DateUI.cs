@@ -13,6 +13,7 @@ public class DateUI : MonoBehaviour {
 	public Text DayText;
 	public Text WeekDayText;
 	public Text DateText;
+	public Button CreateTreeButton;
 
 	public float PreferredHeight
 	{
@@ -101,6 +102,17 @@ public class DateUI : MonoBehaviour {
 		GetComponentInChildren<Image>().color = color;
 	}
 
+	public void CreateTree()
+	{
+		if( logTree_ == null )
+		{
+			LogNote ownerNote = GetComponentInParent<LogNote>();
+			SetTree(ownerNote.LoadLogTree(date_, this.transform, LogNote.ToFileName(ownerNote.TreeNote, Date)));
+			ownerNote.SetSortedIndex(logTree_);
+			logTree_.OnTreeFocused(Input.mousePosition);
+		}
+	}
+
 	public void OnTreeTitleLineChanged()
 	{
 		if( (logTree_ != null && logTree_.TitleLine != null) || isToday_ )
@@ -109,6 +121,7 @@ public class DateUI : MonoBehaviour {
 			DayText.gameObject.SetActive(true);
 			WeekDayText.gameObject.SetActive(true);
 			DateText.gameObject.SetActive(false);
+			CreateTreeButton.gameObject.SetActive(false);
 		}
 		else
 		{
@@ -116,6 +129,7 @@ public class DateUI : MonoBehaviour {
 			DayText.gameObject.SetActive(false);
 			WeekDayText.gameObject.SetActive(false);
 			DateText.gameObject.SetActive(true);
+			CreateTreeButton.gameObject.SetActive(true);
 		}
 	}
 
