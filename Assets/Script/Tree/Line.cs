@@ -992,16 +992,16 @@ public class Line : IEnumerable<Line>
 
 	public void AdjustFontSizeRecursive(int fontSize, float heightPerLine)
 	{
-		AdjustLayoutInChildren();
 		for( int i = 0; i < Count; ++i )
 		{
 			if( children_[i].Field != null )
 			{
 				children_[i].Field.OnFontSizeChanged(fontSize, heightPerLine);
 				children_[i].Toggle.AnimToTargetVisual();
-				children_[i].AdjustFontSizeRecursive(fontSize, heightPerLine);
 			}
+			children_[i].AdjustFontSizeRecursive(fontSize, heightPerLine);
 		}
+		AdjustLayoutInChildren();
 	}
 
 	public void AdjustLayoutInChildren(bool withAnim = false)

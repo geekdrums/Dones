@@ -417,10 +417,9 @@ public class LogNote : Note
 		{
 			logTree.RootLine.AdjustFontSizeRecursive(GameContext.Config.FontSize, GameContext.Config.HeightPerLine);
 		}
-		if( gameObject.activeInHierarchy )
-		{
-			UpdateLayoutElement();
-		}
+		UpdateLayoutElement();
+		UpdateVerticalLayout();
+		treeNote_.UpdateVerticalLayout();
 	}
 
 	#endregion

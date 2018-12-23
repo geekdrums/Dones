@@ -46,8 +46,9 @@ public class Window : MonoBehaviour
 	public TreeNote Note;
 	public LogNote LogNote;
 
-	FileInfo treeFile_;
 	FileInfo settingFile_;
+	SettingXML settingXml_;
+	FileInfo treeFile_;
 	DirectoryInfo logDirectory_;
 
 	float currentScreenWidth_;
@@ -74,9 +75,7 @@ public class Window : MonoBehaviour
 	// Use this for initialization
 	void Start ()
 	{
-		treeFile_ = new FileInfo(System.Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + "/Dones/tree.dtml");
 		settingFile_ = new FileInfo(System.Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + "/Dones/settings.xml");
-		logDirectory_ = new DirectoryInfo(System.Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + "/Dones/log");
 		StartCoroutine(InitialLoadCoroutine());
 	}
 
@@ -85,9 +84,10 @@ public class Window : MonoBehaviour
 		// Editorではいいんだけど、アプリ版はこうしないとScrollがバグってその後一切操作できなくなる。。
 		yield return new WaitForEndOfFrame();
 		GameContext.TagList.LoadTaggedLines();
+		LoadSettings();
 		LoadNote();
 		LoadLog();
-		LoadSettings();
+		ApplySettings();
 		foreach( TagParent tagParent in GameContext.TagList )
 		{
 			tagParent.ApplyLineOrder();
@@ -286,6 +286,9 @@ public class Window : MonoBehaviour
 	[XmlRoot("setting")]
 	public class SettingXML
 	{
+		[XmlElement("SaveDirectory")]
+		public string SaveDirectory { get; set; }
+
 		[XmlArray("tabparams")]
 		[XmlArrayItem("tab")]
 		public List<TabViewParam> TabParams { get; set; }
@@ -320,7 +323,6 @@ public class Window : MonoBehaviour
 		public bool IsMaximized { get; set; }
 	}
 
-
 	void LoadSettings()
 	{
 		if( settingFile_.Exists == false )
@@ -329,17 +331,35 @@ public class Window : MonoBehaviour
 		}
 
 		XmlSerializer serializer = new XmlSerializer(typeof(SettingXML));
-		SettingXML settingXml = (SettingXML)serializer.Deserialize(new StreamReader(settingFile_.OpenRead()));
+		StreamReader reader = new StreamReader(settingFile_.FullName);
+		settingXml_ = (SettingXML)serializer.Deserialize(reader);
+		reader.Close();
 
-		UnityEngine.Screen.SetResolution(settingXml.Screen.Width, settingXml.Screen.Height, settingXml.Screen.IsMaximized ? FullScreenMode.MaximizedWindow : FullScreenMode.Windowed);
+		string saveDirectory = settingXml_.SaveDirectory;
+		if( saveDirectory == null || saveDirectory == "" )
+		{
+			saveDirectory = System.Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + "/Dones";
+		}
+		treeFile_ = new FileInfo(saveDirectory + "/tree.dtml");
+		logDirectory_ = new DirectoryInfo(saveDirectory + "/log");
+	}
 
-		foreach(TabViewParam tabparam in settingXml.TabParams )
+	void ApplySettings()
+	{
+		if( settingXml_ == null )
+		{
+			return;
+		}
+
+		UnityEngine.Screen.SetResolution(settingXml_.Screen.Width, settingXml_.Screen.Height, settingXml_.Screen.IsMaximized ? FullScreenMode.MaximizedWindow : FullScreenMode.Windowed);
+
+		foreach(TabViewParam tabparam in settingXml_.TabParams )
 		{
 			AddTab(new TreePath(tabparam.Path), select: false);
 		}
-		MainTabGroup[settingXml.SelectedTabIndex].IsSelected = true;
+		MainTabGroup[settingXml_.SelectedTabIndex].IsSelected = true;
 
-		if( settingXml.IsTagListOpened )
+		if( settingXml_.IsTagListOpened )
 		{
 			GameContext.TagList.Open();
 		}
@@ -348,7 +368,7 @@ public class Window : MonoBehaviour
 			GameContext.TagList.Close();
 		}
 
-		if( settingXml.LogNoteOpenState == LogNote.OpenState.Minimize )
+		if( settingXml_.LogNoteOpenState == LogNote.OpenState.Minimize )
 		{
 			LogNote.Minimize();
 		}
@@ -378,6 +398,7 @@ public class Window : MonoBehaviour
 		}
 		setting.SelectedTabIndex = MainTabGroup.IndexOf(MainTabGroup.ActiveTab);
 
+		setting.SaveDirectory = Note.Tree.File.Directory.FullName;
 		setting.Screen = new ScreenSetting();
 		setting.Screen.Width = UnityEngine.Screen.width;
 		setting.Screen.Height = UnityEngine.Screen.height;
