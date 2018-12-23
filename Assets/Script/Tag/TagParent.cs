@@ -331,6 +331,18 @@ public class TagParent : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDra
 		}
 	}
 
+	public void ClearLines()
+	{
+		foreach( TaggedLine line in sourceLines_ )
+		{
+			heapManager_.BackToHeap(line);
+		}
+		sourceLines_.Clear();
+		lines_.Clear();
+		selectedLine_ = null;
+		selectedIndex_ = -1;
+	}
+
 	public int IndexOf(TaggedLine taggedLine)
 	{
 		if( lines_.Contains(taggedLine) )

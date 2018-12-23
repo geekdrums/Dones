@@ -127,10 +127,7 @@ public class Window : MonoBehaviour
 				if( GameContext.Config.FontSize < 20 )
 				{
 					GameContext.Config.FontSize += 1;
-					foreach( TreeNote treeNote in MainTabGroup.TreeNotes )
-					{
-						treeNote.OnFontSizeChanged();
-					}
+					Note.OnFontSizeChanged();
 					FontSizeText.text = "FontSize:" + GameContext.Config.FontSize.ToString();
 					FontSizeText.color = GameContext.Config.TextColor;
 					FontSizeText.gameObject.SetActive(true);
@@ -142,10 +139,7 @@ public class Window : MonoBehaviour
 				if( GameContext.Config.FontSize > 12 )
 				{
 					GameContext.Config.FontSize -= 1;
-					foreach( TreeNote treeNote in MainTabGroup.TreeNotes )
-					{
-						treeNote.OnFontSizeChanged();
-					}
+					Note.OnFontSizeChanged();
 					FontSizeText.text = "FontSize:" + GameContext.Config.FontSize.ToString();
 					FontSizeText.color = GameContext.Config.TextColor;
 					FontSizeText.gameObject.SetActive(true);
@@ -169,15 +163,17 @@ public class Window : MonoBehaviour
 				}
 			}
 		}
-		if( Input.GetKeyDown(KeyCode.F5) && MainTabGroup.ActiveNote != null )
+		if( Input.GetKeyDown(KeyCode.F5) && MainTabGroup.ActiveNote == Note )
 		{
-			MainTabGroup.ActiveNote.ReloadNote();
+			GameContext.TagList.ClearAll();
+			Note.ReloadNote();
+			GameContext.TagList.OnTreePathChanged(Note.Tree.TitleLine);
 		}
-		if( MainTabGroup.ActiveNote != null )
+		if( MainTabGroup.ActiveNote == Note )
 		{
-			if( MainTabGroup.ActiveNote.TimeFromRequestedAutoSave() > GameContext.Config.AutoSaveTime )
+			if( Note.TimeFromRequestedAutoSave() > GameContext.Config.AutoSaveTime )
 			{
-				MainTabGroup.ActiveNote.DoAutoSave();
+				Note.DoAutoSave();
 			}
 		}
 

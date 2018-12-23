@@ -2082,22 +2082,18 @@ public class Tree : MonoBehaviour
 		if( rootLine_ != null )
 		{
 			ClearSelection();
+
 			foreach( Line line in rootLine_.GetAllChildren() )
 			{
-				if( this is LogTree == false )
-				{
-					foreach( string tag in line.Tags )
-					{
-						GameContext.TagList.GetTagParent(tag).RemoveLine(line);
-					}
-				}
 				line.BackToHeap();
 			}
 			rootLine_ = null;
 			focusedLine_ = null;
+			titleLine_ = null;
+			titleLineObject_ = null;
 			GC.Collect();
 		}
-
+		
 		LoadFile(file_);
 	}
 

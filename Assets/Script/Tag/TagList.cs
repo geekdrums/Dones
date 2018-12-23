@@ -272,6 +272,18 @@ public class TagList : MonoBehaviour, IEnumerable<TagParent>
 		UpdateLayoutElement();
 	}
 
+	public void ClearAll()
+	{
+		foreach( TagParent tagParent in tagParents_ )
+		{
+			tagParent.ClearLines();
+			heapManager_.BackToHeap(tagParent);
+		}
+		tagParents_.Clear();
+		sourceTagParents_.Clear();
+		UpdateLayoutElement();
+	}
+
 	public void OnTreePathChanged(Line titleLine)
 	{
 		tagParents_.Clear();

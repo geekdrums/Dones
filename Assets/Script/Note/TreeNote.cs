@@ -326,7 +326,14 @@ public class TreeNote : Note
 	{
 		if( tree_.File != null )
 		{
+			TreePath path = tree_.Path;
+
 			tree_.ReloadFile();
+
+			Tree.SetPath(path);
+			UpdateTreePathList(path);
+			actionManager_.SetTitleLine(Tree.TitleLine);
+
 			LogNote.ReloadLog();
 		}
 	}

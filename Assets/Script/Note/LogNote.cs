@@ -671,10 +671,15 @@ public class LogNote : Note
 	
 	public void ReloadLog()
 	{
+		TreePath path = treeNote_.Tree.Path;
 		foreach( LogTree logTree in logTrees_ )
 		{
 			logTree.ReloadFile();
+			logTree.SetPath(path);
 		}
+		actionManager_.SetTitleLine(treeNote_.Tree.TitleLine);
+		UpdateTitleText(path);
+		UpdateDoneCount();
 		UpdateLayoutElement();
 	}
 
