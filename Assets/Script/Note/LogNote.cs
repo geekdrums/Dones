@@ -41,6 +41,7 @@ public class LogNote : Note
 	#region properties
 
 	public TreeNote TreeNote { get { return treeNote_; } set { treeNote_ = value; } }
+	public LogTree TodayTree { get { return todayTree_; } }
 	public OpenState State { get { return openState_; } }
 	public IEnumerable<LogTree> LogTrees { get { return logTrees_.AsEnumerable<LogTree>(); } }
 	public bool IsEdited

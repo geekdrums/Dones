@@ -65,6 +65,7 @@ public class LogTree : Tree
 		// clone & stack parents
 		Stack<Line> cloneAncestors = new Stack<Line>();
 		Line cloneLine = line.Clone();
+		cloneLine.IsDone = true;
 		cloneAncestors.Push(cloneLine);
 		Line originalParent = line.Parent;
 		while( originalParent.IsTitleLine == false )
@@ -116,7 +117,7 @@ public class LogTree : Tree
 				addParent.Add(addLine);
 				addParent = addLine;
 			}
-			cloneLine.Field.SetIsDone(cloneLine.IsDone);
+			cloneLine.Field.SetIsDone(true);
 		}
 		// and its children
 		AddLogChildRecursive(line, addParent);
@@ -309,6 +310,11 @@ public class LogTree : Tree
 	}
 
 	protected override void OnCtrlDInput()
+	{
+
+	}
+
+	public override void OnCtrlShiftSpaceInput()
 	{
 
 	}

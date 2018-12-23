@@ -50,8 +50,8 @@ public class ContextMenu : MonoBehaviour {
 
 		NewTabButton			.interactable = tree_.HasSelection == false && tree_.FocusedLine != null;
 		DoneButton				.interactable = tree_.FocusedLine != null;
-		RepeatDoneButton		.interactable = tree_.FocusedLine != null;
-		AddTagButton			.interactable = tree_.FocusedLine != null;
+		RepeatDoneButton		.interactable = tree_.FocusedLine != null && (tree_ is LogTree == false);
+		AddTagButton			.interactable = tree_.FocusedLine != null && (tree_ is LogTree == false);
 		CopyButton				.interactable = tree_.FocusedLine != null || tree_.HasSelection;
 		PasteButton				.interactable = Tree.Clipboard != null && Tree.Clipboard != "";
 		CopyWithoutFormatButton	.interactable = tree_.FocusedLine != null || tree_.HasSelection;

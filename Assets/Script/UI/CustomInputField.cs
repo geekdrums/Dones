@@ -43,8 +43,8 @@ public class CustomInputField : InputField, IColoredObject
 	// color
 	public Color Foreground { get { return textComponent.color; } set { textComponent.color = value; } }
 	public Color Background { get { return targetGraphic.canvasRenderer.GetColor(); } set { targetGraphic.CrossFadeColor(value, 0.0f, true, true); } }
-	public void SetColor(Color color) { Background = color; }
-	public Color GetColor() { return Background; }
+	public void SetColor(Color color) { Foreground = color; }
+	public Color GetColor() { return Foreground; }
 
 
 	// rect

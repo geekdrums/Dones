@@ -187,7 +187,14 @@ public class Tree : MonoBehaviour
 			}
 			else if( Input.GetKeyDown(KeyCode.Space) )
 			{
-				OnCtrlSpaceInput();
+				if( shift )
+				{
+					OnCtrlShiftSpaceInput();
+				}
+				else
+				{
+					OnCtrlSpaceInput();
+				}
 			}
 			else if( Input.GetKeyDown(KeyCode.D) )
 			{
@@ -791,10 +798,31 @@ public class Tree : MonoBehaviour
 		actionManager_.EndChain();
 	}
 
-	public void OnCtrlShiftSpaceInput()
+	public virtual void OnCtrlShiftSpaceInput()
 	{
-		// todo 履歴にだけ追加してDone状態にはしない
-		OnCtrlSpaceInput();
+		if( focusedLine_ == null ) return;
+
+		actionManager_.StartChain();
+		foreach( Line line in GetSelectedOrFocusedLines() )
+		{
+			if( line.IsDone == false && line.Text != "" )
+			{
+				Line targetLine = line;
+				actionManager_.Execute(new LineAction(
+					targetLines: targetLine,
+					execute: () =>
+					{
+						(ownerNote_ as TreeNote).LogNote.TodayTree.AddLog(targetLine);
+						targetLine.Field.OnRepeatDone();
+					},
+					undo: () =>
+					{
+						(ownerNote_ as TreeNote).LogNote.TodayTree.RemoveLog(targetLine);
+					}));
+
+			}
+		}
+		actionManager_.EndChain();
 	}
 
 	public void Done(Line targetLine)

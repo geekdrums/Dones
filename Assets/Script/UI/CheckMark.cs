@@ -34,9 +34,20 @@ public class CheckMark : MonoBehaviour, IColoredObject {
 	{
 		Line1.Rate = 0;
 		Line2.Rate = 0;
+		AnimManager.AddAnim(Line1, 1.0f, ParamType.GaugeRate, AnimType.Time, 0.05f, 0.01f);
+		AnimManager.AddAnim(Line2, 1.5f, ParamType.GaugeRate, AnimType.Time, 0.1f, 0.06f);
+		AnimManager.AddAnim(Line2, 1.0f, ParamType.GaugeRate, AnimType.Time, 0.05f, 0.16f);
+	}
+
+	public void CheckAndUncheck(float backToUsualTime)
+	{
+		Line1.Rate = 0;
+		Line2.Rate = 0;
 		AnimManager.AddAnim(Line1, 1.0f, ParamType.GaugeRate, AnimType.Time, 0.05f);
 		AnimManager.AddAnim(Line2, 1.5f, ParamType.GaugeRate, AnimType.Time, 0.1f, 0.05f);
 		AnimManager.AddAnim(Line2, 1.0f, ParamType.GaugeRate, AnimType.Time, 0.05f, 0.15f);
+		AnimManager.AddAnim(Line2, 0.0f, ParamType.GaugeRate, AnimType.Time, 0.05f, backToUsualTime);
+		AnimManager.AddAnim(Line1, 0.0f, ParamType.GaugeRate, AnimType.Time, 0.05f, backToUsualTime + 0.05f);
 	}
 
 	public void SetColor(Color color)
