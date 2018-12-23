@@ -96,7 +96,7 @@ public class Window : MonoBehaviour
 		MainTabGroup.UpdateLayoutAll();
 		Note.OnFontSizeChanged();
 
-		DayText.text = String.Format("<size=14>{0}/ </size>{1}/{2}<size=14> ({3})</size>",
+		DayText.text = String.Format("<size=12>{0}/ </size>{1}/{2}<size=12> ({3})</size>",
 			DateTime.Now.ToString("yyyy"), DateTime.Now.ToString("MM").TrimStart('0'), DateTime.Now.ToString("dd").TrimStart('0'), DateTime.Now.ToString("ddd"));
 	}
 

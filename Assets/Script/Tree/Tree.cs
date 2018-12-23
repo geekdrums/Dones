@@ -707,20 +707,33 @@ public class Tree : MonoBehaviour
 			{
 				Line oldParent = line.Parent;
 				Line newParent = line.Parent[index - 1];
+				bool wasParentFolded = false;
 				actionManager_.Execute(new LineAction(
 					targetLines: line,
 					execute: () =>
 					{
-						newParent.Add(line);
-						if( newParent.IsFolded )
+						wasParentFolded = newParent.IsFolded;
+						if( wasParentFolded )
 						{
 							newParent.IsFolded = false;
-							newParent.AdjustLayoutRecursive(line.Index);
+						}
+						newParent.Add(line);
+						if( wasParentFolded )
+						{
+							RequestLayout(newParent.NextSiblingOrUnkleLine);
 						}
 					},
 					undo: () =>
 					{
 						oldParent.Insert(index, line);
+						if( wasParentFolded )
+						{
+							newParent.IsFolded = true;
+						}
+						if( wasParentFolded )
+						{
+							RequestLayout(line);
+						}
 					}
 					));
 			}
@@ -1396,7 +1409,7 @@ public class Tree : MonoBehaviour
 				execute: () =>
 				{
 					src.Parent.Insert(dest.Index, src);
-					dest.AdjustLayout();
+					dest.AdjustLayout(withAnim: true);
 					ownerNote_.ScrollTo(src);
 				}
 				));
@@ -2168,23 +2181,14 @@ public class Tree : MonoBehaviour
 		if( oldTitleLine != null && oldTitleLineObject != null )
 		{
 			oldTitleLine.Bind(oldTitleLineObject);
-			foreach( Line child in oldTitleLine )
-			{
-				child.Field.transform.SetParent(oldTitleLineObject.transform);
-			}
-			oldTitleLine.UpdateFoldLayout();
+			oldTitleLine.OnChildVisibleChanged(oldTitleLineObject);
 		}
 
 		// 新しいTitleLine以下をTreeの下に移動する
 		if( titleLine_ != null && titleLineObject_ != null )
 		{
 			titleLine_.Bind(this.gameObject);
-			foreach( Line child in titleLine_ )
-			{
-				child.FindBindingField();
-				child.Field.transform.SetParent(this.gameObject.transform);
-			}
-			titleLine_.UpdateFoldLayout();
+			titleLine_.OnChildVisibleChanged(this.gameObject);
 		}
 
 		focusedLine_ = null;

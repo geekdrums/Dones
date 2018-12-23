@@ -41,7 +41,7 @@ public class Line : IEnumerable<Line>
 			{
 				isFolded_ = value;
 
-				UpdateFoldLayout();
+				OnChildVisibleChanged();
 				if( Toggle != null )
 				{
 					Toggle.SetFold(IsFolded);
@@ -654,41 +654,9 @@ public class Line : IEnumerable<Line>
 		}
 
 		child.FindBindingField();
-		child.OnInserted();
-	}
-
-	public void OnInserted()
-	{
-		if( Tree == null || Tree is LogTree )
+		if( oldParent == null )
 		{
-			return;
-		}
-
-		foreach( string tag in Tags )
-		{
-			bool add = (IsDone == false);
-			TagParent tagParent = GameContext.TagList.GetTagParent(tag);
-			if( tagParent == null )
-			{
-				// Doneしてないタグなら生成する
-				if( add )
-					tagParent = GameContext.TagList.InstantiateTagParent(tag);
-			}
-			else
-			{
-				// DoneしててもRepeatなら追加してよい
-				add |= tagParent.IsRepeat;
-			}
-			add &= tagParent != null && tagParent.FindBindedLine(this) == null;
-			if( add )
-			{
-				tagParent.InstantiateTaggedLine(this);
-			}
-		}
-
-		if( Field != null )
-		{
-			Field.SetHashTags(tags_);
+			child.UpdateTags();
 		}
 	}
 
@@ -731,10 +699,7 @@ public class Line : IEnumerable<Line>
 				{
 					Binding.transform.SetParent(Parent.Binding.transform);
 				}
-				if( Field != null )
-				{
-					Field.transform.localPosition = CalcTargetPosition();
-				}
+				AdjustLayout(withAnim: true);
 			}
 			break;
 		}
@@ -977,11 +942,18 @@ public class Line : IEnumerable<Line>
 		XY = X | Y,
 	}
 
-	public void AdjustLayout(Direction dir = Direction.XY)
+	public void AdjustLayout(Direction dir = Direction.XY, bool withAnim = false)
 	{
 		if( Binding != null )
 		{
-			AnimManager.AddAnim(Binding, CalcTargetPosition(dir), ParamType.Position, AnimType.Time, GameContext.Config.AnimTime);
+			if( withAnim )
+			{
+				AnimManager.AddAnim(Binding, CalcTargetPosition(dir), ParamType.Position, AnimType.Time, GameContext.Config.AnimTime);
+			}
+			else
+			{
+				Binding.transform.localPosition = CalcTargetPosition(dir);
+			}
 		}
 	}
 
@@ -999,7 +971,7 @@ public class Line : IEnumerable<Line>
 				}
 				if( children_[i].Field != null )
 				{
-					if( target == children_[i].Field.transform.localPosition && AnimManager.IsAnimating(children_[i].Binding) == false )
+					if( target == children_[i].Binding.transform.localPosition && AnimManager.IsAnimating(children_[i].Binding) == false )
 					{
 						// これ以下は高さが変わっていないので、再計算は不要
 						return;
@@ -1044,7 +1016,7 @@ public class Line : IEnumerable<Line>
 					children_[i].TargetPosition = target;
 					if( withAnim )
 					{
-						AnimManager.AddAnim(children_[i].Field, target, ParamType.Position, AnimType.Time, GameContext.Config.AnimTime);
+						AnimManager.AddAnim(children_[i].Binding, target, ParamType.Position, AnimType.Time, GameContext.Config.AnimTime);
 					}
 					else
 					{
@@ -1055,13 +1027,13 @@ public class Line : IEnumerable<Line>
 			}
 		}
 	}
-
-	public void UpdateFoldLayout()
+	
+	public void OnChildVisibleChanged(GameObject newParentObject = null)
 	{
 		bool isChildVisible = isFolded_ == false || IsTitleLine;
 		foreach( Line line in children_ )
 		{
-			if( isChildVisible && line.Field == null )
+			if( isChildVisible && ( line.Field == null || IsTitleLine ) )
 			{
 				line.FindBindingField();
 			}
@@ -1069,6 +1041,10 @@ public class Line : IEnumerable<Line>
 			if( line.Field != null )
 			{
 				line.Field.gameObject.SetActive(isChildVisible);
+				if( newParentObject != null )
+				{
+					line.Field.transform.SetParent(newParentObject.transform);
+				}
 			}
 		}
 		if( isChildVisible )
@@ -1099,7 +1075,7 @@ public class Line : IEnumerable<Line>
 
 	#region Properties
 	
-	public bool IsTitleLine { get { return parent_ == null || (Tree != null && this == Tree.TitleLine); } }
+	public bool IsTitleLine { get { return Tree != null && this == Tree.TitleLine; } }
 
 	public int Level
 	{
@@ -1408,6 +1384,47 @@ public class Line : IEnumerable<Line>
 		}
 	}
 
+	/// <summary>
+	/// タグリストに表示するTaggedLineやLine横に表示する青文字のタグオブジェクトなどを生成する
+	/// </summary>
+	void UpdateTags()
+	{
+		if( Tree == null || Tree is LogTree )
+		{
+			return;
+		}
+
+		foreach( string tag in Tags )
+		{
+			bool add = (IsDone == false);
+			TagParent tagParent = GameContext.TagList.GetTagParent(tag);
+			if( tagParent == null )
+			{
+				// Doneしてないタグなら生成する
+				if( add )
+					tagParent = GameContext.TagList.InstantiateTagParent(tag);
+			}
+			else
+			{
+				// DoneしててもRepeatなら追加してよい
+				add |= tagParent.IsRepeat;
+			}
+			add &= tagParent != null && tagParent.FindBindedLine(this) == null;
+			if( add )
+			{
+				tagParent.InstantiateTaggedLine(this);
+			}
+		}
+
+		if( Field != null )
+		{
+			Field.SetHashTags(tags_);
+		}
+	}
+
+	/// <summary>
+	/// タグリストに表示されているテキストを更新する
+	/// </summary>
 	void ApplyTextToTaggedLine()
 	{
 		if( Tree is LogTree == false )
