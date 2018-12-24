@@ -1598,12 +1598,12 @@ public class Tree : MonoBehaviour
 
 	public void Copy(bool withformat = true)
 	{
-		if( HasSelection )
+		if( HasSelection || (focusedLine_ != null && focusedLine_.Field.HasSelection == false ) )
 		{
 			bool appendTag = withformat;
-			int ignoreLevel = selectedLines_.Values[0].Level;
+			int ignoreLevel = (selectedLines_.Count > 0 ? selectedLines_.Values[0] : focusedLine_).Level;
 			StringBuilder clipboardLines = new StringBuilder();
-			foreach( Line line in selectedLines_.Values )
+			foreach( Line line in GetSelectedOrFocusedLines() )
 			{
 				line.AppendStringTo(clipboardLines, appendTag, ignoreLevel);
 				if( line.IsFolded && appendTag )

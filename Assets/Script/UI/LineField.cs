@@ -32,6 +32,8 @@ public class LineField : CustomInputField
 	}
 	protected bool isSelected_;
 
+	public bool HasSelection { get { return caretPositionInternal != caretSelectPositionInternal; } }
+
 	protected UIGaugeRenderer strikeLine_;
 	protected CheckMark checkMark_;
 
@@ -483,7 +485,7 @@ public class LineField : CustomInputField
 					break;
 				case KeyCode.C:
 				case KeyCode.X:
-					if( ctrlOnly && isSelected_ )
+					if( ctrlOnly && ( isSelected_ || selectionAnchorPosition == selectionFocusPosition ) )
 					{
 						// process in ownerTree
 					}

@@ -984,7 +984,7 @@ public class Line : IEnumerable<Line>
 			}
 		}
 
-		if( IsTitleLine == false )
+		if( parent_ != null && IsTitleLine == false )
 		{
 			parent_.AdjustLayoutRecursive(Index + 1, predToBreak);
 		}

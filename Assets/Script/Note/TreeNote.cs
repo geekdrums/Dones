@@ -166,6 +166,7 @@ public class TreeNote : Note
 	public override void SetNoteViewParam(NoteViewParam param)
 	{
 		Tree.SetPath(param.Path);
+		Tree.TitleLine[0].Field.Select();
 		UpdateTreePathList(param.Path);
 
 		LogNote.SetNoteViewParam(param);
