@@ -47,14 +47,8 @@ public class TaggedLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragH
 #if UNITY_EDITOR
 			name = value;
 #endif
-			if( shouldUpdateTextLength_ == false )
-			{
-				shouldUpdateTextLength_ = true;
-				if( this.gameObject.activeInHierarchy )
-				{
-					StartCoroutine(UpdateTextLengthCoroutine());
-				}
-			}
+
+			GameContext.TextLengthHelper.Request(textComponent_, OnTextLengthCalculated);
 		}
 	}
 	Text textComponent_;
@@ -90,8 +84,6 @@ public class TaggedLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragH
 	public TagParent Parent { get { return tagParent_; } }
 	TagParent tagParent_;
 
-	bool shouldUpdateTextLength_;
-
 	#endregion
 
 
@@ -115,16 +107,6 @@ public class TaggedLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragH
 
 	}
 
-
-	protected override void OnEnable()
-	{
-		base.OnEnable();
-		if( this.gameObject.activeInHierarchy && shouldUpdateTextLength_ )
-		{
-			StartCoroutine(UpdateTextLengthCoroutine());
-		}
-	}
-
 	protected override void OnDisable()
 	{
 		base.OnDisable();
@@ -133,7 +115,6 @@ public class TaggedLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragH
 		{
 			tagParent_.OnLineDisabled(this);
 		}
-		shouldUpdateTextLength_ = false;
 	}
 
 	#endregion
@@ -211,7 +192,7 @@ public class TaggedLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragH
 			strikeLine_.gameObject.SetActive(true);
 			checkMark_.gameObject.SetActive(true);
 			listMark_.SetColor(Color.clear);
-			UpdateStrikeLine();
+			GameContext.TextLengthHelper.Request(textComponent_, OnTextLengthCalculated);
 
 			if( withAnim )
 			{
@@ -231,15 +212,6 @@ public class TaggedLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragH
 		tagParent_.OnDoneChanged(this);
 	}
 
-	public void UpdateStrikeLine()
-	{
-		if( shouldUpdateTextLength_ == false )
-		{
-			shouldUpdateTextLength_ = true;
-			StartCoroutine(UpdateTextLengthCoroutine());
-		}
-	}
-
 	Color GetTargetColor()
 	{
 		if( IsDone )
@@ -250,41 +222,12 @@ public class TaggedLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragH
 		{
 			return GameContext.Config.TextColor;
 		}
-		//else if( BindedLine.Tree.OwnerNote.IsActive || GameContext.Window.MainTabGroup.ActiveNote is TreeNote == false )
-		//{
-		//	return GameContext.Config.TextColor;
-		//}
-		//else
-		//{
-		//	return GameContext.Config.TagSubTextColor;
-		//}
 	}
 
-	IEnumerator UpdateTextLengthCoroutine()
+	void OnTextLengthCalculated()
 	{
-		yield return new WaitForEndOfFrame();
-
-		TextGenerator gen = textComponent_.cachedTextGenerator;
-
-		float charLength = gen.characters[gen.characters.Count - 1].cursorPos.x - gen.characters[0].cursorPos.x;
-		float maxWidth = GameContext.Config.TagListWidth - GameContext.Config.TagCommaInterval;
-		if( charLength > maxWidth )
-		{
-			int maxCharCount = 0;
-			for( int i = 1; i < gen.characters.Count; ++i )
-			{
-				if( maxWidth < gen.characters[i].cursorPos.x - gen.characters[0].cursorPos.x )
-				{
-					maxCharCount = i - 1;
-					charLength = gen.characters[i - 1].cursorPos.x - gen.characters[0].cursorPos.x;
-					break;
-				}
-			}
-			Text = Text.Substring(0, maxCharCount) + "...";
-		}
-
+		float charLength = GameContext.TextLengthHelper.AbbreviateText(textComponent_, GameContext.Config.TagListTextMaxWidth, "...");
 		strikeLine_.SetLength(charLength);
-		shouldUpdateTextLength_ = false;
 	}
 
 	public void Remove()

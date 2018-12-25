@@ -225,14 +225,12 @@ public class TreeNote : Note
 
 		if( path.Length > 0 )
 		{
-			StartCoroutine(UpdateTitleLineTextLengthCoroutine(textList[0].cachedTextGenerator));
+			GameContext.TextLengthHelper.Request(textList[0], OnTextLengthCalculated);
 		}
 	}
 
-	IEnumerator UpdateTitleLineTextLengthCoroutine(TextGenerator gen)
+	void OnTextLengthCalculated()
 	{
-		yield return new WaitWhile(() => gen.characterCount == 0);
-
 		List<Text> textList = new List<Text>(GameContext.Window.TitleLine.GetComponentsInChildren<Text>());
 		List<UIMidairPrimitive> triangleList = new List<UIMidairPrimitive>(GameContext.Window.TitleLine.GetComponentsInChildren<UIMidairPrimitive>());
 
@@ -241,8 +239,9 @@ public class TreeNote : Note
 		float triangleWidth = 12;
 		for( int i = 0; i < textList.Count; ++i )
 		{
-			float width = LineField.CalcTextRectLength(textList[i].cachedTextGenerator, textList[i].text.Length);
+			float width = TextLengthHelper.GetFullTextRectLength(textList[i].cachedTextGenerator);
 			textList[i].transform.localPosition = new Vector3(x, textList[i].transform.localPosition.y, 0);
+			textList[i].rectTransform.sizeDelta = new Vector2(width, textList[i].rectTransform.sizeDelta.y);
 			x += width;
 			x += margin;
 			if( i < triangleList.Count )

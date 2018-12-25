@@ -89,7 +89,13 @@ public class TabButton : UnityEngine.UI.Button, IDragHandler, IBeginDragHandler,
 		else
 		{
 			Text = ViewParam.Path[ViewParam.Path.Length - 1];
+			GameContext.TextLengthHelper.Request(textComponent_, OnTextLengthCalculated);
 		}
+	}
+
+	void OnTextLengthCalculated()
+	{
+		GameContext.TextLengthHelper.AbbreviateText(textComponent_, GameContext.Config.TabTextMaxWidth, "...");
 	}
 
 	#region unity events

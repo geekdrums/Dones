@@ -127,7 +127,7 @@ public class TagIncrementalDialog : MonoBehaviour {
 		float height = searchResults_.Count * TagTextHeight;
 		foreach( TagText tagText in searchResults_ )
 		{
-			float width = CustomInputField.CalcTextRectLength(tagText.TextComponent.cachedTextGenerator, tagText.Text.Length - 1);
+			float width = TextLengthHelper.GetTextRectLength(tagText.TextComponent.cachedTextGenerator, tagText.Text.Length - 1);
 			if( maxWidth < width )
 			{
 				maxWidth = width;
