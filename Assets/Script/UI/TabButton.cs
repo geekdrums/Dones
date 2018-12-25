@@ -17,28 +17,6 @@ public class TabButton : UnityEngine.UI.Button, IDragHandler, IBeginDragHandler,
 	public bool IsSelected
 	{
 		get { return isSelected_; }
-		set
-		{
-			if( value != isSelected_ )
-			{
-				isSelected_ = value;
-				transition = isSelected_ ? Transition.None : Transition.ColorTint;
-
-				if( isSelected_ )
-				{
-					OwnerTabGroup.OnTabSelected(this);
-					BindedNote.SetNoteViewParam(ViewParam);
-					
-					GameContext.Window.UpdateVerticalLayout();
-					GameContext.TagList.OnTreePathChanged(BindedNote is TreeNote ? (BindedNote as TreeNote).Tree.TitleLine : null);
-				}
-				else
-				{
-					BindedNote.CacheNoteViewParam(ViewParam);
-				}
-			}
-			UpdateColor();
-		}
 	}
 	bool isSelected_ = false;
 	
@@ -149,7 +127,7 @@ public class TabButton : UnityEngine.UI.Button, IDragHandler, IBeginDragHandler,
 				return;
 			}
 
-			IsSelected = true;
+			DoSelect();
 		}
 	}
 
@@ -164,12 +142,50 @@ public class TabButton : UnityEngine.UI.Button, IDragHandler, IBeginDragHandler,
 				if( showDialog )
 				{
 					GameContext.Window.ModalDialog.Show(String.Format("\"{0}\" は見つかりませんでした", ViewParam.Path.ToString()), ModalDialog.DialogType.OK, null);
+					DoClose();
+				}
+				return false;
+			}
+			else if( line .Count == 0 )
+			{
+				// childが無ければ表示できない
+				if( showDialog )
+				{
+					GameContext.Window.ModalDialog.Show(String.Format("\"{0}\" 以下には表示するものが存在しませんでした", ViewParam.Path.ToString()), ModalDialog.DialogType.OK, null);
+					DoClose();
 				}
 				return false;
 			}
 		}
 
 		return true;
+	}
+
+	public void DoSelect()
+	{
+		if( isSelected_ == false )
+		{
+			isSelected_ = true;
+			transition = Transition.None;
+			
+			OwnerTabGroup.OnTabSelected(this);
+			BindedNote.SetNoteViewParam(ViewParam);
+
+			GameContext.Window.UpdateVerticalLayout();
+			GameContext.TagList.OnTreePathChanged(BindedNote is TreeNote ? (BindedNote as TreeNote).Tree.TitleLine : null);
+		}
+		UpdateColor();
+	}
+
+	public void Deselect()
+	{
+		if( isSelected_ == true )
+		{
+			isSelected_ = false;
+			transition = Transition.ColorTint;
+			BindedNote.CacheNoteViewParam(ViewParam);
+		}
+		UpdateColor();
 	}
 
 	public void TryClose()
@@ -180,7 +196,9 @@ public class TabButton : UnityEngine.UI.Button, IDragHandler, IBeginDragHandler,
 	public void DoClose()
 	{
 		if( IsSelected )
-			IsSelected = false;
+		{
+			Deselect();
+		}
 		
 		OwnerTabGroup.OnTabClosed(this);
 		Destroy(this.gameObject);

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
 
 public class ModalDialog : MonoBehaviour {
 
@@ -55,24 +56,28 @@ public class ModalDialog : MonoBehaviour {
 			NoButton.gameObject.SetActive(true);
 			CancelButton.gameObject.SetActive(true);
 			OKButton.gameObject.SetActive(false);
+			EventSystem.current.SetSelectedGameObject(YesButton.gameObject);
 			break;
 		case DialogType.YesNo:
 			YesButton.gameObject.SetActive(true);
 			NoButton.gameObject.SetActive(true);
 			CancelButton.gameObject.SetActive(false);
 			OKButton.gameObject.SetActive(false);
+			EventSystem.current.SetSelectedGameObject(YesButton.gameObject);
 			break;
 		case DialogType.OKCancel:
 			YesButton.gameObject.SetActive(false);
 			NoButton.gameObject.SetActive(false);
 			CancelButton.gameObject.SetActive(true);
 			OKButton.gameObject.SetActive(true);
+			EventSystem.current.SetSelectedGameObject(OKButton.gameObject);
 			break;
 		case DialogType.OK:
 			YesButton.gameObject.SetActive(false);
 			NoButton.gameObject.SetActive(false);
 			CancelButton.gameObject.SetActive(false);
 			OKButton.gameObject.SetActive(true);
+			EventSystem.current.SetSelectedGameObject(OKButton.gameObject);
 			break;
 		}
 	}

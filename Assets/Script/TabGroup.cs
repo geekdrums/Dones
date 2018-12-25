@@ -81,7 +81,7 @@ public class TabGroup : MonoBehaviour, IEnumerable<TabButton>
 				{
 					if( tabButtons_[index - 1].CanSelect(showDialog: true) )
 					{
-						tabButtons_[index - 1].IsSelected = true;
+						tabButtons_[index - 1].DoSelect();
 					}
 				}
 			}
@@ -92,7 +92,7 @@ public class TabGroup : MonoBehaviour, IEnumerable<TabButton>
 				{
 					if( tabButtons_[index + 1].CanSelect(showDialog: true) )
 					{
-						tabButtons_[index + 1].IsSelected = true;
+						tabButtons_[index + 1].DoSelect();
 					}
 				}
 			}
@@ -129,7 +129,7 @@ public class TabGroup : MonoBehaviour, IEnumerable<TabButton>
 
 		if( oldActiveTab != null )
 		{
-			oldActiveTab.IsSelected = false;
+			oldActiveTab.Deselect();
 			if( oldActiveTab.BindedNote != activeTab_.BindedNote )
 			{
 				oldActiveTab.BindedNote.Deactivate();
@@ -143,11 +143,6 @@ public class TabGroup : MonoBehaviour, IEnumerable<TabButton>
 
 	public void OnTabClosed(TabButton tab)
 	{
-		if( tab.BindedNote is TreeNote )
-		{
-			GameContext.Window.AddRecentClosedTab(tab);
-		}
-
 		int index = tabButtons_.IndexOf(tab);
 		tabButtons_.Remove(tab);
 		if( tab == activeTab_ )
@@ -161,7 +156,7 @@ public class TabGroup : MonoBehaviour, IEnumerable<TabButton>
 					index = tabButtons_.Count - 1;
 				}
 			}
-			tabButtons_[index].IsSelected = true;
+			tabButtons_[index].DoSelect();
 		}
 
 		UpdateTabLayout();

@@ -54,8 +54,6 @@ public class Window : MonoBehaviour
 
 	float currentScreenWidth_;
 	float currentScreenHeight_;
-	
-	Stack<TreePath> recentClosedTabs_ = new Stack<TreePath>();
 
 	#endregion
 
@@ -160,22 +158,6 @@ public class Window : MonoBehaviour
 				}
 			}
 		}
-		if( ctrl && shift )
-		{
-			if( Input.GetKeyDown(KeyCode.T)  )
-			{
-				Line line = null;
-				while( line == null && recentClosedTabs_.Count > 0 )
-				{
-					line = Note.Tree.GetLineFromPath(recentClosedTabs_.Pop());
-				}
-
-				if( line != null )
-				{
-					AddTab(line);
-				}
-			}
-		}
 		if( Input.GetKeyDown(KeyCode.F5) && TabGroup.ActiveNote == Note )
 		{
 			GameContext.TagList.ClearAll();
@@ -219,11 +201,6 @@ public class Window : MonoBehaviour
 	
 	#region load utils
 
-	public void AddRecentClosedTab(TabButton tab)
-	{
-		recentClosedTabs_.Push(tab.ViewParam.Path);
-	}
-
 	public void AddTab(TreePath path, bool select = true)
 	{
 		foreach( TabButton existTab in TabGroup )
@@ -232,7 +209,14 @@ public class Window : MonoBehaviour
 			{
 				if( existTab.ViewParam.Path.Equals(path) )
 				{
-					existTab.IsSelected = select;
+					if( select )
+					{
+						existTab.DoSelect();
+					}
+					else
+					{
+						existTab.Deselect();
+					}
 					return;
 				}
 			}
@@ -241,7 +225,10 @@ public class Window : MonoBehaviour
 		TabButton tab = Instantiate(TabButtonPrefab.gameObject, TabParent.transform).GetComponent<TabButton>();
 		TabGroup.OnTabCreated(tab);
 		tab.Bind(Note, path);
-		tab.IsSelected = select;
+		if( select )
+		{
+			tab.DoSelect();
+		}
 	}
 
 	public void AddTab(Line line)
@@ -373,7 +360,7 @@ public class Window : MonoBehaviour
 	{
 		if( settingXml_ == null )
 		{
-			TabGroup[0].IsSelected = true;
+			TabGroup[0].DoSelect();
 			return;
 		}
 
@@ -383,7 +370,15 @@ public class Window : MonoBehaviour
 		{
 			AddTab(new TreePath(tabparam.Path), select: false);
 		}
-		TabGroup[Math.Max(0, settingXml_.SelectedTabIndex)].IsSelected = true;
+		TabButton tab = TabGroup[Math.Max(0, settingXml_.SelectedTabIndex)];
+		if( tab.CanSelect(showDialog: false) )
+		{
+			tab.DoSelect();
+		}
+		else
+		{
+			TabGroup[0].DoSelect();
+		}
 
 		if( settingXml_.IsTagListOpened )
 		{
