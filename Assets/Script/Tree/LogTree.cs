@@ -309,6 +309,11 @@ public class LogTree : Tree
 		(ownerNote_ as LogNote).OnOverflowArrowInput(this, key);
 	}
 
+	public override void OnCtrlEInput()
+	{
+
+	}
+
 	protected override void OnCtrlDInput()
 	{
 

@@ -4,6 +4,7 @@ using UnityEngine;
 using System;
 using System.IO;
 using System.Xml;
+using System.Xml.Serialization;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
@@ -61,14 +62,12 @@ public class Config : MonoBehaviour
 	public string DefaultTag = "todo";
 
 	FileInfo configFile_;
+	ConfigXML configXml_;
 
 	// Use this for initialization
 	void Awake()
 	{
 		GameContext.Config = this;
-		configFile_ = new FileInfo(System.Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + "/Dones/config.txt");
-		
-		LoadConfig();
 	}
 
 	// Update is called once per frame
@@ -89,60 +88,36 @@ public class Config : MonoBehaviour
 
 	#region config save / load
 
-	enum ConfigParams
+	[XmlRoot("config")]
+	public class ConfigXML
 	{
-		TimeFormat,
-		DateFormat,
-		FontSize,
-		Count
+		[XmlElement("TimeFormat")]
+		public string TimeFormat { get; set; }
+
+		[XmlElement("DateFormat")]
+		public string DateFormat { get; set; }
+
+		[XmlElement("FontSize")]
+		public int FontSize { get; set; }
 	}
-	static string[] ConfigTags = new string[(int)ConfigParams.Count] {
-		"[TimeFormat]",
-		"[DateFormat]",
-		"[FontSize]",
-	};
-	void LoadConfig()
+
+	public void LoadConfig(string filepath)
 	{
+		configFile_ = new FileInfo(filepath);
+
 		if( configFile_.Exists == false )
 		{
 			return;
 		}
 
-		StreamReader reader = new StreamReader(configFile_.OpenRead());
-		string text = null;
-
-		ConfigParams configParam = ConfigParams.TimeFormat;
-		while( (text = reader.ReadLine()) != null )
-		{
-			foreach( ConfigParams param in (ConfigParams[])Enum.GetValues(typeof(ConfigParams)) )
-			{
-				if( param == ConfigParams.Count ) break;
-				else if( ConfigTags[(int)param] == text )
-				{
-					configParam = param;
-					break;
-				}
-			}
-			text = reader.ReadLine();
-			while( text.StartsWith("//") )
-			{
-				text = reader.ReadLine();
-			}
-			switch( configParam )
-			{
-			case ConfigParams.TimeFormat:
-				TimeFormat = text;
-				break;
-			case ConfigParams.DateFormat:
-				DateFormat = text;
-				break;
-			case ConfigParams.FontSize:
-				int.TryParse(text, out FontSize);
-				break;
-			}
-		}
-
+		XmlSerializer serializer = new XmlSerializer(typeof(ConfigXML));
+		StreamReader reader = new StreamReader(configFile_.FullName);
+		configXml_ = (ConfigXML)serializer.Deserialize(reader);
 		reader.Close();
+
+		TimeFormat = configXml_.TimeFormat;
+		DateFormat = configXml_.DateFormat;
+		FontSize = configXml_.FontSize;
 	}
 
 	void SaveConfig()
@@ -154,16 +129,16 @@ public class Config : MonoBehaviour
 				Directory.CreateDirectory(configFile_.DirectoryName);
 			}
 		}
-
-		StreamWriter writer = new StreamWriter(configFile_.FullName);
 		
-		writer.WriteLine(ConfigTags[(int)ConfigParams.TimeFormat]);
-		writer.WriteLine(TimeFormat);
-		writer.WriteLine(ConfigTags[(int)ConfigParams.DateFormat]);
-		writer.WriteLine(DateFormat);
-		writer.WriteLine(ConfigTags[(int)ConfigParams.FontSize]);
-		writer.WriteLine(FontSize);
+		ConfigXML config = new ConfigXML();
 
+		config.TimeFormat	= TimeFormat;
+		config.DateFormat	= DateFormat;
+		config.FontSize		= FontSize;
+		
+		StreamWriter writer = new StreamWriter(configFile_.FullName);
+		XmlSerializer serializer = new XmlSerializer(typeof(ConfigXML));
+		serializer.Serialize(writer, config);
 		writer.Flush();
 		writer.Close();
 	}

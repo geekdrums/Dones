@@ -48,7 +48,7 @@ public class ContextMenu : MonoBehaviour {
 		transform.position = position;
 		isOpening_ = true;
 
-		NewTabButton			.interactable = tree_.HasSelection == false && tree_.FocusedLine != null;
+		NewTabButton			.interactable = tree_.HasSelection == false && tree_.FocusedLine != null && (tree_ is LogTree == false);
 		DoneButton				.interactable = tree_.FocusedLine != null;
 		RepeatDoneButton		.interactable = tree_.FocusedLine != null && (tree_ is LogTree == false);
 		AddTagButton			.interactable = tree_.FocusedLine != null && (tree_ is LogTree == false);
@@ -69,9 +69,9 @@ public class ContextMenu : MonoBehaviour {
 
 	public void OnClickNewTab()
     {
-        if( tree_.HasSelection == false && tree_.FocusedLine != null )
+        if( tree_.HasSelection == false && tree_.FocusedLine != null && (tree_ is LogTree == false) )
         {
-            GameContext.Window.AddTab(tree_.FocusedLine);
+			tree_.OnCtrlEInput();
 		}
 		Close();
 	}

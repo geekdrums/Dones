@@ -266,7 +266,7 @@ public class LogNote : Note
 		ResetToDefaultButton.GetComponent<RectTransform>().anchoredPosition = new Vector2(25, 0);
 		DoneMark.transform.parent.gameObject.SetActive(false);
 
-		float totalAreaHight = GameContext.Window.MainTabGroup.NoteAreaTransform.rect.height;
+		float totalAreaHight = GameContext.Window.TabGroup.NoteAreaTransform.rect.height;
 		while( layout_.preferredHeight < totalAreaHight )
 		{
 			LoadMore();
@@ -353,7 +353,7 @@ public class LogNote : Note
 
 	public void UpdateVerticalLayout()
 	{
-		float totalAreaHight = GameContext.Window.MainTabGroup.NoteAreaTransform.rect.height;
+		float totalAreaHight = GameContext.Window.TabGroup.NoteAreaTransform.rect.height;
 		float logNoteAreaHight = 0;
 		switch( openState_ )
 		{
@@ -490,7 +490,7 @@ public class LogNote : Note
 		UpdateLayoutElement();
 		if( openState_ == OpenState.Maximize )
 		{
-			float totalAreaHight = GameContext.Window.MainTabGroup.NoteAreaTransform.rect.height;
+			float totalAreaHight = GameContext.Window.TabGroup.NoteAreaTransform.rect.height;
 			while( layout_.preferredHeight < totalAreaHight )
 			{
 				LoadMore();

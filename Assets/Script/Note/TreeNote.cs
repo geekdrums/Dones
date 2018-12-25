@@ -127,7 +127,7 @@ public class TreeNote : Note
 
 	public void UpdateVerticalLayout()
 	{
-		float totalAreaHight = GameContext.Window.MainTabGroup.NoteAreaTransform.rect.height;
+		float totalAreaHight = GameContext.Window.TabGroup.NoteAreaTransform.rect.height;
 		scrollRectTransform_.sizeDelta = new Vector2(scrollRectTransform_.sizeDelta.x, totalAreaHight - LogNote.Rect.size.y - GameContext.Config.LogNoteHeaderMargin);
 
 		CheckScrollbarEnabled();

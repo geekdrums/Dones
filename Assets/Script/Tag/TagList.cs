@@ -64,7 +64,6 @@ public class TagList : MonoBehaviour, IEnumerable<TagParent>
 
 	void Start()
 	{
-		taggedLineFile_ = new FileInfo(System.Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + "/Dones/taglist.txt");
 	}
 
 	#endregion
@@ -433,8 +432,9 @@ public class TagList : MonoBehaviour, IEnumerable<TagParent>
 		Count
 	}
 
-	public void LoadTaggedLines()
+	public void LoadTaggedLines(string filepath)
 	{
+		taggedLineFile_ = new FileInfo(filepath);
 		if( taggedLineFile_.Exists == false )
 		{
 			foreach( string reservedTag in GameContext.Window.TagIncrementalDialog.ReservedTags )

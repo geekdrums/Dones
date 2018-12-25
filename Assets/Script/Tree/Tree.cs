@@ -172,10 +172,7 @@ public class Tree : MonoBehaviour
 			}
 			else if( Input.GetKeyDown(KeyCode.E) )
 			{
-				if( focusedLine_ != null )
-				{
-					GameContext.Window.AddTab(focusedLine_);
-				}
+				OnCtrlEInput();
 			}
 #if UNITY_EDITOR
 			else if( Input.GetKeyDown(KeyCode.W) )
@@ -1464,6 +1461,31 @@ public class Tree : MonoBehaviour
 		actionManager_.EndChain();
 	}
 
+	public virtual void OnCtrlEInput()
+	{
+		if( focusedLine_ == null ) return;
+
+		if( focusedLine_.Count == 0 )
+		{
+			Line newLine = new Line();
+			Line titleLine = focusedLine_;
+			Line layoutStart = titleLine.NextSiblingOrUnkleLine;
+			actionManager_.Execute(new LineAction(
+				targetLines: newLine,
+				execute:()=>
+				{
+					titleLine.Add(newLine);
+				},
+				undo:()=>
+				{
+					titleLine.Remove(newLine);
+					RequestLayout(layoutStart);
+				}));
+		}
+
+		GameContext.Window.AddTab(focusedLine_);
+	}
+
 	protected virtual void OnCtrlDInput()
 	{
 		if( focusedLine_ == null ) return;
@@ -2044,55 +2066,59 @@ public class Tree : MonoBehaviour
 		gameObject.name = "Tree - " + TitleText;
 		titleLine_.Bind(this.gameObject);
 
-		StreamReader reader = new StreamReader(file_.OpenRead());
-		Line parent = titleLine_;
-		Line brother = null;
-		string text = null;
-		int currentLevel, oldLevel = 0;
-		while( (text = reader.ReadLine()) != null )
+		if( file_.Exists )
 		{
-			currentLevel = 0;
-			while( text.StartsWith(Line.TabString) )
+			StreamReader reader = new StreamReader(file_.OpenRead());
+			Line parent = titleLine_;
+			Line brother = null;
+			string text = null;
+			int currentLevel, oldLevel = 0;
+			while( (text = reader.ReadLine()) != null )
 			{
-				++currentLevel;
-				text = text.Remove(0, 1);
-			}
-
-			Line line = new Line(text, loadTag: true);
-
-			Line addParent;
-
-			if( currentLevel > oldLevel )
-			{
-				addParent = brother;
-				parent = brother;
-			}
-			else if( currentLevel == oldLevel )
-			{
-				addParent = parent;
-			}
-			else// currentLevel < oldLevel 
-			{
-				for( int level = oldLevel; level > currentLevel; --level )
+				currentLevel = 0;
+				while( text.StartsWith(Line.TabString) )
 				{
-					if( parent.Parent == null ) break;
-
-					brother = parent;
-					parent = parent.Parent;
+					++currentLevel;
+					text = text.Remove(0, 1);
 				}
-				addParent = parent;
+
+				Line line = new Line(text, loadTag: true);
+
+				Line addParent;
+
+				if( currentLevel > oldLevel )
+				{
+					addParent = brother;
+					parent = brother;
+				}
+				else if( currentLevel == oldLevel )
+				{
+					addParent = parent;
+				}
+				else// currentLevel < oldLevel 
+				{
+					for( int level = oldLevel; level > currentLevel; --level )
+					{
+						if( parent.Parent == null ) break;
+
+						brother = parent;
+						parent = parent.Parent;
+					}
+					addParent = parent;
+				}
+
+				addParent.Add(line);
+
+				brother = line;
+				oldLevel = currentLevel;
 			}
-
-			addParent.Add(line);
-
-			brother = line;
-			oldLevel = currentLevel;
+			reader.Close();
 		}
 		if( titleLine_.Count == 0 )
 		{
 			titleLine_.Add(new Line(""));
 		}
-		reader.Close();
+
 		ResumeLayout();
 		titleLine_.AdjustFontSizeRecursive(GameContext.Config.FontSize, GameContext.Config.HeightPerLine);
 		IsEdited = false;

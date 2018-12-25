@@ -22,7 +22,7 @@ public class Window : MonoBehaviour
 {
 	#region editor params
 
-	public TabGroup MainTabGroup;
+	public TabGroup TabGroup;
 
 	public TabButton TabButtonPrefab;
 
@@ -46,6 +46,7 @@ public class Window : MonoBehaviour
 	public TreeNote Note;
 	public LogNote LogNote;
 
+	DirectoryInfo donesDirectory_;
 	FileInfo settingFile_;
 	SettingXML settingXml_;
 	FileInfo treeFile_;
@@ -75,7 +76,6 @@ public class Window : MonoBehaviour
 	// Use this for initialization
 	void Start ()
 	{
-		settingFile_ = new FileInfo(System.Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + "/Dones/settings.xml");
 		StartCoroutine(InitialLoadCoroutine());
 	}
 
@@ -83,17 +83,30 @@ public class Window : MonoBehaviour
 	{
 		// Editorではいいんだけど、アプリ版はこうしないとScrollがバグってその後一切操作できなくなる。。
 		yield return new WaitForEndOfFrame();
-		GameContext.TagList.LoadTaggedLines();
-		LoadSettings();
+
+		// donesDirectoryを設定、なければ生成
+		InitializeDonesDirectory();
+
+		// donesDirectoryから設定ファイルをロード
+		GameContext.Config.LoadConfig(donesDirectory_.FullName + "/config.xml");
+		LoadSettings(donesDirectory_.FullName + "/settings.xml");
+
+		// noteのファイルとフォルダ情報を設定。保存先は設定により異なる。
+		InitializeNoteDirectory();
+		// noteより先にタグの情報を読み込む必要がある
+		GameContext.TagList.LoadTaggedLines(donesDirectory_.FullName + "/taglist.txt");
+		// noteとlogを読み込み
 		LoadNote();
-		LoadLog();
+
+		// 各種UIの状態を復元
 		ApplySettings();
+
 		foreach( TagParent tagParent in GameContext.TagList )
 		{
 			tagParent.ApplyLineOrder();
 		}
 
-		MainTabGroup.UpdateLayoutAll();
+		TabGroup.UpdateLayoutAll();
 		Note.OnFontSizeChanged();
 
 		DayText.text = String.Format("<size=12>{0}/ </size>{1}/{2}<size=12> ({3})</size>",
@@ -163,13 +176,13 @@ public class Window : MonoBehaviour
 				}
 			}
 		}
-		if( Input.GetKeyDown(KeyCode.F5) && MainTabGroup.ActiveNote == Note )
+		if( Input.GetKeyDown(KeyCode.F5) && TabGroup.ActiveNote == Note )
 		{
 			GameContext.TagList.ClearAll();
 			Note.ReloadNote();
 			GameContext.TagList.OnTreePathChanged(Note.Tree.TitleLine);
 		}
-		if( MainTabGroup.ActiveNote == Note )
+		if( TabGroup.ActiveNote == Note )
 		{
 			if( Note.TimeFromRequestedAutoSave() > GameContext.Config.AutoSaveTime )
 			{
@@ -179,7 +192,7 @@ public class Window : MonoBehaviour
 
 		if(	currentScreenWidth_ != UnityEngine.Screen.width )
 		{
-			MainTabGroup.UpdateTabLayout();
+			TabGroup.UpdateTabLayout();
 			currentScreenWidth_ = UnityEngine.Screen.width;
 		}
 		if( currentScreenHeight_ != UnityEngine.Screen.height )
@@ -213,7 +226,7 @@ public class Window : MonoBehaviour
 
 	public void AddTab(TreePath path, bool select = true)
 	{
-		foreach( TabButton existTab in MainTabGroup )
+		foreach( TabButton existTab in TabGroup )
 		{
 			if( existTab.BindedNote is TreeNote )
 			{
@@ -226,7 +239,7 @@ public class Window : MonoBehaviour
 		}
 
 		TabButton tab = Instantiate(TabButtonPrefab.gameObject, TabParent.transform).GetComponent<TabButton>();
-		MainTabGroup.OnTabCreated(tab);
+		TabGroup.OnTabCreated(tab);
 		tab.Bind(Note, path);
 		tab.IsSelected = select;
 	}
@@ -240,16 +253,7 @@ public class Window : MonoBehaviour
 	{
 		Note.LoadNote(treeFile_.FullName);
 		HomeTabButton.Bind(Note);
-		MainTabGroup.OnTabCreated(HomeTabButton);
-	}
-
-	void LoadLog()
-	{
-		if( Directory.Exists(logDirectory_.FullName) == false )
-		{
-			Directory.CreateDirectory(logDirectory_.FullName);
-		}
-
+		TabGroup.OnTabCreated(HomeTabButton);
 		LogNote.Initialize(Note);
 	}
 
@@ -260,7 +264,7 @@ public class Window : MonoBehaviour
 
 	public void OnHeaderWidthChanged()
 	{
-		MainTabGroup.UpdateTabLayout();
+		TabGroup.UpdateTabLayout();
 	}
 
 	#endregion
@@ -270,7 +274,7 @@ public class Window : MonoBehaviour
 
 	public void UpdateVerticalLayout()
 	{
-		TreeNote treeNote = MainTabGroup.ActiveTreeNote;
+		TreeNote treeNote = TabGroup.ActiveTreeNote;
 		if( treeNote != null )
 		{
 			treeNote.LogNote.UpdateVerticalLayout();
@@ -323,8 +327,20 @@ public class Window : MonoBehaviour
 		public bool IsMaximized { get; set; }
 	}
 
-	void LoadSettings()
+	void InitializeDonesDirectory()
 	{
+		donesDirectory_ = new DirectoryInfo(System.Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + "/Dones");
+
+		if( Directory.Exists(donesDirectory_.FullName) == false )
+		{
+			Directory.CreateDirectory(donesDirectory_.FullName);
+		}
+	}
+
+	void LoadSettings(string filepath)
+	{
+		settingFile_ = new FileInfo(filepath);
+
 		if( settingFile_.Exists == false )
 		{
 			return;
@@ -334,20 +350,30 @@ public class Window : MonoBehaviour
 		StreamReader reader = new StreamReader(settingFile_.FullName);
 		settingXml_ = (SettingXML)serializer.Deserialize(reader);
 		reader.Close();
+	}
 
-		string saveDirectory = settingXml_.SaveDirectory;
+	void InitializeNoteDirectory()
+	{
+		string saveDirectory = (settingXml_ != null ? settingXml_.SaveDirectory : null);
 		if( saveDirectory == null || saveDirectory == "" )
 		{
-			saveDirectory = System.Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + "/Dones";
+			saveDirectory = donesDirectory_.FullName;
 		}
+
 		treeFile_ = new FileInfo(saveDirectory + "/tree.dtml");
 		logDirectory_ = new DirectoryInfo(saveDirectory + "/log");
+
+		if( Directory.Exists(logDirectory_.FullName) == false )
+		{
+			Directory.CreateDirectory(logDirectory_.FullName);
+		}
 	}
 
 	void ApplySettings()
 	{
 		if( settingXml_ == null )
 		{
+			TabGroup[0].IsSelected = true;
 			return;
 		}
 
@@ -357,7 +383,7 @@ public class Window : MonoBehaviour
 		{
 			AddTab(new TreePath(tabparam.Path), select: false);
 		}
-		MainTabGroup[settingXml_.SelectedTabIndex].IsSelected = true;
+		TabGroup[Math.Max(0, settingXml_.SelectedTabIndex)].IsSelected = true;
 
 		if( settingXml_.IsTagListOpened )
 		{
@@ -387,7 +413,7 @@ public class Window : MonoBehaviour
 		SettingXML setting = new SettingXML();
 
 		setting.TabParams = new List<TabViewParam>();
-		foreach( TabButton tabButton in MainTabGroup )
+		foreach( TabButton tabButton in TabGroup )
 		{
 			if( tabButton.BindedNote is TreeNote )
 			{
@@ -396,7 +422,7 @@ public class Window : MonoBehaviour
 				setting.TabParams.Add(tabparam);
 			}
 		}
-		setting.SelectedTabIndex = MainTabGroup.IndexOf(MainTabGroup.ActiveTab);
+		setting.SelectedTabIndex = TabGroup.IndexOf(TabGroup.ActiveTab);
 
 		setting.SaveDirectory = Note.Tree.File.Directory.FullName;
 		setting.Screen = new ScreenSetting();
@@ -457,7 +483,7 @@ public class Window : MonoBehaviour
 			logNote.TreeNote = treeNote;
 
 			tab.Bind(Note);
-			MainTabGroup.OnTabCreated(tab);
+			TabGroup.OnTabCreated(tab);
 			treeNote.LoadNote(paths[i]);
 
 			treeNotes.Add(treeNote);
