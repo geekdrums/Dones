@@ -9,8 +9,6 @@ using UnityEngine.UI;
 using UniRx;
 using UniRx.Triggers;
 using System.IO;
-using System.Runtime.InteropServices;
-using System.Windows.Forms;
 
 // Window - [ LogNote ] - LogTree - Line
 public class LogNote : Note
