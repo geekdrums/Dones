@@ -463,6 +463,7 @@ public class LineField : CustomInputField
 				bool shift = (currentEventModifiers & EventModifiers.Shift) != 0;
 				bool alt = (currentEventModifiers & EventModifiers.Alt) != 0;
 				bool ctrlOnly = ctrl && !alt && !shift;
+				bool ctrlOrCtrlShift = ctrlOnly || (ctrl && shift);
 
 				cachedCaretPos_ = m_CaretSelectPosition;
 				switch( processingEvent.keyCode )
@@ -474,7 +475,7 @@ public class LineField : CustomInputField
 					}
 					break;
 				case KeyCode.Space:
-					if( ctrlOnly )
+					if( ctrlOrCtrlShift )
 					{
 						// process in ownerTree
 					}
@@ -485,7 +486,7 @@ public class LineField : CustomInputField
 					break;
 				case KeyCode.C:
 				case KeyCode.X:
-					if( ctrlOnly && ( isSelected_ || selectionAnchorPosition == selectionFocusPosition ) )
+					if( ctrlOrCtrlShift && ( isSelected_ || selectionAnchorPosition == selectionFocusPosition ) )
 					{
 						// process in ownerTree
 					}
