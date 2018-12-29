@@ -118,7 +118,10 @@ public class ChainAction : ActionBase
 		List<Line> lines = new List<Line>();
 		foreach( ActionBase action in chain_ )
 		{
-            lines.AddRange(action.TargetLines);
+			if( action.TargetLines != null )
+			{
+				lines.AddRange(action.TargetLines);
+			}
 		}
 		LeastCommonParentLine = Line.GetLeastCommonParent(lines.ToArray());
 	}

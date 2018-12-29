@@ -468,17 +468,13 @@ public class LineField : CustomInputField
 				bool ctrlOnly = ctrl && !alt && !shift;
 				bool ctrlOrCtrlShift = ctrlOnly || (ctrl && shift);
 
+				//print(string.Format("isKey:{0}, keyCode:{1}, character:{2}", processingEvent.isKey, processingEvent.keyCode, processingEvent.character));
+				
 				cachedCaretPos_ = m_CaretSelectPosition;
 				switch( processingEvent.keyCode )
 				{
 				case KeyCode.V:
 					if( ctrlOnly )
-					{
-						// process in ownerTree
-					}
-					break;
-				case KeyCode.Space:
-					if( ctrlOrCtrlShift )
 					{
 						// process in ownerTree
 					}
@@ -610,13 +606,19 @@ public class LineField : CustomInputField
 						BindedLine.FixTextInputAction();
 					}
 					break;
-				default:
-					if( ctrlOnly && processingEvent.keyCode == KeyCode.None && processingEvent.character.ToString() == " " )
+				case KeyCode.None:
+					if( ctrlOrCtrlShift && (processingEvent.character == ' ' || processingEvent.character == '　') )
 					{
 						// process in ownerTree
+						if( ctrl && shift && processingEvent.character == '　' )
+						{
+							// shift かつ 全角でSpace入力した時はKeyCodeのSpaceがイベントとして来ないのでこっちで対応
+							BindedLine.Tree.OnCtrlShiftSpaceInput();
+						}
 					}
-					else if( ctrl == false && alt == false && processingEvent.keyCode == KeyCode.None && BindedLine.Tree.HasSelection && processingEvent.character.ToString() != Line.TabString )
+					else if( (ctrl || alt == false) && BindedLine.Tree.HasSelection && processingEvent.character.ToString() != Line.TabString )
 					{
+						// 複数Line選択してキー入力したら、Line内部の文字列削除じゃなくてTreeからLine削除を呼ぶ
 						LineField newField = BindedLine.Tree.DeleteSelection().Field;
 						newField.KeyPressed(processingEvent);
 						newField.CaretPosision = newField.text.Length;
@@ -630,6 +632,9 @@ public class LineField : CustomInputField
 						}
 						KeyPressed(processingEvent);
 					}
+					break;
+				default:
+					KeyPressed(processingEvent);
 					break;
 				}
 			}
