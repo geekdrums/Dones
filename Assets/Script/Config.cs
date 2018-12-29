@@ -12,7 +12,7 @@ public class Config : MonoBehaviour
 	public float DefaultWidthPerLevel = 27;
 	public float DefaultHeightPerLine = 27.0f;
 
-	//public bool DoBackUp = true;
+	public bool DoBackUp = true;
 
 	public int LineHeapCount = 30;
 	public int FontSize = 14;

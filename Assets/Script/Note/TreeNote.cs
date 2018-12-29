@@ -312,6 +312,12 @@ public class TreeNote : Note
 	public void LoadNote(string path)
 	{
 		tree_.LoadFile(new FileInfo(path));
+
+		if( GameContext.Config.DoBackUp && tree_.File.Exists )
+		{
+			tree_.File.CopyTo(tree_.File.FullName + ".bak", overwrite: true);
+		}
+
 		targetScrollValue_ = 1.0f;
 	}
 
