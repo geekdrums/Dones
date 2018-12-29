@@ -1846,7 +1846,7 @@ public class Tree : MonoBehaviour
 			{
 				childField.transform.SetParent(heapParentObject_.transform);
 			}
-			field.BindedLine = null;
+			field.BindedLine.UnBind();
 		}
 		return field.gameObject;
 	}

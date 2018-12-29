@@ -217,12 +217,15 @@ public class LineField : CustomInputField
 
 	public void SetIsBold(bool isBold)
 	{
-		textComponent.fontStyle = isBold ? FontStyle.Bold : FontStyle.Normal;
-		foreach( TagText tagText in tagTexts_ )
+		if( (textComponent.fontStyle == FontStyle.Bold) != isBold )
 		{
-			tagText.TextComponent.fontStyle = isBold ? FontStyle.Bold : FontStyle.Normal;
+			textComponent.fontStyle = isBold ? FontStyle.Bold : FontStyle.Normal;
+			foreach( TagText tagText in tagTexts_ )
+			{
+				tagText.TextComponent.fontStyle = isBold ? FontStyle.Bold : FontStyle.Normal;
+			}
+			OnTextLengthChanged();
 		}
-		OnTextLengthChanged();
 	}
 
 	protected void SetDesiredStrikeLineState()

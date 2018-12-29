@@ -31,6 +31,11 @@ public class TextLengthHelper : MonoBehaviour {
 
 	public static float GetTextRectLength(TextGenerator textGen, int index)
 	{
+		if( textGen.characters.Count == 0 )
+		{
+			return 0;
+		}
+
 		index = Math.Min(textGen.characters.Count - 1, Math.Max(0, index));
 		return textGen.characters[index].cursorPos.x + textGen.characters[index].charWidth - textGen.characters[0].cursorPos.x;
 	}
@@ -57,11 +62,20 @@ public class TextLengthHelper : MonoBehaviour {
 		}
 	}
 
+	public void CancelRequest(Text textComponent)
+	{
+		UpdateTextLengthRequest request = requests_.Find((UpdateTextLengthRequest existReq) => existReq.TextComponent == textComponent);
+		if( request != null )
+		{
+			requests_.Remove(request);
+		}
+	}
+
 	IEnumerator UpdateTextLengthCoroutine(UpdateTextLengthRequest request)
 	{
 		yield return new WaitWhile(() => request.TextComponent.gameObject.activeInHierarchy == false
-									  || request.TextComponent.cachedTextGenerator.characterCount == 0);
-
+										|| request.TextComponent.cachedTextGenerator.characterCount != request.TextComponent.text.Length + 1);
+		
 		request.OnRequestFinished();
 		requests_.Remove(request);
 	}
