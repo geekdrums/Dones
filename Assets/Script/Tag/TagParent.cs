@@ -52,7 +52,7 @@ public class TagParent : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDra
 				{
 					tagToggle_.SetFold(IsFolded);
 				}
-				GameContext.TagList.UpdateLayoutElement();
+				tagList_.UpdateLayoutElement();
 			}
 		}
 	}
@@ -88,6 +88,10 @@ public class TagParent : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDra
 	}
 	bool isRepeat_ = false;
 
+
+	public TagList OwnerList { get { return tagList_; } }
+	TagList tagList_;
+
 	List<TaggedLine> sourceLines_ = new List<TaggedLine>();
 	List<TaggedLine> lines_ = new List<TaggedLine>();
 	TaggedLine selectedLine_;
@@ -100,9 +104,10 @@ public class TagParent : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDra
 	#endregion
 
 
-	public void Initialize(string tag)
+	public void Initialize(string tag, TagList owner)
 	{
 		tag_ = tag;
+		tagList_ = owner;
 		lines_.Clear();
 		selectedLine_ = null;
 		selectedIndex_ = -1;
@@ -261,7 +266,7 @@ public class TagParent : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDra
 			AnimOnInstantiate(taggedLine);
 		}
 		
-		GameContext.TagList.UpdateLayoutElement();
+		tagList_.UpdateLayoutElement();
 
 		return taggedLine;
 	}
@@ -317,9 +322,9 @@ public class TagParent : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDra
 		else
 		{
 			OnLineDisabled(taggedLine);
-			GameContext.TagList.OnTagEmpty(this);
+			tagList_.OnTagEmpty(this);
 		}
-		GameContext.TagList.UpdateLayoutElement();
+		tagList_.UpdateLayoutElement();
 	}
 
 	public void RemoveLine(Line line)
@@ -426,7 +431,7 @@ public class TagParent : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDra
 	{
 		if( lines_.Contains(taggedLine) )
 		{
-			taggedLine.transform.parent = GameContext.TagList.transform;
+			taggedLine.transform.parent = tagList_.transform;
 			taggedLine.transform.SetAsLastSibling();
 		}
 	}
@@ -439,9 +444,9 @@ public class TagParent : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDra
 			taggedLine.transform.localPosition += new Vector3(0, eventData.delta.y, 0);
 
 			float currentY = -(taggedLine.transform.localPosition.y - this.transform.localPosition.y);
-			bool overed = currentY < -GameContext.TagList.Margin || Height + GameContext.TagList.Margin < currentY;
-			GameContext.TagList.OnOverDraggingLine(taggedLine, eventData, overed);
-			if( -GameContext.TagList.Margin < currentY && currentY < Height + GameContext.TagList.Margin )
+			bool overed = currentY < -tagList_.Margin || Height + tagList_.Margin < currentY;
+			tagList_.OnOverDraggingLine(taggedLine, eventData, overed);
+			if( -tagList_.Margin < currentY && currentY < Height + tagList_.Margin )
 			{
 				int desiredIndex = Mathf.Clamp((int)(currentY / GameContext.Config.TagLineHeight), 0, lines_.Count - 1);
 				if( index != desiredIndex )
@@ -466,7 +471,7 @@ public class TagParent : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDra
 		if( lines_.Contains(taggedLine) )
 		{
 			float currentY = -(taggedLine.transform.localPosition.y - this.transform.localPosition.y);
-			bool overed = currentY  < - GameContext.TagList.Margin || Height + GameContext.TagList.Margin < currentY;
+			bool overed = currentY  < - tagList_.Margin || Height + tagList_.Margin < currentY;
 			if( overed )
 			{
 				selectedLine_ = null;
@@ -478,7 +483,7 @@ public class TagParent : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDra
 				selectedIndex_ = lines_.IndexOf(taggedLine);
 				AnimManager.AddAnim(taggedLine, GetTargetPosition(taggedLine), ParamType.Position, AnimType.Time, GameContext.Config.AnimTime);
 			}
-			GameContext.TagList.OnEndOverDragLine(taggedLine, overed);
+			tagList_.OnEndOverDragLine(taggedLine, overed);
 		}
 	}
 
@@ -517,17 +522,17 @@ public class TagParent : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDra
 
 	public void OnBeginDrag(PointerEventData eventData)
 	{
-		GameContext.TagList.OnBeginDragTag(this);
+		tagList_.OnBeginDragTag(this);
 	}
 
 	public void OnDrag(PointerEventData eventData)
 	{
-		GameContext.TagList.OnDraggingTag(this, eventData);
+		tagList_.OnDraggingTag(this, eventData);
 	}
 
 	public void OnEndDrag(PointerEventData eventData)
 	{
-		GameContext.TagList.OnEndDragTag(this);
+		tagList_.OnEndDragTag(this);
 	}
 
 	#endregion

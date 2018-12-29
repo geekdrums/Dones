@@ -176,7 +176,7 @@ public class TabButton : UnityEngine.UI.Button, IDragHandler, IBeginDragHandler,
 			BindedNote.SetNoteViewParam(ViewParam);
 
 			GameContext.Window.UpdateVerticalLayout();
-			GameContext.TagList.OnTreePathChanged(BindedNote is TreeNote ? (BindedNote as TreeNote).Tree.TitleLine : null);
+			GameContext.Window.TagList.OnTreePathChanged(BindedNote is TreeNote ? (BindedNote as TreeNote).Tree.TitleLine : null);
 		}
 		UpdateColor();
 	}

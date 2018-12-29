@@ -51,7 +51,7 @@ public class TagIncrementalDialog : MonoBehaviour {
 		UpdateLayout();
 
 		searchResults_.Clear();
-		foreach( TagParent tagParent in GameContext.TagList )
+		foreach( TagParent tagParent in GameContext.Window.TagList )
 		{
 			if( string.IsNullOrEmpty(text) || (tagParent.Tag.StartsWith(text) && tagParent.Tag != text) )
 			{
@@ -159,7 +159,7 @@ public class TagIncrementalDialog : MonoBehaviour {
 		}
 
 		// 新しいやつを足す
-		foreach( TagParent tagParent in GameContext.TagList )
+		foreach( TagParent tagParent in GameContext.Window.TagList )
 		{
 			if( string.IsNullOrEmpty(text) || (tagParent.Tag.StartsWith(text) && tagParent.Tag != text) )
 			{
@@ -231,7 +231,7 @@ public class TagIncrementalDialog : MonoBehaviour {
 	void SortSeachResult()
 	{
 		int index = 0;
-		foreach( TagParent tagParent in GameContext.TagList )
+		foreach( TagParent tagParent in GameContext.Window.TagList )
 		{
 			TagText tagText = searchResults_.Find((TagText tt) => tt.Text == "#" + tagParent.Tag);
 			if( tagText != null )

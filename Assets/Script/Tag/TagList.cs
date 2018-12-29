@@ -2,6 +2,8 @@
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
 using System;
+using System.Xml;
+using System.Xml.Serialization;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -34,7 +36,8 @@ public class TagList : MonoBehaviour, IEnumerable<TagParent>
 	List<TagParent> sourceTagParents_ = new List<TagParent>();
 	List<TagParent> tagParents_ = new List<TagParent>();
 
-	FileInfo taggedLineFile_;
+	FileInfo tagListFile_;
+	TagListXML tagListXml_;
 
 	List<string> tagOrder_ = new List<string>();
 
@@ -53,7 +56,6 @@ public class TagList : MonoBehaviour, IEnumerable<TagParent>
 
 	void Awake()
 	{
-		GameContext.TagList = this;
 		layout_ = GetComponentInParent<LayoutElement>();
 		contentSizeFitter_ = GetComponentInParent<ContentSizeFitter>();
 		scrollRect_ = GetComponentInParent<ScrollRect>().GetComponent<RectTransform>();
@@ -129,7 +131,7 @@ public class TagList : MonoBehaviour, IEnumerable<TagParent>
 		}
 
 		TagParent tagParent = heapManager_.Instantiate(this.transform);
-		tagParent.Initialize(tag);
+		tagParent.Initialize(tag, this);
 		sourceTagParents_.Insert(GetTagOrderIndex(tag, sourceTagParents_), tagParent);
 		tagParents_.Insert(GetTagOrderIndex(tag, tagParents_), tagParent);
 		UpdateLayoutElement();
@@ -323,9 +325,8 @@ public class TagList : MonoBehaviour, IEnumerable<TagParent>
 
 			if( index != desiredIndex )
 			{
-				TagParent oldDesiredIndexTagParent = tagParents_[desiredIndex];
 				sourceTagParents_.Remove(tagParent);
-				sourceTagParents_.Insert(sourceTagParents_.IndexOf(oldDesiredIndexTagParent), tagParent);
+				sourceTagParents_.Insert(sourceTagParents_.IndexOf(tagParents_[desiredIndex]) + ( index < desiredIndex ? 1 : 0 ), tagParent);
 				tagParents_.Remove(tagParent);
 				tagParents_.Insert(desiredIndex, tagParent);
 				int sign = (int)Mathf.Sign(desiredIndex - index);
@@ -400,7 +401,7 @@ public class TagList : MonoBehaviour, IEnumerable<TagParent>
 
 	private int GetDesiredTagIndex(float currentY)
 	{
-		int desiredIndex = 0;
+		int desiredIndex = tagParents_.Count - 1;
 		for( int i = 0; i < tagParents_.Count; ++i )
 		{
 			if( currentY > GetTargetPosition(tagParents_[i]).y )
@@ -417,10 +418,36 @@ public class TagList : MonoBehaviour, IEnumerable<TagParent>
 
 	#region save / load
 
-	public static string OrderTag = "<order>";
-	public static string EndOrderTag = "</order>";
-	public static string PinnedTag = "<p>";
-	public static string RepeatTag = "<r>";
+	[XmlRoot("setting")]
+	public class TagListXML
+	{
+		[XmlArray("TagOrder")]
+		[XmlArrayItem("Tag")]
+		public List<string> TagOrder{ get; set; }
+
+		[XmlArray("TagParentParam")]
+		[XmlArrayItem("TagParent")]
+		public List<TagParentParam> TagParentParams { get; set; }
+	}
+
+	public class TagParentParam
+	{
+		[XmlElement("Tag")]
+		public string Tag { get; set; }
+
+		[XmlArray("TaggedLines")]
+		[XmlArrayItem("line")]
+		public List<string> TaggedLines { get; set; }
+
+		[XmlElement("IsFolded")]
+		public bool IsFolded { get; set; }
+
+		[XmlElement("IsPinned")]
+		public bool IsPinned { get; set; }
+
+		[XmlElement("IsRepeat")]
+		public bool IsRepeat { get; set; }
+	}
 
 	enum Settings
 	{
@@ -430,88 +457,52 @@ public class TagList : MonoBehaviour, IEnumerable<TagParent>
 		Count
 	}
 
-	public void LoadTaggedLines(string filepath)
+	public void LoadTagListSettings(string filepath)
 	{
-		taggedLineFile_ = new FileInfo(filepath);
-		if( taggedLineFile_.Exists == false )
+		tagListFile_ = new FileInfo(filepath);
+		if( tagListFile_.Exists == false )
 		{
+			return;
+		}
+
+		XmlSerializer serializer = new XmlSerializer(typeof(TagListXML));
+		StreamReader reader = new StreamReader(tagListFile_.FullName);
+		tagListXml_ = (TagListXML)serializer.Deserialize(reader);
+		reader.Close();
+	}
+
+	public void ApplyTagListSetttings()
+	{
+		if( tagListXml_ == null )
+		{
+			return;
+		}
+
+		tagOrder_ = new List<string>(tagListXml_.TagOrder);
+		if( tagOrder_.Count == 0 )
+		{
+			// 無かったのでデフォルトとして予約語タグを入れる
 			foreach( string reservedTag in GameContext.Window.TagIncrementalDialog.ReservedTags )
 			{
 				tagOrder_.Add(reservedTag);
 			}
-			return;
 		}
 
-		StreamReader reader = new StreamReader(taggedLineFile_.OpenRead());
-		string text = null;
-		TagParent tagParent = null;
 		List<TagParent> sortedTagParents = new List<TagParent>();
-		Settings setting = Settings.Initialize;
-		while( (text = reader.ReadLine()) != null )
+		foreach( TagParentParam tagParentParam in tagListXml_.TagParentParams )
 		{
-			if( setting == Settings.Initialize )
+			TagParent tagParent = InstantiateTagParent(tagParentParam.Tag);
+			tagParent.IsFolded = tagParentParam.IsFolded;
+			tagParent.IsPinned = tagParentParam.IsPinned;
+			tagParent.IsRepeat = tagParentParam.IsRepeat;
+			sortedTagParents.Add(tagParent);
+
+			foreach( string taggedLine in tagParentParam.TaggedLines )
 			{
-				if( text == OrderTag )
-				{
-					setting = Settings.OrderList;
-				}
-				else
-				{
-					// 無かったのでデフォルトとして予約語タグを入れる
-					foreach( string reservedTag in GameContext.Window.TagIncrementalDialog.ReservedTags )
-					{
-						tagOrder_.Add(reservedTag);
-					}
-					setting = Settings.TagList;
-				}
-			}
-			else if( setting == Settings.OrderList )
-			{
-				if( text == EndOrderTag )
-				{
-					setting = Settings.TagList;
-				}
-				else
-				{
-					tagOrder_.Add(text);
-				}
-			}
-			else if( setting == Settings.TagList )
-			{
-				if( text.StartsWith("##") )
-				{
-					text = text.Remove(0, 2);
-					bool isPinned = false;
-					bool isRepeat = false;
-					if( text.EndsWith(RepeatTag) )
-					{
-						text = text.Remove(text.Length - RepeatTag.Length);
-						isRepeat = true;
-					}
-					if( text.EndsWith(PinnedTag) )
-					{
-						text = text.Remove(text.Length - PinnedTag.Length);
-						isPinned = true;
-					}
-					bool isFolded = false;
-					if( text.EndsWith(Line.FoldTag) )
-					{
-						text = text.Remove(text.Length - Line.FoldTag.Length);
-						isFolded = true;
-					}
-					tagParent = InstantiateTagParent(text);
-					tagParent.IsFolded = isFolded;
-					tagParent.IsPinned = isPinned;
-					tagParent.IsRepeat = isRepeat;
-					sortedTagParents.Add(tagParent);
-				}
-				else if( tagParent != null )
-				{
-					tagParent.AddLineOrder(text);
-				}
+				tagParent.AddLineOrder(taggedLine);
 			}
 		}
-
+		
 		// 余ったやつは最後に追加する
 		foreach( TagParent leftoverParent in tagParents_ )
 		{
@@ -523,45 +514,48 @@ public class TagList : MonoBehaviour, IEnumerable<TagParent>
 
 		tagParents_ = sortedTagParents;
 		UpdateLayoutElement();
-		reader.Close();
 	}
 
-	public void SaveTaggedLines()
+	public void SaveTagListSettings()
 	{
-		if( taggedLineFile_.Exists == false )
+		if( tagListFile_.Exists == false )
 		{
-			if( Directory.Exists(taggedLineFile_.DirectoryName) == false )
+			if( Directory.Exists(tagListFile_.DirectoryName) == false )
 			{
-				Directory.CreateDirectory(taggedLineFile_.DirectoryName);
+				Directory.CreateDirectory(tagListFile_.DirectoryName);
 			}
 		}
 
-		StreamWriter writer = new StreamWriter(taggedLineFile_.FullName, append: false);
-
-		if( tagOrder_.Count > 0 )
+		if( tagListXml_ == null )
 		{
-			writer.WriteLine(OrderTag);
-			foreach( string tagText in tagOrder_ )
-			{
-				writer.WriteLine(tagText);
-			}
-			writer.WriteLine(EndOrderTag);
+			tagListXml_ = new TagListXML();
 		}
+
+		tagListXml_.TagOrder = new List<string>(tagOrder_);
+
+		tagListXml_.TagParentParams = new List<TagParentParam>();
 		foreach( TagParent tagParent in sourceTagParents_ )
 		{
-			writer.WriteLine(String.Format("##{0}{1}{2}{3}", tagParent.Tag, (tagParent.IsFolded ? Line.FoldTag : ""), (tagParent.IsPinned ? PinnedTag : ""), (tagParent.IsRepeat ? RepeatTag : "")));
+			TagParentParam tagParentParam = new TagParentParam();
+			tagParentParam.Tag = tagParent.Tag;
+			tagParentParam.IsFolded = tagParent.IsFolded;
+			tagParentParam.IsPinned = tagParent.IsPinned;
+			tagParentParam.IsRepeat = tagParent.IsRepeat;
+			tagParentParam.TaggedLines = new List<string>();
 			foreach( TaggedLine taggedLine in tagParent )
 			{
-				if( taggedLine.IsDone )
-				{
-					break;
-				}
 				if( taggedLine.BindedLine != null )
 				{
-					writer.WriteLine(taggedLine.BindedLine.TextWithoutHashTags);
+					tagParentParam.TaggedLines.Add(taggedLine.BindedLine.TextWithoutHashTags);
 				}
 			}
+
+			tagListXml_.TagParentParams.Add(tagParentParam);
 		}
+
+		StreamWriter writer = new StreamWriter(tagListFile_.FullName);
+		XmlSerializer serializer = new XmlSerializer(typeof(TagListXML));
+		serializer.Serialize(writer, tagListXml_);
 		writer.Flush();
 		writer.Close();
 	}

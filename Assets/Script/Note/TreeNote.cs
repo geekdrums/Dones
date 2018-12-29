@@ -197,7 +197,7 @@ public class TreeNote : Note
 		button.onClick.RemoveAllListeners();
 		button.onClick.AddListener(() =>
 		{
-			GameContext.Window.HomeTabButton.OnClick();
+			GameContext.Window.TabGroup.HomeTabButton.OnClick();
 		});
 		textList.RemoveAt(0);// home ボタンを残す
 		triangleList[0].gameObject.SetActive(path.Length > 0);
@@ -218,7 +218,7 @@ public class TreeNote : Note
 				int length = i + 1;
 				button.onClick.AddListener(() =>
 				{
-					GameContext.Window.AddTab(path.GetPartialPath(length));
+					GameContext.Window.TabGroup.AddTab(this, path.GetPartialPath(length));
 				});
 			}
 		}
@@ -254,19 +254,7 @@ public class TreeNote : Note
 
 	public override void Destroy()
 	{
-		List<TaggedLine> removeList = new List<TaggedLine>();
-		foreach( TaggedLine taggedLine in GameContext.TagList.TaggedLines )
-		{
-			if( taggedLine.BindedLine.Tree == this.Tree )
-			{
-				removeList.Add(taggedLine);
-			}
-		}
-		foreach( TaggedLine taggledLine in removeList )
-		{
-			taggledLine.Remove();
-		}
-		
+		GameContext.Window.TagList.ClearAll();		
 		SaveNote();
 		Destroy(this.gameObject);
 		Destroy(LogNote.gameObject);

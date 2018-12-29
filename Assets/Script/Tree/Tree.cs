@@ -835,7 +835,7 @@ public class Tree : MonoBehaviour
 					// doneされたのでタグを消す、Repeatの場合は反映する
 					foreach( string tag in targetLine.Tags )
 					{
-						TagParent tagParent = GameContext.TagList.GetTagParent(tag);
+						TagParent tagParent = GameContext.Window.TagList.GetTagParent(tag);
 						if( tagParent != null )
 						{
 							TaggedLine taggedLine = tagParent.FindBindedLine(targetLine);
@@ -859,7 +859,7 @@ public class Tree : MonoBehaviour
 					// done解除されたのでRepeatのやつは反映して、消したのは復活させる
 					foreach( string tag in targetLine.Tags )
 					{
-						TagParent tagParent = GameContext.TagList.GetTagParent(tag);
+						TagParent tagParent = GameContext.Window.TagList.GetTagParent(tag);
 						if( tagParent != null )
 						{
 							TaggedLine taggedLine = tagParent.FindBindedLine(targetLine);
@@ -1481,14 +1481,16 @@ public class Tree : MonoBehaviour
 				}));
 		}
 
-		GameContext.Window.AddTab(focusedLine_);
+		GameContext.Window.TabGroup.AddTab(focusedLine_);
 	}
 
 	protected virtual void OnCtrlDInput()
 	{
 		if( focusedLine_ == null ) return;
 
-		string newtag = GameContext.TagList.Count > 0 ? GameContext.TagList[0].Tag : GameContext.Config.DefaultTag;
+		TagList tagList = GameContext.Window.TagList;
+
+		string newtag = tagList.Count > 0 ? tagList[0].Tag : GameContext.Config.DefaultTag;
 
 		// Ctrl+Dを連続で押している時はその次のタグに変更する
 		string existTag = null;
@@ -1496,9 +1498,9 @@ public class Tree : MonoBehaviour
 		{
 			existTag = focusedLine_.Tags[focusedLine_.Tags.Count - 1];
 			int existIndex = -1;
-			for( int i = 0; i < GameContext.TagList.Count; ++i )
+			for( int i = 0; i < tagList.Count; ++i )
 			{
-				if( GameContext.TagList[i].Tag == existTag )
+				if( tagList[i].Tag == existTag )
 				{
 					existIndex = i;
 					break;
@@ -1507,13 +1509,13 @@ public class Tree : MonoBehaviour
 
 			if( existIndex >= 0 )
 			{
-				int sign = (Input.GetKey(KeyCode.LeftShift) ? GameContext.TagList.Count - 1 : 1);
-				int newTagIndex = (existIndex + sign) % GameContext.TagList.Count;
+				int sign = (Input.GetKey(KeyCode.LeftShift) ? tagList.Count - 1 : 1);
+				int newTagIndex = (existIndex + sign) % tagList.Count;
 				bool foundNewTag = false;
 				// 次のタグが万が一既に含まれていた場合はその次のタグ……と探していく。
 				while( newTagIndex != existIndex )
 				{
-					string newtagCandid = GameContext.TagList[newTagIndex].Tag;
+					string newtagCandid = tagList[newTagIndex].Tag;
 					if( focusedLine_.Tags.Contains(newtagCandid) == false )
 					{
 						foundNewTag = true;
@@ -1523,7 +1525,7 @@ public class Tree : MonoBehaviour
 					else
 					{
 						newTagIndex += sign;
-						newTagIndex %= GameContext.TagList.Count;
+						newTagIndex %= tagList.Count;
 					}
 				}
 				// 変更すべきタグが見つからなかったのでナシ

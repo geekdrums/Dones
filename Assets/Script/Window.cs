@@ -24,12 +24,9 @@ public class Window : MonoBehaviour
 
 	public TabGroup TabGroup;
 
-	public TabButton TabButtonPrefab;
+	public TagList TagList;
 
-	public GameObject TabParent;
-	public TabButton HomeTabButton;
 	public ContextMenu ContextMenu;
-	
 	public ModalDialog ModalDialog;
 	public TagIncrementalDialog TagIncrementalDialog;
 	public TagMenu TagMenu;
@@ -92,14 +89,18 @@ public class Window : MonoBehaviour
 		// noteのファイルとフォルダ情報を設定。保存先は設定により異なる。
 		InitializeNoteDirectory();
 		// noteより先にタグの情報を読み込む必要がある
-		GameContext.TagList.LoadTaggedLines(donesDirectory_.FullName + "/taglist.txt");
+		TagList.LoadTagListSettings(donesDirectory_.FullName + "/taglist.xml");
+		TagList.ApplyTagListSetttings();
+		// HomeタブをInitialize
+		TabGroup.Initialize(Note);
 		// noteとlogを読み込み
-		LoadNote();
+		Note.LoadNote(treeFile_.FullName);
+		LogNote.Initialize(Note);
 
 		// 各種UIの状態を復元
 		ApplySettings();
 
-		foreach( TagParent tagParent in GameContext.TagList )
+		foreach( TagParent tagParent in TagList )
 		{
 			tagParent.ApplyLineOrder();
 		}
@@ -123,13 +124,13 @@ public class Window : MonoBehaviour
 		{
 			if( Input.GetKeyDown(KeyCode.T) )
 			{
-				if( GameContext.TagList.IsOpened )
+				if( TagList.IsOpened )
 				{
-					GameContext.TagList.Close();
+					TagList.Close();
 				}
 				else
 				{
-					GameContext.TagList.Open();
+					TagList.Open();
 				}
 			}
 
@@ -160,9 +161,10 @@ public class Window : MonoBehaviour
 		}
 		if( Input.GetKeyDown(KeyCode.F5) && TabGroup.ActiveNote == Note )
 		{
-			GameContext.TagList.ClearAll();
+			TagList.ClearAll();
+			TagList.ApplyTagListSetttings();
 			Note.ReloadNote();
-			GameContext.TagList.OnTreePathChanged(Note.Tree.TitleLine);
+			TagList.OnTreePathChanged(Note.Tree.TitleLine);
 		}
 		if( TabGroup.ActiveNote == Note )
 		{
@@ -187,61 +189,13 @@ public class Window : MonoBehaviour
 	void OnApplicationQuit()
 	{
 		Note.SaveNote();
-		
+		TagList.SaveTagListSettings();
+
 		SaveSettings();
-		GameContext.TagList.SaveTaggedLines();
 
 #if HOOK_WNDPROC
 		TermWndProc();
 #endif
-	}
-
-	#endregion
-	
-	
-	#region load utils
-
-	public void AddTab(TreePath path, bool select = true)
-	{
-		foreach( TabButton existTab in TabGroup )
-		{
-			if( existTab.BindedNote is TreeNote )
-			{
-				if( existTab.ViewParam.Path.Equals(path) )
-				{
-					if( select )
-					{
-						existTab.DoSelect();
-					}
-					else
-					{
-						existTab.Deselect();
-					}
-					return;
-				}
-			}
-		}
-
-		TabButton tab = Instantiate(TabButtonPrefab.gameObject, TabParent.transform).GetComponent<TabButton>();
-		TabGroup.OnTabCreated(tab);
-		tab.Bind(Note, path);
-		if( select )
-		{
-			tab.DoSelect();
-		}
-	}
-
-	public void AddTab(Line line)
-	{
-		AddTab(line.GetTreePath());
-	}
-
-	void LoadNote()
-	{
-		Note.LoadNote(treeFile_.FullName);
-		HomeTabButton.Bind(Note);
-		TabGroup.OnTabCreated(HomeTabButton);
-		LogNote.Initialize(Note);
 	}
 
 	#endregion
@@ -368,8 +322,9 @@ public class Window : MonoBehaviour
 
 		foreach(TabViewParam tabparam in settingXml_.TabParams )
 		{
-			AddTab(new TreePath(tabparam.Path), select: false);
+			TabGroup.AddTab(Note, new TreePath(tabparam.Path), select: false);
 		}
+
 		TabButton tab = TabGroup[Math.Max(0, settingXml_.SelectedTabIndex)];
 		if( tab.CanSelect(showDialog: false) )
 		{
@@ -382,11 +337,11 @@ public class Window : MonoBehaviour
 
 		if( settingXml_.IsTagListOpened )
 		{
-			GameContext.TagList.Open();
+			TagList.Open();
 		}
 		else
 		{
-			GameContext.TagList.Close();
+			TagList.Close();
 		}
 
 		if( settingXml_.LogNoteOpenState == LogNote.OpenState.Minimize )
@@ -405,32 +360,35 @@ public class Window : MonoBehaviour
 			}
 		}
 
-		SettingXML setting = new SettingXML();
+		if( settingXml_ == null )
+		{
+			settingXml_ = new SettingXML();
+		}
 
-		setting.TabParams = new List<TabViewParam>();
+		settingXml_.TabParams = new List<TabViewParam>();
 		foreach( TabButton tabButton in TabGroup )
 		{
 			if( tabButton.BindedNote is TreeNote )
 			{
 				TabViewParam tabparam = new TabViewParam();
 				tabparam.Path = new List<string>(tabButton.ViewParam.Path);
-				setting.TabParams.Add(tabparam);
+				settingXml_.TabParams.Add(tabparam);
 			}
 		}
-		setting.SelectedTabIndex = TabGroup.IndexOf(TabGroup.ActiveTab);
+		settingXml_.SelectedTabIndex = TabGroup.IndexOf(TabGroup.ActiveTab);
 
-		setting.SaveDirectory = Note.Tree.File.Directory.FullName;
-		setting.Screen = new ScreenSetting();
-		setting.Screen.Width = UnityEngine.Screen.width;
-		setting.Screen.Height = UnityEngine.Screen.height;
-		setting.Screen.IsMaximized = (UnityEngine.Screen.fullScreenMode == FullScreenMode.MaximizedWindow);
+		settingXml_.SaveDirectory = Note.Tree.File.Directory.FullName;
+		settingXml_.Screen = new ScreenSetting();
+		settingXml_.Screen.Width = UnityEngine.Screen.width;
+		settingXml_.Screen.Height = UnityEngine.Screen.height;
+		settingXml_.Screen.IsMaximized = (UnityEngine.Screen.fullScreenMode == FullScreenMode.MaximizedWindow);
 
-		setting.IsTagListOpened = GameContext.TagList.IsOpened;
-		setting.LogNoteOpenState = LogNote.State;
+		settingXml_.IsTagListOpened = TagList.IsOpened;
+		settingXml_.LogNoteOpenState = LogNote.State;
 
 		StreamWriter writer = new StreamWriter(settingFile_.FullName);
 		XmlSerializer serializer = new XmlSerializer(typeof(SettingXML));
-		serializer.Serialize(writer, setting);
+		serializer.Serialize(writer, settingXml_);
 		writer.Flush();
 		writer.Close();
 	}
@@ -471,16 +429,11 @@ public class Window : MonoBehaviour
 		StringBuilder builder = new StringBuilder();
 		for( int i = 0; i < paths.Length; ++i )
 		{
-			TabButton tab = Instantiate(TabButtonPrefab.gameObject, TabParent.transform).GetComponent<TabButton>();
 			TreeNote treeNote = Instantiate(Note.gameObject, Note.transform.parent).GetComponent<TreeNote>();
 			LogNote logNote = Instantiate(LogNote.gameObject, LogNote.transform.parent).GetComponent<LogNote>();
 			treeNote.LogNote = logNote;
 			logNote.TreeNote = treeNote;
-
-			tab.Bind(Note);
-			TabGroup.OnTabCreated(tab);
 			treeNote.LoadNote(paths[i]);
-
 			treeNotes.Add(treeNote);
 			treeNote.Tree.SaveAllTreeInOneFile(builder, titles[i]);
 		}

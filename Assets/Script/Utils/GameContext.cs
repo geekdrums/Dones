@@ -10,6 +10,5 @@ public static class GameContext
 	public static ControlManager ControlManager;
 	public static ActionManager CurrentActionManager;
 	public static Window Window;
-	public static TagList TagList;
 	public static TextLengthHelper TextLengthHelper;
 }

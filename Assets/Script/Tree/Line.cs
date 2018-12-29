@@ -311,7 +311,7 @@ public class Line : IEnumerable<Line>
 			foreach( string removeTag in removeTags )
 			{
 				line_.tags_.Remove(removeTag);
-				TagParent tagParent = GameContext.TagList.GetTagParent(removeTag);
+				TagParent tagParent = GameContext.Window.TagList.GetTagParent(removeTag);
 				if( tagParent != null )
 				{
 					tagParent.RemoveLine(line_);
@@ -320,7 +320,7 @@ public class Line : IEnumerable<Line>
 			foreach( string addTag in addTags )
 			{
 				line_.tags_.Add(addTag);
-				TagParent tagParent = GameContext.TagList.GetOrInstantiateTagParent(addTag);
+				TagParent tagParent = GameContext.Window.TagList.GetOrInstantiateTagParent(addTag);
 				if( tagParent != null )
 				{
 					tagParent.InstantiateTaggedLine(line_);
@@ -717,7 +717,7 @@ public class Line : IEnumerable<Line>
 		{
 			foreach( string tag in Tags )
 			{
-				TagParent tagParent = GameContext.TagList.GetTagParent(tag);
+				TagParent tagParent = GameContext.Window.TagList.GetTagParent(tag);
 				if( tagParent != null )
 				{
 					tagParent.RemoveLine(this);
@@ -1329,7 +1329,7 @@ public class Line : IEnumerable<Line>
 			Field.SetTextDirectly(text_);
 			Field.SetHashTags(tags_);
 		}
-		TagParent tagParent = GameContext.TagList.GetOrInstantiateTagParent(tag);
+		TagParent tagParent = GameContext.Window.TagList.GetOrInstantiateTagParent(tag);
 		tagParent.InstantiateTaggedLine(this);
 	}
 
@@ -1348,7 +1348,7 @@ public class Line : IEnumerable<Line>
 				Field.SetTextDirectly(text_);
 				Field.SetHashTags(tags_);
 			}
-			TagParent tagParent = GameContext.TagList.GetTagParent(tag);
+			TagParent tagParent = GameContext.Window.TagList.GetTagParent(tag);
 			if( tagParent != null )
 			{
 				tagParent.RemoveLine(this);
@@ -1397,12 +1397,12 @@ public class Line : IEnumerable<Line>
 		foreach( string tag in Tags )
 		{
 			bool add = (IsDone == false);
-			TagParent tagParent = GameContext.TagList.GetTagParent(tag);
+			TagParent tagParent = GameContext.Window.TagList.GetTagParent(tag);
 			if( tagParent == null )
 			{
 				// Doneしてないタグなら生成する
 				if( add )
-					tagParent = GameContext.TagList.InstantiateTagParent(tag);
+					tagParent = GameContext.Window.TagList.InstantiateTagParent(tag);
 			}
 			else
 			{
@@ -1431,7 +1431,7 @@ public class Line : IEnumerable<Line>
 		{
 			foreach( string tag in Tags )
 			{
-				TagParent tagParent = GameContext.TagList.GetTagParent(tag);
+				TagParent tagParent = GameContext.Window.TagList.GetTagParent(tag);
 				if( tagParent != null )
 				{
 					TaggedLine taggedline = tagParent.FindBindedLine(this);

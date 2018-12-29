@@ -61,7 +61,7 @@ public class TagMenu : MonoBehaviour
 		this.gameObject.SetActive(false);
 		if( tagParent_.IsPinned == false && tagParent_.Count == 0 )
 		{
-			GameContext.TagList.OnTagEmpty(tagParent_);
+			GameContext.Window.TagList.OnTagEmpty(tagParent_);
 		}
 	}
 }

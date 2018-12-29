@@ -9,12 +9,14 @@ using System.Text;
 public class TabGroup : MonoBehaviour, IEnumerable<TabButton>
 {
 	#region editor params
+	
+	public GameObject TabParent;
+	public TabButton HomeTabButton;
+	public TabButton TabButtonPrefab;
 
 	public UIGaugeRenderer SplitBar;
 	public RectTransform NoteAreaTransform;
 	public RectTransform NoteTitleAreaTransform;
-	//public FileMenuButton FileMenu;
-	public GameObject Split;
 
 	public float DesiredTabWidth = 200.0f;
 	public float DesiredTabHeight = 30.0f;
@@ -98,15 +100,58 @@ public class TabGroup : MonoBehaviour, IEnumerable<TabButton>
 
 	#endregion
 
-	
+
 
 	#region events
 
-	public void OnTabCreated(TabButton newTab)
+	public void Initialize(TreeNote note)
 	{
-		newTab.OwnerTabGroup = this;
-		tabButtons_.Add(newTab);
+		HomeTabButton.Bind(note);
+		HomeTabButton.OwnerTabGroup = this;
+		tabButtons_.Add(HomeTabButton);
+	}
+
+	public void AddTab(TreeNote note, TreePath path, bool select = true)
+	{
+		foreach( TabButton existTab in tabButtons_ )
+		{
+			if( existTab.BindedNote is TreeNote )
+			{
+				if( existTab.ViewParam.Path.Equals(path) )
+				{
+					if( select )
+					{
+						existTab.DoSelect();
+					}
+					else
+					{
+						existTab.Deselect();
+					}
+					return;
+				}
+			}
+		}
+
+		TabButton tab = Instantiate(TabButtonPrefab.gameObject, TabParent.transform).GetComponent<TabButton>();
+
+		tab.OwnerTabGroup = this;
+		tab.Bind(note, path);
+		tabButtons_.Add(tab);
+
 		UpdateTabLayout();
+		
+		if( select )
+		{
+			tab.DoSelect();
+		}
+	}
+	
+	public void AddTab(Line line)
+	{
+		if( line.Tree.OwnerNote is TreeNote )
+		{
+			AddTab(line.Tree.OwnerNote as TreeNote, line.GetTreePath());
+		}
 	}
 
 	public void OnTabSelected(TabButton tab)
@@ -178,8 +223,8 @@ public class TabGroup : MonoBehaviour, IEnumerable<TabButton>
 	public void UpdateTabLayout()
 	{
 		//desiredTabGroupWidth_ = UnityEngine.Screen.width - GameContext.Window.TagListWidth;
-		NoteAreaTransform.offsetMax = new Vector3(-GameContext.TagList.Width - 10, NoteAreaTransform.offsetMax.y);
-		NoteTitleAreaTransform.offsetMax = new Vector3(-GameContext.TagList.Width - 10, NoteTitleAreaTransform.offsetMax.y);
+		NoteAreaTransform.offsetMax = new Vector3(-GameContext.Window.TagList.Width - 10, NoteAreaTransform.offsetMax.y);
+		NoteTitleAreaTransform.offsetMax = new Vector3(-GameContext.Window.TagList.Width - 10, NoteTitleAreaTransform.offsetMax.y);
 
 		//currentTabWidth_ = DesiredTabWidth;
 		//if( DesiredTabWidth * tabButtons_.Count > desiredTabGroupWidth_ )
@@ -191,8 +236,7 @@ public class TabGroup : MonoBehaviour, IEnumerable<TabButton>
 			tab.Width = DesiredTabWidth;
 			tab.TargetPosition = GetTabPosition(tab);
 		}
-		//FileMenu.TargetPosition = Vector3.down * DesiredTabHeight * tabButtons_.Count;
-		Split.transform.SetAsLastSibling();
+		SplitBar.transform.SetAsLastSibling();
 	}
 
 	Vector3 GetTabPosition(TabButton tab)
@@ -244,7 +288,7 @@ public class TabGroup : MonoBehaviour, IEnumerable<TabButton>
 	public void OnEndTabDrag(TabButton tab)
 	{
 		AnimManager.AddAnim(tab, GetTabPosition(tab), ParamType.Position, AnimType.Time, GameContext.Config.AnimTime);
-		Split.transform.SetAsLastSibling();
+		SplitBar.transform.SetAsLastSibling();
 	}
 
 	#endregion
