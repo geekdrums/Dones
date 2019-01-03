@@ -66,24 +66,16 @@ public class DateUI : MonoBehaviour {
 	{
 		date_ = date;
 		isToday_ = (date == today);
-		/*if( (today - date).Days < (int)today.DayOfWeek )
-		{
-			MonthText.text = date.ToString("M/d");
-			DateText.text = date.ToString("ddd");
-		}
-		else */
 		if( date.Year == today.Year )
 		{
 			MonthText.text = date.ToString("M/");
-			DayText.text = date.ToString("dd").TrimStart('0');//なぜか"d"だと6/26/2017みたいにフルで出力されるので。。
-			DateText.text = date.ToString("M/d");
 		}
 		else
 		{
 			MonthText.text = date.ToString("yyyy/M/");
-			DayText.text = date.ToString("dd").TrimStart('0');
-			DateText.text = date.ToString("M/d");
 		}
+		DayText.text = date.ToString("dd").TrimStart('0');//なぜか"d"だと6/26/2017みたいにフルで出力されるので。。
+		DateText.text = date.ToString("d ddd");
 		WeekDayText.text = date.ToString("ddd");
 	}
 

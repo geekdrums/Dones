@@ -28,13 +28,13 @@ public class UIMidairPrimitive : MaskableGraphic, IColoredObject
 	/*
 	 * 3----------------------------1	growOutVertices_[2*n+1]
 	 * 
-	 * 3------------------------1		growOutVertices_[2*n]
+	 * 2------------------------0		growOutVertices_[2*n]
 	 * 3------------------------1		uiVertices_[2*n+1]
 	 * 
 	 * 
 	 * 
 	 * 2------------------0				uiVertices_[2*n]
-	 * 2------------------0				growInVertices_[2*n + 1]
+	 * 3------------------1				growInVertices_[2*n + 1]
 	 * 
 	 * 2--------------0					growInVertices_[2*n]
 	 */
@@ -402,7 +402,7 @@ public class UIMidairPrimitive : MaskableGraphic, IColoredObject
 		vertexIndices_ = new List<int>();
 		for( int i = 0; i < ArcN; ++i )
 		{
-			for( int j = 0; j < 6; ++j )
+			for( int j = 0; j < QuadIndices.Length; ++j )
 			{
 				vertexIndices_.Add(2 * i + QuadIndices[j]);
 			}

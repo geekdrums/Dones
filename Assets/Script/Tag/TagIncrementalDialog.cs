@@ -11,6 +11,7 @@ public class TagIncrementalDialog : MonoBehaviour {
 	public float TagTextHeight = 27;
 	public float BaseXOffset;
 	public Image SelectionImage;
+	public RectTransform BaseRect;
 
 	public List<string> ReservedTags;
 
@@ -134,12 +135,7 @@ public class TagIncrementalDialog : MonoBehaviour {
 			}
 		}
 
-		foreach( UIMidairRect rect in GetComponentsInChildren<UIMidairRect>() )
-		{
-			rect.Width = maxWidth + 20;
-			rect.Height = height + 2;
-			rect.RecalculatePolygon();
-		}
+		BaseRect.sizeDelta = new Vector2(maxWidth + 20, height + 2);
 
 		SelectionImage.rectTransform.sizeDelta = new Vector2(maxWidth + 20, TagTextHeight);
 

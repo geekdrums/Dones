@@ -37,8 +37,6 @@ public class LineField : CustomInputField
 	protected UIGaugeRenderer strikeLine_;
 	protected CheckMark checkMark_;
 
-	protected bool isPointerEntered_ = false;
-
 	protected List<TagText> tagTexts_ = new List<TagText>();
 
 	#endregion
@@ -400,26 +398,11 @@ public class LineField : CustomInputField
 		BindedLine.FixTextInputAction();
 	}
 
-	public override void OnPointerEnter(PointerEventData eventData)
-	{
-		base.OnPointerEnter(eventData);
-		if( Input.GetMouseButton(0) == false )
-		{
-			isPointerEntered_ = true;
-		}
-	}
-
-	public override void OnPointerExit(PointerEventData eventData)
-	{
-		base.OnPointerExit(eventData);
-		isPointerEntered_ = false;
-	}
-
 	public override void OnPointerUp(PointerEventData eventData)
 	{
 		base.OnPointerUp(eventData);
 
-		if( BindedLine.IsLinkText && isPointerEntered_ )
+		if( BindedLine.IsLinkText && isFocused )
 		{
 			Vector2 localMousePos;
 			RectTransformUtility.ScreenPointToLocalPointInRectangle(textComponent.rectTransform, eventData.position, eventData.pressEventCamera, out localMousePos);

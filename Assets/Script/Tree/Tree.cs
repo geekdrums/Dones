@@ -77,33 +77,6 @@ public class Tree : MonoBehaviour
 	public override string ToString() { return TitleText; }
 
 
-	// utils
-	protected IEnumerable<Line> GetSelectedOrFocusedLines(bool ascending = true)
-	{
-		if( HasSelection )
-		{
-			if( ascending )
-			{
-				foreach( Line line in selectedLines_.Values )
-				{
-					yield return line;
-				}
-			}
-			else
-			{
-				for( int i = selectedLines_.Count - 1; i >= 0; --i )
-				{
-					yield return selectedLines_.Values[i];
-				}
-			}
-		}
-		else if( focusedLine_ != null )
-		{
-			yield return focusedLine_;
-		}
-	}
-
-
 	#endregion
 
 
@@ -129,19 +102,6 @@ public class Tree : MonoBehaviour
 
 
 	#region unity events
-	
-	public virtual void OnTreeFocused(Vector2 mousePosition)
-	{
-		if( titleLine_ != null )
-		{
-			Line line = titleLine_.LastVisibleLine;
-			if( line != null && line.Field != null && mousePosition.y < line.Field.RectY )
-			{
-				line.Field.Select();
-			}
-		}
-		GameContext.CurrentActionManager = (ActionManager)actionManager_;
-	}
 
 	public void UpdateKeyboardInput(bool ctrl, bool shift, bool alt)
 	{
@@ -621,7 +581,7 @@ public class Tree : MonoBehaviour
 	#endregion
 
 
-	#region Input
+	#region input
 
 	public void SubscribeKeyInput()
 	{
@@ -1837,6 +1797,19 @@ public class Tree : MonoBehaviour
 
 
 	#region events
+	
+	public virtual void OnTreeFocused(Vector2 mousePosition)
+	{
+		if( titleLine_ != null )
+		{
+			Line line = titleLine_.LastVisibleLine;
+			if( line != null && line.Field != null && mousePosition.y < line.Field.RectY )
+			{
+				line.Field.Select();
+			}
+		}
+		GameContext.CurrentActionManager = (ActionManager)actionManager_;
+	}
 
 	public GameObject FindBindingField()
 	{
@@ -1934,6 +1907,50 @@ public class Tree : MonoBehaviour
 
 	public void OnTextFieldDestroy(LineField field)
 	{
+	}
+
+	#endregion
+
+
+	#region utils
+	
+	protected IEnumerable<Line> GetSelectedOrFocusedLines(bool ascending = true)
+	{
+		if( HasSelection )
+		{
+			if( ascending )
+			{
+				foreach( Line line in selectedLines_.Values )
+				{
+					yield return line;
+				}
+			}
+			else
+			{
+				for( int i = selectedLines_.Count - 1; i >= 0; --i )
+				{
+					yield return selectedLines_.Values[i];
+				}
+			}
+		}
+		else if( focusedLine_ != null )
+		{
+			yield return focusedLine_;
+		}
+	}
+
+	public IEnumerable<Line> Search(string text, bool containFolded = true)
+	{
+		if( text != null && text != "" && titleLine_ != null )
+		{
+			foreach( Line line in (containFolded ? titleLine_.GetAllChildren() : titleLine_.GetVisibleChildren()) )
+			{
+				if( line.Text.Contains(text) )
+				{
+					yield return line;
+				}
+			}
+		}
 	}
 
 	#endregion

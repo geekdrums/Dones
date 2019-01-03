@@ -246,7 +246,7 @@ public class TagList : MonoBehaviour, IEnumerable<TagParent>
 	public void Open()
 	{
 		isOpened_ = true;
-		OpenButton.transform.parent.gameObject.SetActive(false);
+		OpenButton.transform.gameObject.SetActive(false);
 		CloseButton.transform.parent.gameObject.SetActive(true);
 		AnimManager.RemoveOtherAnim(scrollRect_);
 		AnimManager.AddAnim(scrollRect_, GameContext.Config.TagListWidth, ParamType.SizeDeltaX, AnimType.Time, 0.1f);
@@ -256,7 +256,7 @@ public class TagList : MonoBehaviour, IEnumerable<TagParent>
 	public void Close()
 	{
 		isOpened_ = false;
-		OpenButton.transform.parent.gameObject.SetActive(true);
+		OpenButton.transform.gameObject.SetActive(true);
 		CloseButton.transform.parent.gameObject.SetActive(false);
 		AnimManager.RemoveOtherAnim(scrollRect_);
 		AnimManager.AddAnim(scrollRect_, -1, ParamType.SizeDeltaX, AnimType.BounceOut, 0.2f);

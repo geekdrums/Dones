@@ -202,6 +202,7 @@ public class TreeNote : Note
 			GameContext.Window.TabGroup.HomeTabButton.OnClick();
 		});
 		textList.RemoveAt(0);// home ボタンを残す
+		//triangleList[0].gameObject.SetActive(path.Length > 0);
 		triangleList.RemoveAt(0);
 
 		for( int i = 0; i < textList.Count; ++i )
