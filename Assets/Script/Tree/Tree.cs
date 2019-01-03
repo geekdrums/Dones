@@ -22,7 +22,6 @@ public class Tree : MonoBehaviour
 	protected Line rootLine_;
 	protected GameObject rootLineObject_;
 	protected GameObject titleLineObject_;
-	protected GameObject heapParentObject_;
 	protected Line titleLine_;
 	protected Line focusedLine_;
 	protected Line selectionStartLine_, selectionEndLine_;
@@ -94,10 +93,6 @@ public class Tree : MonoBehaviour
 		rootLineObject_ = new GameObject("RootLine");
 		rootLineObject_.transform.SetParent(this.transform, worldPositionStays: false);
 		rootLineObject_.SetActive(false);
-
-		heapParentObject_ = new GameObject("LineHeap");
-		heapParentObject_.transform.SetParent(this.transform);
-		heapParentObject_.SetActive(false);
 	}
 
 
@@ -1813,13 +1808,14 @@ public class Tree : MonoBehaviour
 
 	public GameObject FindBindingField()
 	{
-		LineField field = heapManager_.Instantiate(heapParentObject_.transform);
+		LineField field = heapManager_.Instantiate();
 		field.Initialize();
 		if( field.BindedLine != null )
 		{
+			Transform heapParent = transform.Find("LineHeap");
 			foreach( LineField childField in field.GetComponentsInChildren<LineField>() )
 			{
-				childField.transform.SetParent(heapParentObject_.transform);
+				childField.transform.SetParent(heapParent);
 			}
 			field.BindedLine.UnBind();
 		}
@@ -1939,15 +1935,19 @@ public class Tree : MonoBehaviour
 		}
 	}
 
-	public IEnumerable<Line> Search(string text, bool containFolded = true)
+	public IEnumerable<SearchField.SearchResult> Search(string text, bool containFolded = true)
 	{
-		if( text != null && text != "" && titleLine_ != null )
+		if( titleLine_ != null && text != null && text != "" && text != " "/*space*/ && text != "	"/*tab*/ )
 		{
 			foreach( Line line in (containFolded ? titleLine_.GetAllChildren() : titleLine_.GetVisibleChildren()) )
 			{
-				if( line.Text.Contains(text) )
+				int index = line.Text.IndexOf(text);
+				if( index >= 0 )
 				{
-					yield return line;
+					SearchField.SearchResult res = new SearchField.SearchResult();
+					res.Line = line;
+					res.Index = index;
+					yield return res;
 				}
 			}
 		}

@@ -56,6 +56,9 @@ public class Config : MonoBehaviour
 	public Color ToggleColor;
 	public Color ToggleOpenedColor;
 
+	public Color SearchFocusColor;
+	public Color SearchUnfocusColor;
+
 	public string TimeFormat = "HH:mm";
 	public string DateFormat = "yyyy/M/d (ddd)";
 	public string DefaultTag = "todo";

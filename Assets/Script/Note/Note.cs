@@ -15,14 +15,7 @@ using System.Windows.Forms;
 // Window > [ Note ] > Tree > Line
 public class Note : MonoBehaviour
 {
-	#region editor params
-
-	public LineField LinePrefab;
-
-	#endregion
-
 	protected ActionManager actionManager_ = new ActionManager();
-	protected HeapManager<LineField> heapManager_ = new HeapManager<LineField>();
 	protected List<Tree> saveRequestedTrees_ = new List<Tree>();
 	
 	protected LayoutElement layout_;
@@ -45,7 +38,6 @@ public class Note : MonoBehaviour
 		contentSizeFitter_ = GetComponentInParent<ContentSizeFitter>();
 		scrollRect_ = GetComponentInParent<ScrollRect>();
 		scrollRectTransform_ = scrollRect_.GetComponent<RectTransform>();
-		heapManager_.Initialize(GameContext.Config.LineHeapCount, LinePrefab, useFromFirst: true); // lastのほうにFoldされたLineとかが溜まっていくので、Reviveする可能性が高いため0番目のフリーな要素から使っていく
 	}
 
 

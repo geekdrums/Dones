@@ -58,7 +58,7 @@ public class TextLengthHelper : MonoBehaviour {
 		}
 		else
 		{
-			// 別のonTextLengthCalculatedがなければ登録する必要はない？
+			request.OnTextLengthCalculated += onTextLengthCalculated;
 		}
 	}
 

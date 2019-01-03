@@ -123,7 +123,7 @@ public class TagParent : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDra
 
 	void Awake ()
 	{
-		heapManager_.Initialize(10, TaggedLinePrefab);
+		heapManager_.Initialize(10, TaggedLinePrefab, LineParent.transform);
 		tagToggle_ = GetComponentInChildren<TagToggle>();
 	}
 	

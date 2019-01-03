@@ -412,7 +412,8 @@ public class LineField : CustomInputField
 			}
 		}
 	}
-	
+
+	Event processingEvent_ = new Event();
 	public override void OnUpdateSelected(BaseEventData eventData)
 	{
 		if( !isFocused || BindedLine == null || BindedLine.Tree == null )
@@ -421,11 +422,10 @@ public class LineField : CustomInputField
 		bool consumedEvent = false;
 
 		int compositionBugCount = -1;
-		Event popEvent = new Event();
 		List<Event> currentEvents = new List<Event>();
-		while( Event.PopEvent(popEvent) )
+		while( Event.PopEvent(processingEvent_) )
 		{
-			currentEvents.Add(new Event(popEvent));
+			currentEvents.Add(processingEvent_);
 		}
 		if( currentEvents.Find((Event e) => e.rawType == EventType.MouseDown) != null )
 		{

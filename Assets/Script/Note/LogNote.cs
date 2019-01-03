@@ -79,6 +79,9 @@ public class LogNote : Note
 	int suspendLayoutCount_;
 	bool isDateUIlistLoading_ = false;
 
+	GameObject heapParentObject_;
+	HeapManager<LineField> heapManager_ = new HeapManager<LineField>();
+
 	#endregion
 
 
@@ -88,6 +91,12 @@ public class LogNote : Note
 	protected override void Awake()
 	{
 		base.Awake();
+
+		heapParentObject_ = new GameObject("LineHeap");
+		heapParentObject_.transform.SetParent(this.transform);
+		heapParentObject_.SetActive(false);
+		heapManager_.Initialize(GameContext.Config.LineHeapCount, GameContext.Window.Note.LinePrefab, heapParentObject_.transform, useFromFirst: true); // lastのほうにFoldされたLineとかが溜まっていくので、Reviveする可能性が高いため0番目のフリーな要素から使っていく
+
 		today_ = DateTime.Now.Date;
 		endDate_ = today_;
 		doneMarks_.Add(DoneMark.GetComponent<UIMidairPrimitive>());

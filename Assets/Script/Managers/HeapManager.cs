@@ -11,19 +11,26 @@ public class HeapManager<C> : IEnumerable<C> where C : MonoBehaviour
 {
 	int heapUnitCount_;
 	C prefab_;
+	Transform parent_;
 	List<C> heap_ = new List<C>();
 	bool useFromFirst_;
 
-	public void Initialize(int unitCount, C prefab, bool useFromFirst = false)
+	public void Initialize(int unitCount, C prefab, Transform parent, bool useFromFirst = false)
 	{
 		heapUnitCount_ = unitCount;
 		prefab_ = prefab;
+		parent_ = parent;
 		useFromFirst_ = useFromFirst;
 	}
 
 	// 新しいCを要求
-	public C Instantiate(Transform parent)
+	public C Instantiate(Transform parent = null)
 	{
+		if( parent == null )
+		{
+			parent = parent_;
+		}
+
 		C heapObj = null;
 		if( heap_.Count > 0 )
 		{
@@ -37,13 +44,16 @@ public class HeapManager<C> : IEnumerable<C> where C : MonoBehaviour
 
 		if( heapObj == null )
 		{
-			for( int i = 0; i < heapUnitCount_; ++i )
+			for( int i = 0; i < heapUnitCount_ - 1; ++i )
 			{
-				heapObj = GameObject.Instantiate(prefab_.gameObject, parent).GetComponent<C>();
-				heapObj.gameObject.SetActive(false);
-				heap_.Add(heapObj);
+				C newObj = GameObject.Instantiate(prefab_.gameObject, parent_).GetComponent<C>();
+				newObj.gameObject.SetActive(false);
+				heap_.Add(newObj);
 			}
+			heapObj = GameObject.Instantiate(prefab_.gameObject, parent).GetComponent<C>();
+			heap_.Add(heapObj);
 		}
+
 		heap_.Remove(heapObj);
 		if( heapObj.transform.parent != parent )
 		{
@@ -52,6 +62,21 @@ public class HeapManager<C> : IEnumerable<C> where C : MonoBehaviour
 		heapObj.gameObject.SetActive(true);
 		return heapObj;
 	}
+
+	public C ReviveOrInstantiate(Transform parent)
+	{
+		C unbindedInstance = heap_.Find((C c) => c.transform.parent == parent);
+		if( unbindedInstance != null )
+		{
+			Revive(unbindedInstance);
+			return unbindedInstance;
+		}
+		else
+		{
+			return Instantiate(parent);
+		}
+	}
+
 
 	// ヒープに戻していたCを同じ設定でそのまま再利用
 	public void Revive(C heapObj)

@@ -28,7 +28,7 @@ public class TagIncrementalDialog : MonoBehaviour {
 	
 	void Initialize () {
 		tagTextHeapManager_ = new HeapManager<TagText>();
-		tagTextHeapManager_.Initialize(3, TagTextPrefab);
+		tagTextHeapManager_.Initialize(3, TagTextPrefab, LayoutParent.transform);
 		rect_ = GetComponent<RectTransform>();
 	}
 	
@@ -58,7 +58,7 @@ public class TagIncrementalDialog : MonoBehaviour {
 			{
 				if( searchResults_.Find((t) => t.Text == "#" + tagParent.Tag) == null )
 				{
-					TagText tagText = tagTextHeapManager_.Instantiate(LayoutParent.transform);
+					TagText tagText = tagTextHeapManager_.Instantiate();
 					tagText.Text = "#" + tagParent.Tag;
 					searchResults_.Add(tagText);
 				}
@@ -70,7 +70,7 @@ public class TagIncrementalDialog : MonoBehaviour {
 			{
 				if( searchResults_.Find((t) => t.Text == "#" + reservedTag) == null )
 				{
-					TagText tagText = tagTextHeapManager_.Instantiate(LayoutParent.transform);
+					TagText tagText = tagTextHeapManager_.Instantiate();
 					tagText.Text = "#" + reservedTag;
 					searchResults_.Add(tagText);
 				}
@@ -161,7 +161,7 @@ public class TagIncrementalDialog : MonoBehaviour {
 			{
 				if( searchResults_.Find((t) => t.Text == "#" + tagParent.Tag) == null )
 				{
-					TagText tagText = tagTextHeapManager_.Instantiate(LayoutParent.transform);
+					TagText tagText = tagTextHeapManager_.Instantiate();
 					tagText.Text = "#" + tagParent.Tag;
 					searchResults_.Add(tagText);
 				}
@@ -173,7 +173,7 @@ public class TagIncrementalDialog : MonoBehaviour {
 			{
 				if( searchResults_.Find((t) => t.Text == "#" + reservedTag) == null )
 				{
-					TagText tagText = tagTextHeapManager_.Instantiate(LayoutParent.transform);
+					TagText tagText = tagTextHeapManager_.Instantiate();
 					tagText.Text = "#" + reservedTag;
 					searchResults_.Add(tagText);
 				}

@@ -59,7 +59,7 @@ public class TagList : MonoBehaviour, IEnumerable<TagParent>
 		layout_ = GetComponentInParent<LayoutElement>();
 		contentSizeFitter_ = GetComponentInParent<ContentSizeFitter>();
 		scrollRect_ = GetComponentInParent<ScrollRect>().GetComponent<RectTransform>();
-		heapManager_.Initialize(3, TagParentPrefab);
+		heapManager_.Initialize(3, TagParentPrefab, this.transform);
 	}
 
 	void Start()

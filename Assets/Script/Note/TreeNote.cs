@@ -26,18 +26,31 @@ public class TreeNote : Note
 	public FileInfo File { get { return tree_ != null ? tree_.File : null; } }
 
 	public LogNote LogNote;
-
+	
+	public LineField LinePrefab;
 	public TagText TagTextPrefab;
 
-	protected HeapManager<TagText> tagHeapManager_;
+	protected HeapManager<LineField> heapManager_ = new HeapManager<LineField>();
+	protected HeapManager<TagText> tagHeapManager_ = new HeapManager<TagText>();
+	protected GameObject heapParentObject_;
+	protected GameObject tagHeapParentObject_;
 
 	#endregion
 
 	protected override void Awake()
 	{
 		base.Awake();
-		tagHeapManager_ = new HeapManager<TagText>();
-		tagHeapManager_.Initialize(1, TagTextPrefab);
+		
+		heapParentObject_ = new GameObject("LineHeap");
+		heapParentObject_.transform.SetParent(this.transform);
+		heapParentObject_.SetActive(false);
+		heapManager_.Initialize(GameContext.Config.LineHeapCount, LinePrefab, heapParentObject_.transform, useFromFirst: true); // lastのほうにFoldされたLineとかが溜まっていくので、Reviveする可能性が高いため0番目のフリーな要素から使っていく
+
+		tagHeapParentObject_ = new GameObject("TagHeap");
+		tagHeapParentObject_.transform.SetParent(this.transform);
+		tagHeapParentObject_.SetActive(false);
+		tagHeapManager_.Initialize(1, TagTextPrefab, tagHeapParentObject_.transform);
+
 		tree_ = GetComponent<Tree>();
 		tree_.Initialize(this, new ActionManagerProxy(actionManager_), heapManager_, tagHeapManager_);
 		tree_.OnEdited += this.OnEdited;
