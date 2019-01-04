@@ -198,60 +198,22 @@ public class SearchField : CustomInputField
 
 	#region overrides
 
-	Event processingEvent_ = new Event();
-	public override void OnUpdateSelected(BaseEventData eventData)
+	protected override bool OnProcessKeyEvent(Event processingEvent, bool ctrl, bool shift, bool alt)
 	{
-		if( !isFocused )
-			return;
-
 		bool consumedEvent = false;
-		while( Event.PopEvent(processingEvent_) )
+		switch( processingEvent.keyCode )
 		{
-			if( processingEvent_.rawType == EventType.KeyDown )
+			case KeyCode.F3:
+			case KeyCode.Return:
+			case KeyCode.KeypadEnter:
 			{
+				FocusNext();
 				consumedEvent = true;
-				switch( processingEvent_.keyCode )
-				{
-					case KeyCode.F3:
-					case KeyCode.Return:
-					case KeyCode.KeypadEnter:
-					{
-						FocusNext();
-						break;
-					}
-					default:
-					{
-						KeyPressed(processingEvent_);
-						break;
-					}
-				}
 			}
-
-			switch( processingEvent_.type )
-			{
-				case EventType.ValidateCommand:
-				case EventType.ExecuteCommand:
-				switch( processingEvent_.commandName )
-				{
-					case "SelectAll":
-					SelectAll();
-					consumedEvent = true;
-					break;
-				}
-				break;
-			}
+			break;
 		}
 
-		if( consumedEvent )
-			UpdateLabel();
-
-		eventData.Use();
-
-
-		// ひらがな入力で、変換の最後の1文字だけ、BackspaceのKeyDownが来ない問題
-		bool compositionStringDeleted = (compositionString.Length > 0 && Input.compositionString.Length == 0);
-		if( compositionStringDeleted )
-			UpdateLabel();
+		return consumedEvent;
 	}
 
 	#endregion

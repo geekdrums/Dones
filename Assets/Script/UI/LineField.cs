@@ -413,224 +413,169 @@ public class LineField : CustomInputField
 		}
 	}
 
-	Event processingEvent_ = new Event();
-	public override void OnUpdateSelected(BaseEventData eventData)
+	protected override bool OnProcessKeyEvent(Event processingEvent, bool ctrl, bool shift, bool alt)
 	{
-		if( !isFocused || BindedLine == null || BindedLine.Tree == null )
-			return;
-
 		bool consumedEvent = false;
 
-		int compositionBugCount = -1;
-		List<Event> currentEvents = new List<Event>();
-		while( Event.PopEvent(processingEvent_) )
+		if( BindedLine == null || BindedLine.Tree == null )
+			return consumedEvent;
+
+
+		bool ctrlOnly = ctrl && !alt && !shift;
+		bool ctrlOrCtrlShift = ctrlOnly || (ctrl && shift);
+		switch( processingEvent.keyCode )
 		{
-			currentEvents.Add(processingEvent_);
-		}
-		if( currentEvents.Find((Event e) => e.rawType == EventType.MouseDown) != null )
-		{
-			compositionBugCount = 0;
-			foreach( Event maybeDuplicatedEvent in currentEvents )
+			case KeyCode.V:
+			if( ctrlOnly )
 			{
-				if( maybeDuplicatedEvent.rawType == EventType.KeyDown )
-				{
-					++compositionBugCount;
-				}
-			}
-		}
-		foreach( Event processingEvent in currentEvents )
-		{
-			if( processingEvent.rawType == EventType.KeyDown )
-			{
+				// process in ownerTree
 				consumedEvent = true;
+			}
+			break;
+			case KeyCode.C:
+			case KeyCode.X:
+			if( ctrlOrCtrlShift && (isSelected_ || selectionAnchorPosition == selectionFocusPosition) )
+			{
+				// process in ownerTree
+				consumedEvent = true;
+			}
+			break;
+			case KeyCode.Semicolon:
+			if( ctrlOnly && BindedLine.Tree.HasSelection == false )
+			{
+				DateTime now = DateTime.Now;
+				string oldText = text;
+				BindedLine.Tree.ActionManager.Execute(new LineAction(
+					targetLines: BindedLine,
+					execute: () =>
+					{
+						Paste(now.ToString(GameContext.Config.TimeFormat));
+					},
+					undo: () =>
+					{
+						text = oldText;
+					}
+					));
 
-				var currentEventModifiers = processingEvent.modifiers;
-				bool ctrl = SystemInfo.operatingSystemFamily == OperatingSystemFamily.MacOSX ? (currentEventModifiers & EventModifiers.Command) != 0 : (currentEventModifiers & EventModifiers.Control) != 0;
-				bool shift = (currentEventModifiers & EventModifiers.Shift) != 0;
-				bool alt = (currentEventModifiers & EventModifiers.Alt) != 0;
-				bool ctrlOnly = ctrl && !alt && !shift;
-				bool ctrlOrCtrlShift = ctrlOnly || (ctrl && shift);
+				consumedEvent = true;
+			}
+			break;
+			case KeyCode.Colon:
+			case KeyCode.Equals://日本語キーボードだとこっちになってるらしい。どうしたものか。Configにするか。
+			if( ctrlOnly && BindedLine.Tree.HasSelection == false )
+			{
+				DateTime date = DateTime.Now;
+				string oldText = text;
+				BindedLine.Tree.ActionManager.Execute(new LineAction(
+					targetLines: BindedLine,
+					execute: () =>
+					{
+						Paste(date.ToString(GameContext.Config.DateFormat));
+					},
+					undo: () =>
+					{
+						text = oldText;
+					}
+					));
 
-				//print(string.Format("isKey:{0}, keyCode:{1}, character:{2}", processingEvent.isKey, processingEvent.keyCode, processingEvent.character));
-				
-				cachedCaretPos_ = m_CaretSelectPosition;
-				switch( processingEvent.keyCode )
+				consumedEvent = true;
+			}
+			break;
+			case KeyCode.Delete:
+			{
+				if( BindedLine.Tree.HasSelection )
 				{
-				case KeyCode.V:
-					if( ctrlOnly )
-					{
-						// process in ownerTree
-					}
-					else
-					{
-						KeyPressed(processingEvent);
-					}
-					break;
-				case KeyCode.C:
-				case KeyCode.X:
-					if( ctrlOrCtrlShift && ( isSelected_ || selectionAnchorPosition == selectionFocusPosition ) )
-					{
-						// process in ownerTree
-					}
-					else
-					{
-						KeyPressed(processingEvent);
-					}
-					break;
-				case KeyCode.Semicolon:
-					if( ctrlOnly && BindedLine.Tree.HasSelection == false )
-					{
-						DateTime now = DateTime.Now;
-						string oldText = text;
-						BindedLine.Tree.ActionManager.Execute(new LineAction(
-							targetLines: BindedLine,
-							execute: () =>
-							{
-								Paste(now.ToString(GameContext.Config.TimeFormat));
-							},
-							undo: () =>
-							{
-								text = oldText;
-							}
-							));
-					}
-					break;
-				case KeyCode.Colon:
-				case KeyCode.Equals://日本語キーボードだとこっちになってるらしい。どうしたものか。Configにするか。
-					if( ctrlOnly && BindedLine.Tree.HasSelection == false )
-					{
-						DateTime date = DateTime.Now;
-						string oldText = text;
-						BindedLine.Tree.ActionManager.Execute(new LineAction(
-							targetLines: BindedLine,
-							execute: () =>
-							{
-								Paste(date.ToString(GameContext.Config.DateFormat));
-							},
-							undo: () =>
-							{
-								text = oldText;
-							}
-							));
-					}
-					break;
-				case KeyCode.Delete:
-					{
-						if( BindedLine.Tree.HasSelection )
-						{
-							// process in ownerTree
-						}
-						else
-						{
-							bool use = cachedCaretPos_ < text.Length;
-							KeyPressed(processingEvent);
-							if( use ) BindedLine.Tree.OnDeleteKeyConsumed();
-						}
-					}
-					break;
-				case KeyCode.Backspace:
-					{
-						if( BindedLine.Tree.HasSelection )
-						{
-							// process in ownerTree
-						}
-						else
-						{
-							KeyPressed(processingEvent);
-						}
-					}
-					break;
-				case KeyCode.DownArrow:
-					{
-						if( BindedLine.NextVisibleLine != null )
-						{
-							// process in ownerTree
-						}
-						else
-						{
-							KeyPressed(processingEvent);
-							BindedLine.FixTextInputAction();
-						}
-					}
-					break;
-				case KeyCode.UpArrow:
-					{
-						if( BindedLine.PrevVisibleLine != null )
-						{
-							// process in ownerTree
-						}
-						else
-						{
-							KeyPressed(processingEvent);
-							BindedLine.FixTextInputAction();
-						}
-					}
-					break;
-				case KeyCode.RightArrow:
-				case KeyCode.LeftArrow:
-					{
-						KeyPressed(processingEvent);
-						desiredCaretPos_ = m_CaretSelectPosition;
-						BindedLine.FixTextInputAction();
-						if( GameContext.Window.TagIncrementalDialog.IsActive )
-						{
-							if( Line.GetTagInCaretPosition(BindedLine.Text, desiredCaretPos_) == null )
-							{
-								GameContext.Window.TagIncrementalDialog.Close();
-							}
-						}
-					}
-					break;
-				case KeyCode.Home:
-				case KeyCode.End:
-					{
-						KeyPressed(processingEvent);
-						desiredCaretPos_ = m_CaretSelectPosition;
-						BindedLine.FixTextInputAction();
-					}
-					break;
-				case KeyCode.None:
-					if( ctrlOrCtrlShift && (processingEvent.character == ' ' || processingEvent.character == '　') )
-					{
-						// process in ownerTree
-						if( ctrl && shift && processingEvent.character == '　' )
-						{
-							// shift かつ 全角でSpace入力した時はKeyCodeのSpaceがイベントとして来ないのでこっちで対応
-							BindedLine.Tree.OnCtrlShiftSpaceInput();
-						}
-					}
-					else if( (ctrl || alt == false) && BindedLine.Tree.HasSelection && processingEvent.character.ToString() != Line.TabString )
-					{
-						// 複数Line選択してキー入力したら、Line内部の文字列削除じゃなくてTreeからLine削除を呼ぶ
-						LineField newField = BindedLine.Tree.DeleteSelection().Field;
-						newField.KeyPressed(processingEvent);
-						newField.CaretPosision = newField.text.Length;
-					}
-					else
-					{
-						if( compositionBugCount >= 0 && compositionBugCount % 2 == 0 )
-						{
-							if( compositionBugCount == 0 ) continue;
-							compositionBugCount -= 2;
-						}
-						KeyPressed(processingEvent);
-					}
-					break;
-				default:
-					KeyPressed(processingEvent);
-					break;
+					// process in ownerTree
+					consumedEvent = true;
+				}
+				else
+				{
+					bool use = cachedCaretPos_ < text.Length;
+					if( use ) BindedLine.Tree.OnDeleteKeyConsumed();
 				}
 			}
+			break;
+			case KeyCode.Backspace:
+			{
+				if( BindedLine.Tree.HasSelection )
+				{
+					// process in ownerTree
+					consumedEvent = true;
+				}
+			}
+			break;
+			case KeyCode.DownArrow:
+			{
+				if( BindedLine.NextVisibleLine != null )
+				{
+					// process in ownerTree
+					consumedEvent = true;
+				}
+				else
+				{
+					BindedLine.FixTextInputAction();
+				}
+			}
+			break;
+			case KeyCode.UpArrow:
+			{
+				if( BindedLine.PrevVisibleLine != null )
+				{
+					// process in ownerTree
+					consumedEvent = true;
+				}
+				else
+				{
+					BindedLine.FixTextInputAction();
+				}
+			}
+			break;
+			case KeyCode.RightArrow:
+			case KeyCode.LeftArrow:
+			{
+				desiredCaretPos_ = m_CaretSelectPosition;
+				BindedLine.FixTextInputAction();
+				if( GameContext.Window.TagIncrementalDialog.IsActive )
+				{
+					if( Line.GetTagInCaretPosition(BindedLine.Text, desiredCaretPos_) == null )
+					{
+						GameContext.Window.TagIncrementalDialog.Close();
+					}
+				}
+			}
+			break;
+			case KeyCode.Home:
+			case KeyCode.End:
+			{
+				desiredCaretPos_ = m_CaretSelectPosition;
+				BindedLine.FixTextInputAction();
+			}
+			break;
+			case KeyCode.None:
+			{
+				if( ctrlOrCtrlShift && (processingEvent.character == ' ' || processingEvent.character == '　') )
+				{
+					// process in ownerTree
+					if( ctrl && shift && processingEvent.character == '　' )
+					{
+						// shift かつ 全角でSpace入力した時はKeyCodeのSpaceがイベントとして来ないのでこっちで対応
+						BindedLine.Tree.OnCtrlShiftSpaceInput();
+					}
+					consumedEvent = true;
+				}
+				else if( (ctrl || alt == false) && BindedLine.Tree.HasSelection && processingEvent.character.ToString() != Line.TabString )
+				{
+					// 複数Line選択してキー入力したら、Line内部の文字列削除じゃなくてTreeからLine削除を呼ぶ
+					LineField newField = BindedLine.Tree.DeleteSelection().Field;
+					newField.KeyPressed(processingEvent);
+					newField.CaretPosision = newField.text.Length;
+					consumedEvent = true;
+				}
+			}
+			break;
 		}
 
-		// ひらがな入力で、変換の最後の1文字だけ、BackspaceのKeyDownが来ない問題
-		bool compositionStringDeleted = (compositionString.Length > 0 && Input.compositionString.Length == 0);
-		if( consumedEvent || compositionStringDeleted )
-			UpdateLabel();
-
-		compositionString = Input.compositionString;
-
-		eventData.Use();
+		return consumedEvent;
 	}
 
 	#endregion

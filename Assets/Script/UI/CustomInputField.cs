@@ -135,14 +135,90 @@ public class CustomInputField : InputField, IColoredObject
 
 	}
 
+	protected virtual bool OnProcessKeyEvent(Event processingEvent, bool ctrl, bool shift, bool alt)
+	{
+		bool consumedEvent = false;
+		return consumedEvent;
+	}
+
 	protected static string compositionString = "";
+	protected Event outEvent = new Event();
 	public override void OnUpdateSelected(BaseEventData eventData)
 	{
-		base.OnUpdateSelected(eventData);
+		if( !isFocused )
+			return;
+
+		bool consumedEvent = false;
+
+		// 全角変換中に確定させない状態でInputFieldからフォーカスを外すと変換中の文字が倍加するバグ
+		// https://www.facebook.com/groups/unityuserj/permalink/1511318235594778/
+		int compositionBugCount = -1;
+		List<Event> currentEvents = new List<Event>();
+		while( Event.PopEvent(outEvent) )
+		{
+			currentEvents.Add(new Event(outEvent));
+		}
+		if( currentEvents.Find((Event e) => e.rawType == EventType.MouseDown) != null )
+		{
+			compositionBugCount = 0;
+			foreach( Event maybeDuplicatedEvent in currentEvents )
+			{
+				if( maybeDuplicatedEvent.rawType == EventType.KeyDown )
+				{
+					++compositionBugCount;
+				}
+			}
+		}
+		foreach( Event processingEvent in currentEvents )
+		{
+			if( processingEvent.rawType == EventType.KeyDown )
+			{
+				var currentEventModifiers = processingEvent.modifiers;
+				bool ctrl = SystemInfo.operatingSystemFamily == OperatingSystemFamily.MacOSX ? (currentEventModifiers & EventModifiers.Command) != 0 : (currentEventModifiers & EventModifiers.Control) != 0;
+				bool shift = (currentEventModifiers & EventModifiers.Shift) != 0;
+				bool alt = (currentEventModifiers & EventModifiers.Alt) != 0;
+
+				//print(string.Format("isKey:{0}, keyCode:{1}, character:{2}", processingEvent.isKey, processingEvent.keyCode, processingEvent.character));
+
+				cachedCaretPos_ = m_CaretSelectPosition;
+
+				// 派生先で自由にキー入力を処理。イベントが消化されたらその後は不要。
+				consumedEvent = OnProcessKeyEvent(processingEvent, ctrl, shift, alt);
+
+				if( consumedEvent == false )
+				{
+					switch( processingEvent.keyCode )
+					{
+						case KeyCode.None:
+						{
+							if( compositionBugCount >= 0 && compositionBugCount % 2 == 0 )
+							{
+								if( compositionBugCount == 0 ) continue;
+								compositionBugCount -= 2;
+							}
+							KeyPressed(processingEvent);
+						}
+						break;
+						default:
+						{
+							KeyPressed(processingEvent);
+						}
+						break;
+					}
+				}
+
+				consumedEvent = true;
+			}
+		}
+
 		// ひらがな入力で、変換の最後の1文字だけ、BackspaceのKeyDownが来ない問題
 		bool compositionStringDeleted = (compositionString.Length > 0 && Input.compositionString.Length == 0);
-		if( compositionStringDeleted )
+		if( consumedEvent || compositionStringDeleted )
 			UpdateLabel();
+
+		compositionString = Input.compositionString;
+
+		eventData.Use();
 	}
 
 	#endregion
