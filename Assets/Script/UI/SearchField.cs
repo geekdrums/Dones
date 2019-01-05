@@ -26,6 +26,7 @@ public class SearchField : CustomInputField
 
 	HeapManager<UIMidairRect> rectHeap_ = new HeapManager<UIMidairRect>();
 	UIMidairRect shade_;
+	Text countText_;
 
 	#endregion
 
@@ -33,6 +34,7 @@ public class SearchField : CustomInputField
 	{
 		rectHeap_.Initialize(10, GetComponentsInChildren<UIMidairRect>()[0], this.transform);
 		shade_ = GetComponentsInChildren<UIMidairRect>()[1];
+		countText_ = GetComponentsInChildren<Text>(includeInactive: true)[2];
 		textSubscription_ = onValueChanged.AsObservable().Subscribe(text =>
 		{
 			OnTextChanged(text);
@@ -50,11 +52,6 @@ public class SearchField : CustomInputField
 			{
 				Search();
 				textChanged_ = false;
-			}
-
-			if( Input.GetKeyDown(KeyCode.KeypadEnter) )
-			{
-
 			}
 		}
 	}
@@ -112,6 +109,17 @@ public class SearchField : CustomInputField
 				searchResults_[focusResultIndex_].Rect.SetColor(GameContext.Config.SearchFocusColor);
 			}
 		}
+
+		if( searchResults_.Count > 0 )
+		{
+			countText_.gameObject.SetActive(true);
+			countText_.text = String.Format("{0}/{1}", focusResultIndex_ + 1, searchResults_.Count);
+		}
+		else
+		{
+			countText_.gameObject.SetActive(false);
+			countText_.text = "";
+		}
 	}
 
 	void InstantiateSearchRect(SearchResult result)
@@ -153,6 +161,8 @@ public class SearchField : CustomInputField
 			{
 				focusResultIndex_ = 0;
 			}
+
+			countText_.text = String.Format("{0}/{1}", focusResultIndex_ + 1, searchResults_.Count);
 
 			// 前にフォーカスしてたやつの色を戻す
 			if( oldFucusIndex != focusResultIndex_ && 0 <= oldFucusIndex && oldFucusIndex < searchResults_.Count )
@@ -207,6 +217,7 @@ public class SearchField : CustomInputField
 		{
 			placeholder.enabled = true;
 			AnimManager.AddAnim(shade_, 0.0f, ParamType.AlphaColor, AnimType.Time, 0.1f);
+			countText_.gameObject.SetActive(false);
 
 			ClearSearchResult();
 		}
