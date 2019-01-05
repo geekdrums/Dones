@@ -56,7 +56,7 @@ public class Note : MonoBehaviour
 	}
 
 
-	public virtual void ScrollTo(Line targetLine)
+	public virtual void ScrollTo(Line targetLine, bool immediate = false)
 	{
 		float scrollHeight = scrollRectTransform_.rect.height;
 		float targetAbsolutePositionY = targetLine.TargetAbsolutePosition.y;
@@ -68,7 +68,14 @@ public class Note : MonoBehaviour
 		if( targetUnderHeight > 0 )
 		{
 			targetScrollValue_ = Mathf.Clamp01(1.0f - (targetHeight + heightPerLine * 1.5f - scrollHeight) / (layout_.preferredHeight - scrollHeight));
-			isScrollAnimating_ = true;
+			if( immediate )
+			{
+				scrollRect_.verticalScrollbar.value = targetScrollValue_;
+			}
+			else
+			{
+				isScrollAnimating_ = true;
+			}
 			return;
 		}
 
@@ -77,7 +84,14 @@ public class Note : MonoBehaviour
 		if( targetOverHeight > 0 )
 		{
 			targetScrollValue_ = Mathf.Clamp01((layout_.preferredHeight - scrollHeight - targetHeight) / (layout_.preferredHeight - scrollHeight));
-			isScrollAnimating_ = true;
+			if( immediate )
+			{
+				scrollRect_.verticalScrollbar.value = targetScrollValue_;
+			}
+			else
+			{
+				isScrollAnimating_ = true;
+			}
 			return;
 		}
 	}

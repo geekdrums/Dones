@@ -34,6 +34,11 @@ public class LineField : CustomInputField
 
 	public bool HasSelection { get { return caretPositionInternal != caretSelectPositionInternal; } }
 
+	public string SelectionString { get { return text.Substring(SelectionStartIndex, SelectionLength); } }
+	public int SelectionStartIndex { get { return Math.Min(caretPositionInternal, caretSelectPositionInternal); } }
+	public int SelectionEndIndex { get { return Math.Max(caretPositionInternal, caretSelectPositionInternal); } }
+	public int SelectionLength { get { return Math.Abs(caretPositionInternal - caretSelectPositionInternal); } }
+
 	protected UIGaugeRenderer strikeLine_;
 	protected CheckMark checkMark_;
 
@@ -352,6 +357,7 @@ public class LineField : CustomInputField
 
 	protected override void OnFocused()
 	{
+		base.OnFocused();
 		if( BindedLine != null && BindedLine.Tree != null )
 		{
 			BindedLine.Tree.OnFocused(BindedLine);

@@ -39,6 +39,8 @@ public class CustomInputField : InputField, IColoredObject
 	protected static int desiredSelectionFocusPos_;
 	public int ActualCaretPosition { get { return m_CaretSelectPosition; } set { m_CaretSelectPosition = m_CaretPosition = value; } }
 	
+	// override features
+	protected virtual bool EnableSelectAll { get { return false; } }
 
 	// color
 	public Color Foreground { get { return textComponent.color; } set { textComponent.color = value; } }
@@ -132,7 +134,10 @@ public class CustomInputField : InputField, IColoredObject
 
 	protected virtual void OnFocused()
 	{
-
+		if( EnableSelectAll )
+		{
+			SelectAll();
+		}
 	}
 
 	protected virtual bool OnProcessKeyEvent(Event processingEvent, bool ctrl, bool shift, bool alt)
@@ -208,6 +213,23 @@ public class CustomInputField : InputField, IColoredObject
 				}
 
 				consumedEvent = true;
+			}
+
+			if( EnableSelectAll )
+			{
+				switch( processingEvent.type )
+				{
+					case EventType.ValidateCommand:
+					case EventType.ExecuteCommand:
+					switch( processingEvent.commandName )
+					{
+						case "SelectAll":
+						SelectAll();
+						consumedEvent = true;
+						break;
+					}
+					break;
+				}
 			}
 		}
 

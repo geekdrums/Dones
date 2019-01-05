@@ -140,6 +140,11 @@ public class Window : MonoBehaviour
 
 			if( Input.GetKeyDown(KeyCode.F) )
 			{
+				Line focusedLine = Note.Tree.FocusedLine;
+				if( focusedLine != null && focusedLine.Field.HasSelection )
+				{
+					SearchField.text = focusedLine.Field.SelectionString;
+				}
 				SearchField.IsFocused = true;
 			}
 
@@ -174,6 +179,14 @@ public class Window : MonoBehaviour
 			TagList.ApplyTagListSetttings();
 			Note.ReloadNote();
 			TagList.OnTreePathChanged(Note.Tree.TitleLine);
+		}
+		if( Input.GetKeyDown(KeyCode.F3) )
+		{
+			if( SearchField.IsFocused == false )
+			{
+				// focus中はOnUpdateSelectedから呼ばれるが、非フォーカス時もF3キーはサーチに紐付ける
+				SearchField.FocusNext();
+			}
 		}
 		if( TabGroup.ActiveNote == Note )
 		{

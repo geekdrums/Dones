@@ -23,7 +23,7 @@ public class Tree : MonoBehaviour
 	protected GameObject rootLineObject_;
 	protected GameObject titleLineObject_;
 	protected Line titleLine_;
-	protected Line focusedLine_;
+	protected Line focusedLine_, lastFocusedLine_;
 	protected Line selectionStartLine_, selectionEndLine_;
 	protected SortedList<int, Line> selectedLines_ = new SortedList<int, Line>();
 
@@ -68,6 +68,7 @@ public class Tree : MonoBehaviour
 	public ActionManagerProxy ActionManager { get { return actionManager_; } }
 	public FileInfo File { get { return file_; } }
 	public Line FocusedLine { get { return focusedLine_; } }
+	public Line LastFocusedLine { get { return lastFocusedLine_; } }
 	public Line RootLine { get { return rootLine_; } }
 	public Line TitleLine { get { return titleLine_; } }
 	public TreePath Path { get { return path_; } }
@@ -1851,6 +1852,10 @@ public class Tree : MonoBehaviour
 		}
 
 		focusedLine_ = line;
+		if( line != null )
+		{
+			lastFocusedLine_ = line;
+		}
 		GameContext.CurrentActionManager = (ActionManager)actionManager_;
 
 		if( focusedLine_ != null && focusedLine_.Field.Rect.Contains(Input.mousePosition) )

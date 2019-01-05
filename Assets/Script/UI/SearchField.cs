@@ -61,8 +61,7 @@ public class SearchField : CustomInputField
 	
 	#endregion
 
-
-	public void Search()
+	void ClearSearchResult()
 	{
 		foreach( SearchResult result in searchResults_ )
 		{
@@ -72,24 +71,46 @@ public class SearchField : CustomInputField
 			}
 		}
 		searchResults_.Clear();
+		focusResultIndex_ = -1;
+	}
+
+	public void Search()
+	{
+		ClearSearchResult();
+
 		searchResults_.AddRange(GameContext.Window.Note.Tree.Search(text));
 
-		foreach( SearchResult result in searchResults_ )
+		Line lastFocusedLine = GameContext.Window.Note.Tree.LastFocusedLine;
+		float lastTargetAbsolutePositionY = 0;
+		if( lastFocusedLine != null && lastFocusedLine.Field != null )
 		{
+			lastTargetAbsolutePositionY = lastFocusedLine.TargetAbsolutePosition.y;
+		}
+
+		for( int i = 0; i < searchResults_.Count; ++i )
+		{
+			SearchResult result = searchResults_[i];
 			if( result.Line.IsVisible && result.Line.Field != null )
 			{
 				InstantiateSearchRect(result);
 			}
+
+			if( focusResultIndex_ < 0 )
+			{
+				if( lastFocusedLine == null || lastFocusedLine.Field != null &&
+					lastTargetAbsolutePositionY >= result.Line.TargetAbsolutePosition.y )
+				{
+					focusResultIndex_ = i;
+				}
+			}
 		}
 
-		if( searchResults_.Count > 0 && searchResults_[0].Rect != null )
+		if( focusResultIndex_ >= 0 )
 		{
-			focusResultIndex_ = 0;
-			searchResults_[focusResultIndex_].Rect.SetColor(GameContext.Config.SearchFocusColor);
-		}
-		else
-		{
-			focusResultIndex_ = -1;
+			if( searchResults_[focusResultIndex_].Rect != null )
+			{
+				searchResults_[focusResultIndex_].Rect.SetColor(GameContext.Config.SearchFocusColor);
+			}
 		}
 	}
 
@@ -103,13 +124,12 @@ public class SearchField : CustomInputField
 			float x = result.Index > 0 ? result.Line.Field.GetTextRectLength(result.Index - 1) : 0;
 			float width = result.Line.Field.GetTextRectLength(result.Index + text.Length - 1) - x;
 
-			result.Rect.rectTransform.anchoredPosition = new Vector2(x + 10, 0);
-			result.Rect.rectTransform.sizeDelta = new Vector2(width, result.Rect.rectTransform.sizeDelta.y);
+			result.Rect.rectTransform.anchoredPosition = new Vector2(x + 10, -4.5f);
+			result.Rect.rectTransform.sizeDelta = new Vector2(width, -7);
 			result.Rect.rectTransform.SetAsFirstSibling();
 		});
 	}
-
-
+	
 	public void FocusNext()
 	{
 		if( searchResults_.Count > 0 )
@@ -159,8 +179,8 @@ public class SearchField : CustomInputField
 
 			// 新たにフォーカスしたやつの色設定など
 			focusResult.Rect.SetColor(GameContext.Config.SearchFocusColor);
-			// todo animation
-			GameContext.Window.Note.ScrollTo(focusResult.Line);
+			//AnimManager.AddAnim(focusResult.Rect.gameObject, focusResult.Rect.rectTransform.sizeDelta.x, ParamType.SizeDeltaX, AnimType.Time, 0.1f, initValue: 0.0f);
+			GameContext.Window.Note.ScrollTo(focusResult.Line, immediate: true);
 		}
 	}
 
@@ -169,6 +189,8 @@ public class SearchField : CustomInputField
 
 	protected override void OnFocused()
 	{
+		base.OnFocused();
+
 		placeholder.enabled = false;
 		targetGraphic.enabled = false;
 		
@@ -185,6 +207,8 @@ public class SearchField : CustomInputField
 		{
 			placeholder.enabled = true;
 			AnimManager.AddAnim(shade_, 0.0f, ParamType.AlphaColor, AnimType.Time, 0.1f);
+
+			ClearSearchResult();
 		}
 	}
 	
@@ -197,7 +221,8 @@ public class SearchField : CustomInputField
 
 
 	#region overrides
-
+	
+	protected override bool EnableSelectAll { get { return true; } }
 	protected override bool OnProcessKeyEvent(Event processingEvent, bool ctrl, bool shift, bool alt)
 	{
 		bool consumedEvent = false;
