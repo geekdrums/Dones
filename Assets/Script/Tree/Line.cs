@@ -9,7 +9,7 @@ using UnityEngine.EventSystems;
 using UniRx;
 
 // Window > Note > Tree > [ Line ]
-public class Line : IEnumerable<Line>
+public class Line : IEnumerable<Line>, IComparable<Line>
 {
 	#region params
 	
@@ -18,17 +18,26 @@ public class Line : IEnumerable<Line>
 		get { return text_; }
 		set
 		{
-			text_ = value;
-			if( Field != null )
-			{
-				Field.SetTextDirectly(text_);
-			}
+			SetTextDirectly(value);
 			CheckIsLink();
 			CheckHashTags();
 			ApplyTextToTaggedLine();
 		}
 	}
+	public void SetTextDirectly(string text)
+	{
+		text_ = text;
+		if( Field != null )
+		{
+			Field.SetTextDirectly(text);
+		}
+		if( OnTextChanged != null )
+		{
+			OnTextChanged(text_);
+		}
+	}
 	protected string text_;
+	public event Action<string> OnTextChanged;
 	public int TextLength { get { return text_.Length; } }
 	public override string ToString() { return Text; }
 
@@ -141,6 +150,7 @@ public class Line : IEnumerable<Line>
 	}
 
 	public EBindState BindState { get; protected set; }
+	public event Action<EBindState> OnBindStateChanged;
 
 	public GameObject Binding { get; protected set; }
 	public Tree Tree { get; protected set; }
@@ -173,6 +183,11 @@ public class Line : IEnumerable<Line>
 		public StringBuilder Text = new StringBuilder();
 		public int CaretPos { get; set; }
 		public TagTextEditAction TagEdit { get; set; }
+		public event Action<TextAction, Line> OnFixEvent;
+		public override IEnumerable<Line> GetTargetLines()
+		{
+			yield return line_;
+		}
 
 		protected Line line_;
 
@@ -180,7 +195,14 @@ public class Line : IEnumerable<Line>
 		{
 			line_ = line;
 			CaretPos = line.Field.CaretPosision;
-			TargetLines = new Line[] { line_ };
+		}
+
+		public void OnFix()
+		{
+			if( OnFixEvent != null )
+			{
+				OnFixEvent(this, line_);
+			}
 		}
 	}
 
@@ -206,9 +228,7 @@ public class Line : IEnumerable<Line>
 
 			line_.Field.IsFocused = true;
 			line_.Field.CaretPosision = CaretPos;
-			line_.text_ = line_.text_.Remove(CaretPos, Text.Length);
-			line_.Field.SetTextDirectly(line_.text_);
-
+			line_.SetTextDirectly(line_.text_.Remove(CaretPos, Text.Length));
 			line_.CheckTagIncrementalDialog();
 		}
 
@@ -217,8 +237,7 @@ public class Line : IEnumerable<Line>
 			if( Text.Length == 0 ) return;
 
 			line_.Field.IsFocused = true;
-			line_.text_ = line_.text_.Insert(CaretPos, Text.ToString());
-			line_.Field.SetTextDirectly(line_.text_);
+			line_.SetTextDirectly(line_.text_.Insert(CaretPos, Text.ToString()));
 			line_.Field.CaretPosision = CaretPos + Text.Length;
 
 			if( TagEdit != null )
@@ -244,8 +263,7 @@ public class Line : IEnumerable<Line>
 		public override void Undo()
 		{
 			line_.Field.IsFocused = true;
-			line_.text_ = line_.text_.Insert(CaretPos, Text.ToString());
-			line_.Field.SetTextDirectly(line_.text_);
+			line_.SetTextDirectly(line_.text_.Insert(CaretPos, Text.ToString()));
 			line_.Field.CaretPosision = CaretPos + Text.Length;
 
 			if( TagEdit != null )
@@ -265,9 +283,7 @@ public class Line : IEnumerable<Line>
 
 			line_.Field.IsFocused = true;
 			line_.Field.CaretPosision = CaretPos;
-			line_.text_ = line_.text_.Remove(CaretPos, Text.Length);
-			line_.Field.SetTextDirectly(line_.text_);
-
+			line_.SetTextDirectly(line_.text_.Remove(CaretPos, Text.Length));
 			line_.CheckTagIncrementalDialog();
 		}
 	}
@@ -277,6 +293,10 @@ public class Line : IEnumerable<Line>
 		Line line_;
 		List<string> newTags_;
 		List<string> oldTags_;
+		public override IEnumerable<Line> GetTargetLines()
+		{
+			return line_;
+		}
 
 		public TagTextEditAction(Line line, List<string> tags)
 		{
@@ -368,7 +388,7 @@ public class Line : IEnumerable<Line>
 	protected TextAction textAction_ = null;
 	protected float lastTextActionTime_ = 0;
 
-	protected void OnTextChanged(string newText)
+	protected void OnLineFieldInput(string newText)
 	{
 		int oldCaretPos = Field.CaretPosision;
 		int currentCaretPos = Field.ActualCaretPosition;
@@ -384,7 +404,7 @@ public class Line : IEnumerable<Line>
 		if( oldCaretPos < currentCaretPos )
 		{
 			// キャレットが正方向に移動しているので入力
-			if( textAction_ == null || textAction_ is TextInputAction == false || Time.time - lastTextActionTime_ > GameContext.Config.TextInputFixIntervalTime )
+			if( textAction_ == null || textAction_ is TextInputAction == false || Time.time - lastTextActionTime_ > GameContext.Config.TextInputFixIntervalTime || newText[currentCaretPos - 1] == ' ' )
 			{
 				FixTextInputAction();
 				textAction_ = new TextInputAction(this);
@@ -429,6 +449,10 @@ public class Line : IEnumerable<Line>
 		lastTextActionTime_ = Time.time;
 
 		text_ = newText;
+		if( OnTextChanged != null )
+		{
+			OnTextChanged(text_);
+		}
 
 		if( Tree is LogTree == false )
 		{
@@ -466,6 +490,10 @@ public class Line : IEnumerable<Line>
 
 	public void FixTextInputAction()
 	{
+		if( textAction_ != null )
+		{
+			textAction_.OnFix();
+		}
 		textAction_ = null;
 	}
 	
@@ -503,6 +531,10 @@ public class Line : IEnumerable<Line>
 		Binding = binding;
 		Field = Binding.GetComponent<LineField>();
 		BindState = EBindState.Bind;
+		if( OnBindStateChanged != null )
+		{
+			OnBindStateChanged(BindState);
+		}
 		if( Field != null )
 		{
 			if( parent_ != null && parent_.Binding != null )
@@ -515,7 +547,7 @@ public class Line : IEnumerable<Line>
 			Field.SetTextDirectly(text_);
 			fieldSubscription_ = Field.onValueChanged.AsObservable().Subscribe(text =>
 			{
-				OnTextChanged(text);
+				OnLineFieldInput(text);
 			});
 
 			UpdateBindingField();
@@ -558,14 +590,14 @@ public class Line : IEnumerable<Line>
 		if( Field != null )
 		{
 			Field.BindedLine = null;
-			foreach( LineField childField in Field.GetComponentsInChildren<LineField>() )
-			{
-				childField.transform.SetParent(Tree.transform);
-			}
 		}
 		Binding = null;
 		Field = null;
 		BindState = EBindState.Unbind;
+		if( OnBindStateChanged != null )
+		{
+			OnBindStateChanged(BindState);
+		}
 	}
 
 	public void BackToHeap()
@@ -579,6 +611,10 @@ public class Line : IEnumerable<Line>
 		}
 		Tree.BackToHeap(this);
 		BindState = EBindState.WeakBind;
+		if( OnBindStateChanged != null )
+		{
+			OnBindStateChanged(BindState);
+		}
 	}
 
 	public void UpdateBindingField()
@@ -780,6 +816,11 @@ public class Line : IEnumerable<Line>
 		}
     }
 
+	public bool IsAlive()
+	{
+		return Tree != null && IsChildOf(Tree.RootLine);
+	}
+
     public bool HasBeenChildOf(Line line)
     {
         Line parent = LastParent;
@@ -929,6 +970,74 @@ public class Line : IEnumerable<Line>
 			}
 		}
 	}
+	
+	public IEnumerable<SearchField.SearchResult> Search(string text)
+	{
+		int index = Text.IndexOf(text);
+		while( index >= 0 )
+		{
+			SearchField.SearchResult res = new SearchField.SearchResult();
+			res.Line = this;
+			res.Index = index;
+			yield return res;
+			index = Text.IndexOf(text, index + 1);
+		}
+	}
+
+	public int CompareTo(Line other)
+	{
+		if( this == other )
+		{
+			return 0;
+		}
+		else if( this.Tree != other.Tree)
+		{
+			return 0;
+		}
+		else
+		{
+			Line parent = Parent;
+			Line otherParent = other.Parent;
+			Line child = this;
+			Line otherChild = other;
+			int level = this.Level;
+			int otherLevel = other.Level;
+
+			// 同じ階層になるまで親をたどる
+			while( level < otherLevel && otherParent != null )
+			{
+				--otherLevel;
+				otherChild = otherParent;
+				otherParent = otherParent.Parent;
+			}
+			while( otherLevel < level && parent != null )
+			{
+				--level;
+				child = parent;
+				parent = parent.Parent;
+			}
+			// 同じ親になるまでたどる
+			while( parent != otherParent && parent != null && otherParent != null )
+			{
+				otherChild = otherParent;
+				otherParent = otherParent.Parent;
+				child = parent;
+				parent = parent.Parent;
+			}
+
+			if( child == otherChild )
+			{
+				// 子供が一致した場合は直系の子孫ということになるのでLevelで判別可能
+				return this.Level - other.Level;
+			}
+			else
+			{
+				// 直系ではないので、同じ階層でのIndexで判定
+				return child.Index - otherChild.Index;
+			}
+		}
+	}
+
 	#endregion
 
 
@@ -1323,10 +1432,9 @@ public class Line : IEnumerable<Line>
 	public void AddTag(string tag)
 	{
 		tags_.Add(tag);
-		text_ = String.Format("{0} #{1}", text_, tag);
+		SetTextDirectly(String.Format("{0} #{1}", text_, tag));
 		if( Field != null )
 		{
-			Field.SetTextDirectly(text_);
 			Field.SetHashTags(tags_);
 		}
 		TagParent tagParent = GameContext.Window.TagList.GetOrInstantiateTagParent(tag);
@@ -1342,10 +1450,9 @@ public class Line : IEnumerable<Line>
 			{
 				Field.CaretPosision = 0;
 			}
-			text_ = text_.Remove(text_.LastIndexOf("#" + tag) - 1, tag.Length + 2);
+			SetTextDirectly(text_.Remove(text_.LastIndexOf("#" + tag) - 1, tag.Length + 2));
 			if( Field != null )
 			{
-				Field.SetTextDirectly(text_);
 				Field.SetHashTags(tags_);
 			}
 			TagParent tagParent = GameContext.Window.TagList.GetTagParent(tag);
@@ -1356,11 +1463,7 @@ public class Line : IEnumerable<Line>
 		}
 		else if( tag == "" )
 		{
-			text_ = text_.Remove(text_.LastIndexOf(" #"), 2);
-			if( Field != null )
-			{
-				Field.SetTextDirectly(text_);
-			}
+			SetTextDirectly(text_.Remove(text_.LastIndexOf(" #"), 2));
 		}
 	}
 
@@ -1639,11 +1742,9 @@ public class Line : IEnumerable<Line>
 	{
 		if( text_.StartsWith(CommentTag) )
 		{
-			text_ = text_.Remove(0, CommentTag.Length);
-
+			SetTextDirectly(text_.Remove(0, CommentTag.Length));
 			if( Field != null )
 			{
-				Field.SetTextDirectly(text_);
 				Field.CaretPosision = 0;
 			}
 

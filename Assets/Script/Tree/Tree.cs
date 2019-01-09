@@ -538,12 +538,12 @@ public class Tree : MonoBehaviour
 
 	#region actionManager
 
-	protected void actionManager__ChainStarted(object sender, EventArgs e)
+	protected void actionManager__ChainStarted(object sender, ChainActionEventArgs e)
 	{
 		SuspendLayout();
 	}
 
-	protected void actionManager__ChainEnded(object sender, EventArgs e)
+	protected void actionManager__ChainEnded(object sender, ChainActionEventArgs e)
 	{
 		ResumeLayout();
 
@@ -912,6 +912,7 @@ public class Tree : MonoBehaviour
 			string oldString = target.Text;
 			string subString = target.Text.Substring(0, caretPos);
 			string newString = target.Text.Substring(caretPos, target.TextLength - caretPos);
+			newline.Text = newString;
 
 			// 基本はすぐ下の兄弟にする
 			Line insertParent = parent;
@@ -928,7 +929,6 @@ public class Tree : MonoBehaviour
 				execute: () =>
 				{
 					target.Text = subString;
-					newline.Text += newString;
 					insertParent.Insert(insertIndex, newline);
 					insertParent.AdjustLayoutRecursive(insertIndex + 1);
 					newline.Field.CaretPosision = 0;
@@ -1638,7 +1638,7 @@ public class Tree : MonoBehaviour
 			string oldTag = pasteStart.GetTagStrings();
 			int oldCaretPos = pasteStart.Field.CaretPosision;
 			actionManager_.Execute(new LineAction(
-				targetLines: pasteStart.Parent,
+				targetLines: pasteStart,
 				execute: () =>
 				{
 					if( loadTag )
@@ -1946,12 +1946,8 @@ public class Tree : MonoBehaviour
 		{
 			foreach( Line line in (containFolded ? titleLine_.GetAllChildren() : titleLine_.GetVisibleChildren()) )
 			{
-				int index = line.Text.IndexOf(text);
-				if( index >= 0 )
+				foreach( SearchField.SearchResult res in line.Search(text) )
 				{
-					SearchField.SearchResult res = new SearchField.SearchResult();
-					res.Line = line;
-					res.Index = index;
 					yield return res;
 				}
 			}
@@ -2264,6 +2260,7 @@ public class Tree : MonoBehaviour
 		}
 
 		focusedLine_ = null;
+		lastFocusedLine_ = null;
 		selectionStartLine_ = selectionEndLine_ = null;
 		selectedLines_.Clear();
 

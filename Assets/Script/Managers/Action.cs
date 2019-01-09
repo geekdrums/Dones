@@ -9,12 +9,12 @@ public abstract class ActionBase
 	public abstract void Execute();
 	public abstract void Undo();
 	public abstract void Redo();
-	public Line[] TargetLines { get; protected set; }
 	public ActionManagerProxy Proxy { get; set; }
+	public abstract IEnumerable<Line> GetTargetLines();
 
     public virtual bool IsRelatedTo(Line titleLine)
     {
-		foreach( Line line in TargetLines )
+		foreach( Line line in GetTargetLines() )
 		{
 			Line targetLine = line;
 
@@ -34,16 +34,6 @@ public abstract class ActionBase
 		}
         return false;
     }
-	
-	public override string ToString()
-	{
-        StringBuilder builder = new StringBuilder();
-        foreach (Line line in TargetLines)
-        {
-            builder.AppendLine(line.GetTreePath().ToString());
-        }
-        return builder.ToString();
-	}
 }
 
 public class LineAction : ActionBase
@@ -51,6 +41,11 @@ public class LineAction : ActionBase
 	protected System.Action execute_;
 	protected System.Action undo_;
 	protected System.Action redo_;
+	public Line[] TargetLines { get; protected set; }
+	public override IEnumerable<Line> GetTargetLines()
+	{
+		return TargetLines.AsEnumerable<Line>();
+	}
 
 	public LineAction(System.Action execute, System.Action undo, System.Action redo, params Line[] targetLines)
 	{
@@ -84,6 +79,16 @@ public class LineAction : ActionBase
 	{
 		redo_();
 	}
+
+	public override string ToString()
+	{
+		StringBuilder builder = new StringBuilder();
+		foreach( Line line in TargetLines )
+		{
+			builder.AppendLine(line.GetTreePath().ToString());
+		}
+		return builder.ToString();
+	}
 }
 
 public class ChainAction : ActionBase
@@ -101,7 +106,17 @@ public class ChainAction : ActionBase
 	}
 
 
-    public override bool IsRelatedTo(Line titleLine)
+	public override IEnumerable<Line> GetTargetLines()
+	{
+		foreach( ActionBase action in chain_ )
+		{
+			foreach( Line targetLine in action.GetTargetLines() )
+			{
+				yield return targetLine;
+			}
+		}
+	}
+	public override bool IsRelatedTo(Line titleLine)
     {
         foreach (ActionBase action in chain_)
         {
@@ -115,15 +130,7 @@ public class ChainAction : ActionBase
 
     public void CheckLeastCommonParent()
 	{
-		List<Line> lines = new List<Line>();
-		foreach( ActionBase action in chain_ )
-		{
-			if( action.TargetLines != null )
-			{
-				lines.AddRange(action.TargetLines);
-			}
-		}
-		LeastCommonParentLine = Line.GetLeastCommonParent(lines.ToArray());
+		LeastCommonParentLine = Line.GetLeastCommonParent(GetTargetLines().ToArray<Line>());
 	}
 	
 	public void AddChain(ActionBase action)
@@ -159,10 +166,10 @@ public class ChainAction : ActionBase
     public override string ToString()
     {
         StringBuilder builder = new StringBuilder();
-        foreach (ActionBase action in chain_)
-        {
-            builder.AppendLine(action.ToString());
-        }
+		foreach( ActionBase action in chain_ )
+		{
+			builder.AppendLine(action.ToString());
+		}
         return builder.ToString();
     }
 }

@@ -15,8 +15,8 @@ using System.Windows.Forms;
 // Window > [ Note ] > Tree > Line
 public class Note : MonoBehaviour
 {
+	public ActionManager ActionManager { get { return actionManager_; } }
 	protected ActionManager actionManager_ = new ActionManager();
-	protected List<Tree> saveRequestedTrees_ = new List<Tree>();
 	
 	protected LayoutElement layout_;
 	protected ContentSizeFitter contentSizeFitter_;
@@ -30,6 +30,7 @@ public class Note : MonoBehaviour
 
 	protected bool isScrollAnimating_;
 
+	protected List<Tree> saveRequestedTrees_ = new List<Tree>();
 	protected float lastSaveRequestedTime_ = 0;
 
 	protected virtual void Awake()

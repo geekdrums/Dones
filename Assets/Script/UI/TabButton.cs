@@ -176,7 +176,15 @@ public class TabButton : UnityEngine.UI.Button, IDragHandler, IBeginDragHandler,
 			BindedNote.SetNoteViewParam(ViewParam);
 
 			GameContext.Window.UpdateVerticalLayout();
-			GameContext.Window.TagList.OnTreePathChanged(BindedNote is TreeNote ? (BindedNote as TreeNote).Tree.TitleLine : null);
+			if( BindedNote is TreeNote )
+			{
+				GameContext.Window.TagList.OnTreePathChanged((BindedNote as TreeNote).Tree.TitleLine);
+				GameContext.Window.SearchField.OnTreePathChanged((BindedNote as TreeNote).Tree);
+			}
+			else
+			{
+				// 他のNoteを作ったときに表示をどうするかは、その時考える
+			}
 		}
 		UpdateColor();
 	}
