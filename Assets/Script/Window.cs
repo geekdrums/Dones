@@ -112,6 +112,8 @@ public class Window : MonoBehaviour
 
 		DayText.text = String.Format("<size=12>{0}/ </size>{1}/{2}<size=12> ({3})</size>",
 			DateTime.Now.ToString("yyyy"), DateTime.Now.ToString("MM").TrimStart('0'), DateTime.Now.ToString("dd").TrimStart('0'), DateTime.Now.ToString("ddd"));
+
+		SearchField.Initialize();
 	}
 
 	// Update is called once per frame

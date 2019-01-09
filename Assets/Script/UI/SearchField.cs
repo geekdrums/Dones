@@ -66,10 +66,8 @@ public class SearchField : CustomInputField
 
 	#endregion
 
-	protected override void Awake()
+	public void Initialize()
 	{
-		base.Awake();
-
 		rectHeap_.Initialize(10, GetComponentsInChildren<UIMidairRect>()[0], this.transform);
 		shade_ = GetComponentsInChildren<UIMidairRect>()[1];
 		countText_ = GetComponentsInChildren<Text>(includeInactive: true)[2];
@@ -349,7 +347,10 @@ public class SearchField : CustomInputField
 
 	public void OnTreePathChanged(Tree tree)
 	{
-		Search(tree);
+		if( CanSearch() )
+		{
+			Search(tree);
+		}
 	}
 
 	#endregion
