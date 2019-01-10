@@ -10,7 +10,6 @@ using UniRx;
 using UniRx.Triggers;
 using System.IO;
 using System.Runtime.InteropServices;
-using System.Windows.Forms;
 
 // Window > [ Note ] > Tree > Line
 public class Note : MonoBehaviour

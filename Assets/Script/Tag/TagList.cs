@@ -10,7 +10,7 @@ using System.IO;
 using System.Text;
 
 // Window > [ TagList ] > TagParent > TaggedLine
-public class TagList : MonoBehaviour, IEnumerable<TagParent>
+public class TagList : MonoBehaviour
 {
 	#region editor params
 
@@ -78,10 +78,6 @@ public class TagList : MonoBehaviour, IEnumerable<TagParent>
 		{
 			yield return tagParent;
 		}
-	}
-	IEnumerator IEnumerable.GetEnumerator()
-	{
-		return this.GetEnumerator();
 	}
 
 	public int Count { get { return tagParents_.Count; } }
@@ -243,23 +239,37 @@ public class TagList : MonoBehaviour, IEnumerable<TagParent>
 
 	#region open / close
 
-	public void Open()
+	public void Open(bool withAnim = true)
 	{
 		isOpened_ = true;
 		OpenButton.transform.gameObject.SetActive(false);
 		CloseButton.transform.parent.gameObject.SetActive(true);
-		AnimManager.RemoveOtherAnim(scrollRect_);
-		AnimManager.AddAnim(scrollRect_, GameContext.Config.TagListWidth, ParamType.SizeDeltaX, AnimType.Time, 0.1f);
+		if( withAnim )
+		{
+			AnimManager.RemoveOtherAnim(scrollRect_);
+			AnimManager.AddAnim(scrollRect_, GameContext.Config.TagListWidth, ParamType.SizeDeltaX, AnimType.Time, 0.1f);
+		}
+		else
+		{
+			scrollRect_.sizeDelta = new Vector2(GameContext.Config.TagListWidth, scrollRect_.sizeDelta.y);
+		}
 		GameContext.Window.OnHeaderWidthChanged();
 	}
 
-	public void Close()
+	public void Close(bool withAnim = true)
 	{
 		isOpened_ = false;
 		OpenButton.transform.gameObject.SetActive(true);
 		CloseButton.transform.parent.gameObject.SetActive(false);
-		AnimManager.RemoveOtherAnim(scrollRect_);
-		AnimManager.AddAnim(scrollRect_, -1, ParamType.SizeDeltaX, AnimType.BounceOut, 0.2f);
+		if( withAnim )
+		{
+			AnimManager.RemoveOtherAnim(scrollRect_);
+			AnimManager.AddAnim(scrollRect_, -1, ParamType.SizeDeltaX, AnimType.BounceOut, 0.2f);
+		}
+		else
+		{
+			scrollRect_.sizeDelta = new Vector2(-1, scrollRect_.sizeDelta.y);
+		}
 		GameContext.Window.OnHeaderWidthChanged();
 	}
 

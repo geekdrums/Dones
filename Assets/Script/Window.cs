@@ -11,7 +11,6 @@ using System.IO;
 using System.Xml;
 using System.Xml.Serialization;
 using System.Runtime.InteropServices;
-using System.Windows.Forms;
 using System.Text;
 #if UNITY_EDITOR
 using UnityEditor;
@@ -23,6 +22,9 @@ public class Window : MonoBehaviour
 	#region editor params
 
 	public TabGroup TabGroup;
+
+	public TreeNote Note;
+	public LogNote LogNote;
 
 	public TagList TagList;
 
@@ -41,9 +43,6 @@ public class Window : MonoBehaviour
 
 
 	#region params
-
-	public TreeNote Note;
-	public LogNote LogNote;
 
 	DirectoryInfo donesDirectory_;
 	FileInfo settingFile_;
@@ -343,9 +342,10 @@ public class Window : MonoBehaviour
 			return;
 		}
 
-		UnityEngine.Screen.SetResolution(settingXml_.Screen.Width, settingXml_.Screen.Height, settingXml_.Screen.IsMaximized ? FullScreenMode.MaximizedWindow : FullScreenMode.Windowed);
+		// 無駄なので消し。いつかまともにサポートされたら復活させたい。
+		// UnityEngine.Screen.SetResolution(settingXml_.Screen.Width, settingXml_.Screen.Height, settingXml_.Screen.IsMaximized ? FullScreenMode.MaximizedWindow : FullScreenMode.Windowed);
 
-		foreach(TabViewParam tabparam in settingXml_.TabParams )
+		foreach( TabViewParam tabparam in settingXml_.TabParams )
 		{
 			TabGroup.AddTab(Note, new TreePath(tabparam.Path), select: false);
 		}
@@ -362,11 +362,11 @@ public class Window : MonoBehaviour
 
 		if( settingXml_.IsTagListOpened )
 		{
-			TagList.Open();
+			TagList.Open(withAnim: false);
 		}
 		else
 		{
-			TagList.Close();
+			TagList.Close(withAnim: false);
 		}
 
 		if( settingXml_.LogNoteOpenState == LogNote.OpenState.Minimize )
@@ -406,7 +406,7 @@ public class Window : MonoBehaviour
 		settingXml_.Screen = new ScreenSetting();
 		settingXml_.Screen.Width = UnityEngine.Screen.width;
 		settingXml_.Screen.Height = UnityEngine.Screen.height;
-		settingXml_.Screen.IsMaximized = (UnityEngine.Screen.fullScreenMode == FullScreenMode.MaximizedWindow);
+		settingXml_.Screen.IsMaximized = UnityEngine.Screen.fullScreen;
 
 		settingXml_.IsTagListOpened = TagList.IsOpened;
 		settingXml_.LogNoteOpenState = LogNote.State;
