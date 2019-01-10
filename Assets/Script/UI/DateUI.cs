@@ -12,7 +12,7 @@ public class DateUI : MonoBehaviour {
 	public Text MonthText;
 	public Text DayText;
 	public Text WeekDayText;
-	public Text DateText;
+	public Text ShortDateText;
 	public Button CreateTreeButton;
 
 	public float PreferredHeight
@@ -75,8 +75,16 @@ public class DateUI : MonoBehaviour {
 			MonthText.text = date.ToString("yyyy/M/");
 		}
 		DayText.text = date.ToString("dd").TrimStart('0');//なぜか"d"だと6/26/2017みたいにフルで出力されるので。。
-		DateText.text = date.ToString("d ddd");
 		WeekDayText.text = date.ToString("ddd");
+
+		if( date.Year == today.Year && date.Month == today.Month )
+		{
+			ShortDateText.text = date.ToString("d ddd");
+		}
+		else
+		{
+			ShortDateText.text = date.ToString("M/d");
+		}
 	}
 
 	void SetTree(LogTree tree)
@@ -90,7 +98,7 @@ public class DateUI : MonoBehaviour {
 		MonthText.color = color;
 		DayText.color = color;
 		WeekDayText.color = color;
-		DateText.color = color;
+		ShortDateText.color = color;
 		GetComponentInChildren<Image>().color = color;
 	}
 
@@ -109,18 +117,22 @@ public class DateUI : MonoBehaviour {
 	{
 		if( (logTree_ != null && logTree_.TitleLine != null) || isToday_ )
 		{
+			// 日付を大きく表示
 			MonthText.gameObject.SetActive(true);
 			DayText.gameObject.SetActive(true);
 			WeekDayText.gameObject.SetActive(true);
-			DateText.gameObject.SetActive(false);
+
+			ShortDateText.gameObject.SetActive(false);
 			CreateTreeButton.gameObject.SetActive(false);
 		}
 		else
 		{
+			// 短く表示
 			MonthText.gameObject.SetActive(false);
 			DayText.gameObject.SetActive(false);
 			WeekDayText.gameObject.SetActive(false);
-			DateText.gameObject.SetActive(true);
+
+			ShortDateText.gameObject.SetActive(true);
 			CreateTreeButton.gameObject.SetActive(true);
 		}
 	}
