@@ -31,7 +31,7 @@ public class LogNote : Note
 	public UnityEngine.UI.Button ResetToDefaultButton;
 
 	public Text TitleText;
-	public UIMidairPrimitive TitleArrow;
+	public Image TitleArrow;
 
 	#endregion
 
@@ -279,9 +279,8 @@ public class LogNote : Note
 			LoadMore();
 			UpdateLayoutElement();
 		}
-		TitleArrow.Angle = 180;
-		TitleArrow.SetColor(GameContext.Config.ToggleOpenedColor);
-		TitleArrow.RecalculatePolygon();
+		TitleArrow.transform.localRotation = Quaternion.identity;
+		TitleArrow.color = GameContext.Config.ToggleOpenedColor;
 	}
 
 	public void Minimize()
@@ -297,9 +296,8 @@ public class LogNote : Note
 		ResetToDefaultButton.GetComponent<RectTransform>().anchoredPosition = new Vector2(0, 0);
 		MinimizeButton.gameObject.SetActive(false);
 		DoneMark.transform.parent.gameObject.SetActive(true);
-		TitleArrow.Angle = -90;
-		TitleArrow.SetColor(GameContext.Config.DoneColor);
-		TitleArrow.RecalculatePolygon();
+		TitleArrow.transform.localRotation = Quaternion.AngleAxis(90, Vector3.forward);
+		TitleArrow.color = GameContext.Config.DoneColor;
 	}
 
 	public void ResetToDefault()
@@ -315,9 +313,8 @@ public class LogNote : Note
 		MinimizeButton.GetComponent<RectTransform>().anchoredPosition = new Vector2(0, 0);
 		ResetToDefaultButton.gameObject.SetActive(false);
 		DoneMark.transform.parent.gameObject.SetActive(false);
-		TitleArrow.Angle = 180;
-		TitleArrow.SetColor(GameContext.Config.ToggleOpenedColor);
-		TitleArrow.RecalculatePolygon();
+		TitleArrow.transform.localRotation = Quaternion.identity;
+		TitleArrow.color = GameContext.Config.ToggleOpenedColor;
 	}
 
 	private void SetOpenState(OpenState state)

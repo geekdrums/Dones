@@ -41,7 +41,7 @@ public class TagToggle : Toggle {
 
 	public void AnimToTargetVisual()
 	{
-		(targetGraphic as UIMidairPrimitive).SetColor(TargetColor);
+		(targetGraphic as Image).color = TargetColor;
 		targetGraphic.CrossFadeColor(Color.white, 0, true, true);
 		AnimManager.AddAnim(targetGraphic, interactable && isOn ? 0 : 90, ParamType.RotationZ, AnimType.Time, GameContext.Config.AnimTime);
 	}

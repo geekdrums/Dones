@@ -198,12 +198,12 @@ public class TreeNote : Note
 	void UpdateTreePathList(TreePath path)
 	{
 		List<Text> textList = new List<Text>(GameContext.Window.TitleLine.GetComponentsInChildren<Text>(includeInactive: true));
-		List<UIMidairPrimitive> triangleList = new List<UIMidairPrimitive>(GameContext.Window.TitleLine.GetComponentsInChildren<UIMidairPrimitive>(includeInactive: true));
+		List<Image> triangleList = new List<Image>(GameContext.Window.TitleLine.GetComponentsInChildren<Image>(includeInactive: true));
 
 		while( textList.Count < path.Length + 1 )
 		{
 			textList.Add(Instantiate(textList[0].gameObject, GameContext.Window.TitleLine.transform).GetComponent<Text>());
-			triangleList.Add(Instantiate(triangleList[0].gameObject, GameContext.Window.TitleLine.transform).GetComponent<UIMidairPrimitive>());
+			triangleList.Add(Instantiate(triangleList[0].gameObject, GameContext.Window.TitleLine.transform).GetComponent<Image>());
 		}
 
 		GameContext.TextLengthHelper.Request(textList[path.Length], OnTextLengthCalculated);
@@ -241,7 +241,7 @@ public class TreeNote : Note
 	void OnTextLengthCalculated()
 	{
 		List<Text> textList = new List<Text>(GameContext.Window.TitleLine.GetComponentsInChildren<Text>());
-		List<UIMidairPrimitive> triangleList = new List<UIMidairPrimitive>(GameContext.Window.TitleLine.GetComponentsInChildren<UIMidairPrimitive>());
+		List<Image> triangleList = new List<Image>(GameContext.Window.TitleLine.GetComponentsInChildren<Image>());
 
 		float x = 0;
 		float margin = 12;

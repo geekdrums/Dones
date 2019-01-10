@@ -148,6 +148,8 @@ public class Window : MonoBehaviour
 				SearchField.IsFocused = true;
 			}
 
+			/*
+			 * フォントアトラスの再構成によるバグを防ぐため、一旦機能削除
 			if( Input.mouseScrollDelta.y > 0 )
 			{
 				if( GameContext.Config.FontSize < 20 )
@@ -172,6 +174,7 @@ public class Window : MonoBehaviour
 					AnimManager.AddAnim(FontSizeText.gameObject, 0.0f, ParamType.TextAlphaColor, AnimType.Time, 3.0f, endOption: AnimEndOption.Deactivate);
 				}
 			}
+			*/
 		}
 		if( Input.GetKeyDown(KeyCode.F5) && TabGroup.ActiveNote == Note )
 		{

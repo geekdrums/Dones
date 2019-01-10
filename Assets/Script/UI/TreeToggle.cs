@@ -66,7 +66,7 @@ public class TreeToggle : Toggle {
 		if( textField_ != null && textField_.BindedLine != null )
 		{
 			this.interactable = textField_ != null && textField_.BindedLine.Count > 0;
-			(targetGraphic as UIMidairPrimitive).SetColor(TargetColor);
+			(targetGraphic as Image).color = TargetColor;
 			targetGraphic.CrossFadeColor(Color.white, 0, true, true);
 			AnimManager.AddAnim(targetGraphic, interactable && isOn ? 0 : 90, ParamType.RotationZ, AnimType.Time, GameContext.Config.AnimTime);
 			if( verticalLine_ != null )
