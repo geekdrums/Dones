@@ -181,8 +181,40 @@ public class TaggedLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragH
 
 	public void Done()
 	{
-		BindedLine.Tree.Done(BindedLine);
+		if( tagParent_.IsRepeat )
+		{
+			BindedLine.Tree.RepeatDone(BindedLine);
+			OnRepeatDone();
+		}
+		else
+		{
+			BindedLine.Tree.Done(BindedLine);
+		}
 		ShowBindedLine();
+	}
+
+	public void OnRepeatDone()
+	{
+		strikeLine_.gameObject.SetActive(true);
+		checkMark_.gameObject.SetActive(true);
+
+		float backToUsualTime = 0.7f;
+
+		// strike anim
+		strikeLine_.Rate = 0.0f;
+		AnimManager.AddAnim(strikeLine_, 1.0f, ParamType.GaugeRate, AnimType.Time, 0.15f);
+		AnimManager.AddAnim(strikeLine_, 0.0f, ParamType.GaugeRate, AnimType.Time, 0.1f, backToUsualTime, endOption: AnimEndOption.Deactivate);
+
+		// check anim
+		checkMark_.CheckAndUncheck(backToUsualTime);
+
+		// list anim
+		listMark_.SetColor(Color.clear);
+		AnimManager.AddAnim(listMark_, Color.black, ParamType.Color, AnimType.Time, 0.15f, backToUsualTime);
+
+		// color anim
+		SetColor(GameContext.Config.DoneTextColor);
+		AnimManager.AddAnim(this.gameObject, GameContext.Config.TextColor, ParamType.Color, AnimType.Time, 0.1f, backToUsualTime);
 	}
 
 	public void OnDoneChanged(bool withAnim = true)

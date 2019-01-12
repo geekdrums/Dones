@@ -299,7 +299,7 @@ public class TagList : MonoBehaviour
 		foreach( TagParent tagParent in sourceTagParents_ )
 		{
 			tagParent.OnTreePathChanged(titleLine);
-			bool isActive = ( tagParent.Count > 0 );
+			bool isActive = (tagParent.IsPinned || tagParent.Count > 0);
 			tagParent.gameObject.SetActive(isActive);
 			if( isActive )
 			{

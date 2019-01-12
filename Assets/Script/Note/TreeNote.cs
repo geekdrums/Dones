@@ -28,6 +28,7 @@ public class TreeNote : Note
 	
 	public LineField LinePrefab;
 	public TagText TagTextPrefab;
+	public Text TitlePathPrefab;
 
 	protected HeapManager<LineField> heapManager_ = new HeapManager<LineField>();
 	protected HeapManager<TagText> tagHeapManager_ = new HeapManager<TagText>();
@@ -196,36 +197,31 @@ public class TreeNote : Note
 
 	void UpdateTreePathList(TreePath path)
 	{
-		List<Text> textList = new List<Text>(GameContext.Window.TitleLine.GetComponentsInChildren<Text>(includeInactive: true));
-		List<Image> triangleList = new List<Image>(GameContext.Window.TitleLine.GetComponentsInChildren<Image>(includeInactive: true));
-
-		while( textList.Count < path.Length + 1 )
+		List<Text> titlePathList = new List<Text>(GameContext.Window.TitlePath.GetComponentsInChildren<Text>(includeInactive: true));
+		
+		while( titlePathList.Count < path.Length )
 		{
-			textList.Add(Instantiate(textList[0].gameObject, GameContext.Window.TitleLine.transform).GetComponent<Text>());
-			triangleList.Add(Instantiate(triangleList[0].gameObject, GameContext.Window.TitleLine.transform).GetComponent<Image>());
+			titlePathList.Add(Instantiate(TitlePathPrefab.gameObject, GameContext.Window.TitlePath.transform).GetComponent<Text>());
 		}
 
-		GameContext.TextLengthHelper.Request(textList[path.Length], OnTextLengthCalculated);
-
-		UnityEngine.UI.Button button = textList[0].GetComponent<UnityEngine.UI.Button>();
-		button.onClick.RemoveAllListeners();
-		button.onClick.AddListener(() =>
+		if( path.Length > 0 )
 		{
-			GameContext.Window.TabGroup.HomeTabButton.OnClick();
-		});
-		textList.RemoveAt(0);// home ボタンを残す
-		triangleList.RemoveAt(0);
-
-		for( int i = 0; i < textList.Count; ++i )
+			GameContext.TextLengthHelper.Request(titlePathList[path.Length - 1], OnTextLengthCalculated);
+		}
+		else
 		{
-			textList[i].gameObject.SetActive(i < path.Length);
-			triangleList[i].gameObject.SetActive(i < path.Length);
+			GameContext.Window.SearchField.transform.localPosition = new Vector3(55, GameContext.Window.SearchField.transform.localPosition.y, 0);
+		}
+		
+		for( int i = 0; i < titlePathList.Count; ++i )
+		{
+			titlePathList[i].gameObject.SetActive(i < path.Length);
 			if( i < path.Length )
 			{
 				bool isLastPath = i == path.Length - 1;
-				textList[i].text = path[i];
-				textList[i].color = (isLastPath ? GameContext.Config.TextColor : GameContext.Config.DoneTextColor);
-				button = textList[i].GetComponent<UnityEngine.UI.Button>();
+				titlePathList[i].text = path[i];
+				titlePathList[i].color = (isLastPath ? GameContext.Config.TextColor : GameContext.Config.DoneTextColor);
+				UnityEngine.UI.Button button = titlePathList[i].GetComponent<UnityEngine.UI.Button>();
 				button.enabled = isLastPath == false;
 				button.onClick.RemoveAllListeners();
 				int length = i + 1;
@@ -239,26 +235,23 @@ public class TreeNote : Note
 
 	void OnTextLengthCalculated()
 	{
-		List<Text> textList = new List<Text>(GameContext.Window.TitleLine.GetComponentsInChildren<Text>());
-		List<Image> triangleList = new List<Image>(GameContext.Window.TitleLine.GetComponentsInChildren<Image>());
+		List<Text> titlePathList = new List<Text>(GameContext.Window.TitlePath.GetComponentsInChildren<Text>());
 
-		float x = 0;
+		float x = 55;
 		float margin = 12;
 		float triangleWidth = 12;
-		for( int i = 0; i < textList.Count; ++i )
+		for( int i = 0; i < titlePathList.Count; ++i )
 		{
-			float width = TextLengthHelper.GetFullTextRectLength(textList[i].cachedTextGenerator);
-			textList[i].transform.localPosition = new Vector3(x, textList[i].transform.localPosition.y, 0);
-			textList[i].rectTransform.sizeDelta = new Vector2(width, textList[i].rectTransform.sizeDelta.y);
+			float width = TextLengthHelper.GetFullTextRectLength(titlePathList[i].cachedTextGenerator);
+			titlePathList[i].transform.localPosition = new Vector3(x, titlePathList[i].transform.localPosition.y, 0);
+			titlePathList[i].rectTransform.sizeDelta = new Vector2(width, titlePathList[i].rectTransform.sizeDelta.y);
 			x += width;
 			x += margin;
-			if( i < triangleList.Count )
-			{
-				triangleList[i].transform.localPosition = new Vector3(x, triangleList[i].transform.localPosition.y, 0);
-				x += triangleWidth;
-			}
+			Image triangle = titlePathList[i].GetComponentInChildren<Image>();
+			triangle.transform.localPosition = new Vector3(width + margin, triangle.transform.localPosition.y, 0);
+			x += triangleWidth;
 		}
-		GameContext.Window.SearchField.transform.localPosition = new Vector3(x - 5, GameContext.Window.SearchField.transform.localPosition.y, 0);
+		GameContext.Window.SearchField.transform.localPosition = new Vector3(x - 3, GameContext.Window.SearchField.transform.localPosition.y, 0);
 	}
 
 	public override void Destroy()

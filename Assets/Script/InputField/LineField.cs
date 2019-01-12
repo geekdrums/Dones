@@ -144,7 +144,7 @@ public class LineField : CustomInputField
 
 		strikeLine_.Rate = 0.0f;
 		AnimManager.AddAnim(strikeLine_, 1.0f, ParamType.GaugeRate, AnimType.Time, 0.15f);
-		AnimManager.AddAnim(strikeLine_, 0.0f, ParamType.GaugeRate, AnimType.Time, 0.1f, backToUsualTime);
+		AnimManager.AddAnim(strikeLine_, 0.0f, ParamType.GaugeRate, AnimType.Time, 0.1f, backToUsualTime, endOption: AnimEndOption.Deactivate);
 
 		checkMark_.CheckAndUncheck(backToUsualTime);
 
@@ -539,6 +539,8 @@ public class LineField : CustomInputField
 			case KeyCode.RightArrow:
 			case KeyCode.LeftArrow:
 			{
+				KeyPressed(processingEvent);
+				consumedEvent = true;
 				desiredCaretPos_ = m_CaretSelectPosition;
 				BindedLine.FixTextInputAction();
 				if( GameContext.Window.TagIncrementalDialog.IsActive )
@@ -553,6 +555,8 @@ public class LineField : CustomInputField
 			case KeyCode.Home:
 			case KeyCode.End:
 			{
+				KeyPressed(processingEvent);
+				consumedEvent = true;
 				desiredCaretPos_ = m_CaretSelectPosition;
 				BindedLine.FixTextInputAction();
 			}

@@ -742,8 +742,7 @@ public class Tree : MonoBehaviour
 		{
 			if( line.Text != "" )
 			{
-				Line targetLine = line;
-				Done(targetLine);
+				Done(line);
 			}
 		}
 		actionManager_.EndChain();
@@ -758,22 +757,25 @@ public class Tree : MonoBehaviour
 		{
 			if( line.IsDone == false && line.Text != "" )
 			{
-				Line targetLine = line;
-				actionManager_.Execute(new LineAction(
-					targetLines: targetLine,
-					execute: () =>
-					{
-						(ownerNote_ as TreeNote).LogNote.TodayTree.AddLog(targetLine);
-						targetLine.Field.OnRepeatDone();
-					},
-					undo: () =>
-					{
-						(ownerNote_ as TreeNote).LogNote.TodayTree.RemoveLog(targetLine);
-					}));
-
+				RepeatDone(line);
 			}
 		}
 		actionManager_.EndChain();
+	}
+
+	public void RepeatDone(Line targetLine)
+	{
+		actionManager_.Execute(new LineAction(
+			targetLines: targetLine,
+			execute: () =>
+			{
+				(ownerNote_ as TreeNote).LogNote.TodayTree.AddLog(targetLine);
+				targetLine.Field.OnRepeatDone();
+			},
+			undo: () =>
+			{
+				(ownerNote_ as TreeNote).LogNote.TodayTree.RemoveLog(targetLine);
+			}));
 	}
 
 	public void Done(Line targetLine)

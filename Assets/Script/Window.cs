@@ -36,7 +36,7 @@ public class Window : MonoBehaviour
 
 	public Text FontSizeText;
 	public SaveText SaveText;
-	public GameObject TitleLine;
+	public GameObject TitlePath;
 	public Text DayText;
 
 	#endregion

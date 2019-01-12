@@ -20,7 +20,7 @@ public class TabButton : UnityEngine.UI.Button, IDragHandler, IBeginDragHandler,
 	
 	public string Text
 	{
-		get { return textComponent_.text; }
+		get { return (textComponent_ != null ? textComponent_.text : "Home"); }
 		set
 		{
 			if( textComponent_ == null )
@@ -82,7 +82,7 @@ public class TabButton : UnityEngine.UI.Button, IDragHandler, IBeginDragHandler,
 		Line line = note.Tree.GetLineFromPath(ViewParam.Path);
 		if( ViewParam.Path.Length == 0 )
 		{
-			Text = "Home";
+			//Text = "Home";
 		}
 		else
 		{
@@ -235,6 +235,11 @@ public class TabButton : UnityEngine.UI.Button, IDragHandler, IBeginDragHandler,
 		if( textComponent_ != null && GameContext.Config != null )
 		{
 			textComponent_.color = isSelected_ ? Color.white : GameContext.Config.TextColor;
+		}
+		else if( ViewParam != null && ViewParam.Path.Length == 0 )
+		{
+			// home icon
+			GetComponentsInChildren<Image>()[1].color = isSelected_ ? Color.white : GameContext.Config.IconColor;
 		}
 	}
 
