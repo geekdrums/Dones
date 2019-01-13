@@ -485,7 +485,7 @@ public class Line : IEnumerable<Line>, IComparable<Line>
 			Field.OnTextLengthChanged();
 		}
 		ApplyTextToTaggedLine();
-		CheckIsComment();
+		//CheckIsComment();
 	}
 
 	public void FixTextInputAction()
@@ -1740,6 +1740,7 @@ public class Line : IEnumerable<Line>, IComparable<Line>
 	
 	public void CheckIsComment()
 	{
+		/*
 		if( text_.StartsWith(CommentTag) )
 		{
 			SetTextDirectly(text_.Remove(0, CommentTag.Length));
@@ -1765,6 +1766,7 @@ public class Line : IEnumerable<Line>, IComparable<Line>
 				}
 				));
 		}
+		*/
 	}
 
 	public void CheckHashTags()

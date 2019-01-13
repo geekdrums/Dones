@@ -248,23 +248,22 @@ public class LineField : CustomInputField
 			strikeLine_.Direction = Vector3.right;
 			strikeLine_.Length = 0;
 			strikeLine_.Width = 1;
-			strikeLine_.rectTransform.anchoredPosition = new Vector2(-5, 0);
 			if( BindedLine.IsLinkText )
 			{
 				strikeLine_.gameObject.SetActive(true);
-				strikeLine_.transform.localPosition = new Vector3(strikeLine_.transform.localPosition.x, -5, strikeLine_.transform.localPosition.z);
+				strikeLine_.rectTransform.anchoredPosition = new Vector2(0, -7);
 				strikeLine_.SetColor(GameContext.Config.ThemeColor);
 			}
 			else if( BindedLine.IsDone && BindedLine.IsClone == false )
 			{
 				strikeLine_.gameObject.SetActive(true);
-				strikeLine_.transform.localPosition = new Vector3(strikeLine_.transform.localPosition.x, 0, strikeLine_.transform.localPosition.z);
+				strikeLine_.rectTransform.anchoredPosition = new Vector2(-3, 0);
 				strikeLine_.SetColor(GameContext.Config.StrikeColor);
 			}
 			else
 			{
 				strikeLine_.gameObject.SetActive(false);
-				strikeLine_.transform.localPosition = new Vector3(strikeLine_.transform.localPosition.x, 0, strikeLine_.transform.localPosition.z);
+				strikeLine_.rectTransform.anchoredPosition = new Vector2(-3, 0);
 				strikeLine_.SetColor(GameContext.Config.StrikeColor);
 			}
 		}
@@ -314,10 +313,21 @@ public class LineField : CustomInputField
 		float charLength = GetFullTextRectLength();
 
 		if( BindedLine.IsComment == false && strikeLine_.gameObject.activeInHierarchy )
-			strikeLine_.SetLength(charLength + 5);
-		
+		{
+			if( BindedLine.IsLinkText )
+			{
+				strikeLine_.SetLength(charLength);
+			}
+			else
+			{
+				strikeLine_.SetLength(charLength + 6);
+			}
+		}
+
 		if( checkMark_.gameObject.activeSelf )
+		{
 			checkMark_.SetPositionX(charLength);
+		}
 
 		float rectHeight = RectHeight;
 		foreach( TagText tagText in tagTexts_ )

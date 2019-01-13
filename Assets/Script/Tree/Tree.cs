@@ -158,7 +158,7 @@ public class Tree : MonoBehaviour
 			else if( Input.GetKeyDown(KeyCode.B) )
 #endif
 			{
-				OnCtrlBInput();
+				//OnCtrlBInput();
 			}
 			else if( Input.GetKeyDown(KeyCode.Home) )
 			{
@@ -844,39 +844,40 @@ public class Tree : MonoBehaviour
 			));
 	}
 
-	protected void OnEnterInput()
+	protected void OnIncrementalDialogEnter()
 	{
-		if( focusedLine_ != null && GameContext.Window.TagIncrementalDialog.IsActive )
+		// タグのインクリメンタルサーチで選択した時の場合
+		string selectedTag = GameContext.Window.TagIncrementalDialog.GetSelectedTag();
+		if( selectedTag != null )
 		{
-			// タグのインクリメンタルサーチで選択した時の場合
-			string selectedTag = GameContext.Window.TagIncrementalDialog.GetSelectedTag();
-			if( selectedTag != null )
-			{
-				Line line = focusedLine_;
-				string caretTag = Line.GetTagInCaretPosition(line.Text, line.Field.CaretPosision);
-				int oldCaretPos = line.Field.CaretPosision;
-				actionManager_.Execute(new LineAction(
-					targetLines: line,
-					execute: () =>
-					{
-						line.Field.CaretPosision = 0;
-						line.RemoveTag(caretTag);
-						line.AddTag(selectedTag);
-						line.Field.CaretPosision = line.Text.Length;
-					},
-					undo: () =>
-					{
-						line.Field.CaretPosision = 0;
-						line.RemoveTag(selectedTag);
-						line.AddTag(caretTag);
-						line.Field.CaretPosision = oldCaretPos;
-					}
-					));
-				GameContext.Window.TagIncrementalDialog.Close();
-				return;
-			}
+			Line line = focusedLine_;
+			string caretTag = Line.GetTagInCaretPosition(line.Text, line.Field.CaretPosision);
+			int oldCaretPos = line.Field.CaretPosision;
+			actionManager_.Execute(new LineAction(
+				targetLines: line,
+				execute: () =>
+				{
+					line.Field.CaretPosision = 0;
+					line.RemoveTag(caretTag);
+					line.AddTag(selectedTag);
+					line.Field.CaretPosision = line.Text.Length;
+				},
+				undo: () =>
+				{
+					line.Field.CaretPosision = 0;
+					line.RemoveTag(selectedTag);
+					line.AddTag(caretTag);
+					line.Field.CaretPosision = oldCaretPos;
+				}
+				));
+			GameContext.Window.TagIncrementalDialog.Close();
+			return;
 		}
+	}
 
+	protected void NewLine()
+	{
+		//bool shift = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
 		int caretPos = focusedLine_.Field.CaretPosision;
 		Line target = focusedLine_;
 		Line parent = focusedLine_.Parent;
@@ -945,6 +946,18 @@ public class Tree : MonoBehaviour
 					target.Field.IsFocused = true;
 				}
 				));
+		}
+	}
+
+	protected void OnEnterInput()
+	{
+		if( focusedLine_ != null && GameContext.Window.TagIncrementalDialog.IsActive )
+		{
+			OnIncrementalDialogEnter();
+		}
+		else
+		{
+			NewLine();
 		}
 	}
 

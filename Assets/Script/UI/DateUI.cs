@@ -75,11 +75,11 @@ public class DateUI : MonoBehaviour {
 			MonthText.text = date.ToString("yyyy/M/");
 		}
 		DayText.text = date.ToString("dd").TrimStart('0');//なぜか"d"だと6/26/2017みたいにフルで出力されるので。。
-		WeekDayText.text = date.ToString("ddd");
+		WeekDayText.text = date.DayOfWeek.ToString().Substring(0,3);
 
 		if( date.Year == today.Year && date.Month == today.Month )
 		{
-			ShortDateText.text = date.ToString("d ddd");
+			ShortDateText.text = date.ToString("d ") + WeekDayText.text;
 		}
 		else
 		{

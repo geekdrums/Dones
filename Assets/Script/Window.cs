@@ -110,7 +110,7 @@ public class Window : MonoBehaviour
 		Note.OnFontSizeChanged();
 
 		DayText.text = String.Format("<size=12>{0}/ </size>{1}/{2}<size=12> ({3})</size>",
-			DateTime.Now.ToString("yyyy"), DateTime.Now.ToString("MM").TrimStart('0'), DateTime.Now.ToString("dd").TrimStart('0'), DateTime.Now.ToString("ddd"));
+			DateTime.Now.ToString("yyyy"), DateTime.Now.ToString("MM").TrimStart('0'), DateTime.Now.ToString("dd").TrimStart('0'), DateTime.Now.DayOfWeek.ToString().Substring(0, 3));
 
 		SearchField.Initialize();
 	}
