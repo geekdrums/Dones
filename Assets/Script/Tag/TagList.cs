@@ -333,6 +333,24 @@ public class TagList : MonoBehaviour
 
 			int desiredIndex = GetDesiredTagIndex(tagParent.transform.localPosition.y);
 
+			if( desiredIndex == 0 && 0 < index )
+			{
+				// 0番目に移動するには、０番目よりも上にもっていかないとダメ
+				if( tagParent.transform.localPosition.y > GetTargetPosition(tagParents_[0]).y )
+				{
+					//desiredIndex = 0;
+				}
+				else
+				{
+					desiredIndex = 1;
+				}
+			}
+			else if( desiredIndex < index )
+			{
+				// 上方向には、その範囲に入ったらじゃなくて、範囲を超えて上に動かした時に入れ替える。
+				desiredIndex += 1;
+			}
+
 			if( index != desiredIndex )
 			{
 				sourceTagParents_.Remove(tagParent);
@@ -363,7 +381,7 @@ public class TagList : MonoBehaviour
 		tagOvelayDesiredIndex_ = -1;
 		if( overed )
 		{
-			int desiredIndex = GetDesiredTagIndex(taggedLine.transform.localPosition.y) - 1;
+			int desiredIndex = GetDesiredTagIndex(taggedLine.transform.localPosition.y);
 
 			if( tagParents_.IndexOf(taggedLine.Parent) != desiredIndex )
 			{
@@ -378,7 +396,7 @@ public class TagList : MonoBehaviour
 		tagOvelayDesiredIndex_ = -1;
 		if( overed )
 		{
-			int desiredIndex = GetDesiredTagIndex(taggedLine.transform.localPosition.y) - 1;
+			int desiredIndex = GetDesiredTagIndex(taggedLine.transform.localPosition.y);
 
 			if( 0 <= desiredIndex && tagParents_.IndexOf(taggedLine.Parent) != desiredIndex )
 			{
@@ -409,17 +427,26 @@ public class TagList : MonoBehaviour
 		UpdateLayoutElement();
 	}
 
-	private int GetDesiredTagIndex(float currentY)
+	public bool IsOutsideOf(TagParent tagParent, float currentY)
+	{
+		int index = tagParents_.IndexOf(tagParent);
+		int desiredIndex = GetDesiredTagIndex(currentY);
+		return index != desiredIndex;
+	}
+
+	public int GetDesiredTagIndex(float currentY)
 	{
 		int desiredIndex = tagParents_.Count - 1;
-		for( int i = 0; i < tagParents_.Count; ++i )
+		for( int i = 0; i < tagParents_.Count - 1; ++i )
 		{
-			if( currentY > GetTargetPosition(tagParents_[i]).y )
+			// 次の要素のY座標より上（Y座標は上方向がプラス）であれば
+			if( currentY > GetTargetPosition(tagParents_[i + 1]).y )
 			{
 				desiredIndex = i;
 				break;
 			}
 		}
+		// 最後の要素を抜かしてそれより上に無い、ということは一番下
 		return desiredIndex;
 	}
 

@@ -770,7 +770,10 @@ public class Tree : MonoBehaviour
 			execute: () =>
 			{
 				(ownerNote_ as TreeNote).LogNote.TodayTree.AddLog(targetLine);
-				targetLine.Field.OnRepeatDone();
+				if( targetLine.Field != null )
+				{
+					targetLine.Field.OnRepeatDone();
+				}
 			},
 			undo: () =>
 			{

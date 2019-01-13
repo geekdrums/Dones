@@ -133,6 +133,7 @@ public class TaggedLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragH
 			tagParent_ = GetComponentInParent<TagParent>();
 		}
 
+		isSelected_ = false;
 		BindedLine = line;
 		Text = line.TextWithoutHashTags;
 		IsDone = line.IsDone;
@@ -162,7 +163,6 @@ public class TaggedLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragH
 	{
 		base.OnSelect(eventData);
 		isSelected_ = true;
-		image.color = GameContext.Config.TagSelectionColor;
 		tagParent_.OnSelect(this);
 	}
 
@@ -170,7 +170,6 @@ public class TaggedLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragH
 	{
 		base.OnDeselect(eventData);
 		isSelected_ = false;
-		image.color = Color.white;
 		tagParent_.OnDeselect(this);
 	}
 
@@ -293,6 +292,7 @@ public class TaggedLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragH
 		if( IsDone == false )
 		{
 			tagParent_.OnEndDragLine(this);
+			OnDeselect(null);
 		}
 	}
 

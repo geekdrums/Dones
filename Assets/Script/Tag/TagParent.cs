@@ -109,10 +109,15 @@ public class TagParent : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDra
 		tag_ = tag;
 		tagList_ = owner;
 		lines_.Clear();
+		sourceLines_.Clear();
 		selectedLine_ = null;
 		selectedIndex_ = -1;
 		GetComponentInChildren<Text>().text = "#" + tag_;
-		
+
+		isPinned_ = false;
+		isRepeat_ = false;
+		isFolded_ = false;
+
 #if UNITY_EDITOR
 		name = "#" + tag_;
 #endif
@@ -443,11 +448,11 @@ public class TagParent : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDra
 			int index = lines_.IndexOf(taggedLine);
 			taggedLine.transform.localPosition += new Vector3(0, eventData.delta.y, 0);
 
-			float currentY = -(taggedLine.transform.localPosition.y - this.transform.localPosition.y);
-			bool overed = currentY < -tagList_.Margin || Height + tagList_.Margin < currentY;
+			bool overed = tagList_.IsOutsideOf(this, taggedLine.transform.localPosition.y);
 			tagList_.OnOverDraggingLine(taggedLine, eventData, overed);
-			if( -tagList_.Margin < currentY && currentY < Height + tagList_.Margin )
+			if( overed == false )
 			{
+				float currentY = -(taggedLine.transform.localPosition.y - this.transform.localPosition.y);
 				int desiredIndex = Mathf.Clamp((int)(currentY / GameContext.Config.TagLineHeight), 0, lines_.Count - 1);
 				if( index != desiredIndex )
 				{
@@ -470,8 +475,7 @@ public class TagParent : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDra
 	{
 		if( lines_.Contains(taggedLine) )
 		{
-			float currentY = -(taggedLine.transform.localPosition.y - this.transform.localPosition.y);
-			bool overed = currentY  < - tagList_.Margin || Height + tagList_.Margin < currentY;
+			bool overed = tagList_.IsOutsideOf(this, taggedLine.transform.localPosition.y);
 			if( overed )
 			{
 				selectedLine_ = null;
