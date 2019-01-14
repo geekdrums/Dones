@@ -198,25 +198,6 @@ public class LineField : CustomInputField
 		Foreground = GetDesiredTextColor();
 	}
 
-	public void SetIsComment(bool isComment)
-	{
-		SetDesiredStrikeLineState();
-		Foreground = GetDesiredTextColor();
-		if( isComment )
-		{
-			Background = Color.white;
-			transition = Transition.None;
-		}
-		else
-		{
-			transition = Transition.ColorTint;
-			if( BindedLine.IsDone )
-			{
-				SetIsDone(BindedLine.IsDone);
-			}
-		}
-	}
-
 	public void SetIsBold(bool isBold)
 	{
 		if( (textComponent.fontStyle == FontStyle.Bold) != isBold )
@@ -232,42 +213,27 @@ public class LineField : CustomInputField
 
 	protected void SetDesiredStrikeLineState()
 	{
-		if( BindedLine.IsComment )
+		float charLength = GetFullTextRectLength();
+		if( BindedLine.IsLinkText )
 		{
 			strikeLine_.gameObject.SetActive(true);
-			strikeLine_.Direction = Vector3.up;
-			strikeLine_.Length = 28;
-			strikeLine_.Width = 6;
-			strikeLine_.Rate = 1.0f;
-			strikeLine_.rectTransform.anchoredPosition = new Vector2(-10, -13);
-			strikeLine_.SetColor(GameContext.Config.CommentLineColor);
+			strikeLine_.rectTransform.anchoredPosition = new Vector2(0, -7);
+			strikeLine_.SetLength(charLength);
+			strikeLine_.SetColor(GameContext.Config.ThemeColor);
 		}
 		else
 		{
-			strikeLine_.Direction = Vector3.right;
-			strikeLine_.Width = 1;
-			float charLength = GetFullTextRectLength();
-			if( BindedLine.IsLinkText )
+			if( BindedLine.IsDone && BindedLine.IsClone == false )
 			{
 				strikeLine_.gameObject.SetActive(true);
-				strikeLine_.rectTransform.anchoredPosition = new Vector2(0, -7);
-				strikeLine_.SetLength(charLength);
-				strikeLine_.SetColor(GameContext.Config.ThemeColor);
-			}
-			else if( BindedLine.IsDone && BindedLine.IsClone == false )
-			{
-				strikeLine_.gameObject.SetActive(true);
-				strikeLine_.rectTransform.anchoredPosition = new Vector2(-3, 0);
-				strikeLine_.SetLength(charLength + 6);
-				strikeLine_.SetColor(GameContext.Config.StrikeColor);
 			}
 			else
 			{
 				strikeLine_.gameObject.SetActive(false);
-				strikeLine_.rectTransform.anchoredPosition = new Vector2(-3, 0);
-				strikeLine_.SetLength(0);
-				strikeLine_.SetColor(GameContext.Config.StrikeColor);
 			}
+			strikeLine_.rectTransform.anchoredPosition = new Vector2(-3, 0);
+			strikeLine_.SetLength(charLength + 6);
+			strikeLine_.SetColor(GameContext.Config.StrikeColor);
 		}
 	}
 
@@ -298,10 +264,6 @@ public class LineField : CustomInputField
 			{
 				return GameContext.Config.ThemeColor;
 			}
-			else if( BindedLine.IsComment )
-			{
-				return GameContext.Config.CommentTextColor;
-			}
 			else
 			{
 				return GameContext.Config.TextColor;
@@ -314,22 +276,16 @@ public class LineField : CustomInputField
 	{
 		float charLength = GetFullTextRectLength();
 
-		if( BindedLine.IsComment == false && strikeLine_.gameObject.activeInHierarchy )
+		if( BindedLine.IsLinkText )
 		{
-			if( BindedLine.IsLinkText )
-			{
-				strikeLine_.SetLength(charLength);
-			}
-			else
-			{
-				strikeLine_.SetLength(charLength + 6);
-			}
+			strikeLine_.SetLength(charLength);
+		}
+		else
+		{
+			strikeLine_.SetLength(charLength + 6);
 		}
 
-		if( checkMark_.gameObject.activeSelf )
-		{
-			checkMark_.SetPositionX(charLength);
-		}
+		checkMark_.SetPositionX(charLength);
 
 		float rectHeight = RectHeight;
 		foreach( TagText tagText in tagTexts_ )

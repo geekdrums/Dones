@@ -661,7 +661,7 @@ public class Tree : MonoBehaviour
 		foreach( Line line in GetSelectedOrFocusedLines() )
 		{
 			int index = line.Index;
-			if( index > 0 && (line.Parent == titleLine_ || line.Parent.Field.IsSelected == false) && line.IsComment == false )
+			if( index > 0 && (line.Parent == titleLine_ || line.Parent.Field.IsSelected == false) )
 			{
 				Line oldParent = line.Parent;
 				Line newParent = line.Parent[index - 1];
@@ -705,7 +705,7 @@ public class Tree : MonoBehaviour
 		// 逆順で下から処理
 		foreach( Line line in GetSelectedOrFocusedLines(ascending: false) )
 		{
-			if( line.Parent.IsTitleLine == false && (line.Parent.Field.IsSelected == false || line.Parent.Level <= 0) && line.IsComment == false )
+			if( line.Parent.IsTitleLine == false && (line.Parent.Field.IsSelected == false || line.Parent.Level <= 0) )
 			{
 				int index = line.Index;
 				Line targetLine = line;
@@ -886,10 +886,6 @@ public class Tree : MonoBehaviour
 		Line parent = focusedLine_.Parent;
 		int index = focusedLine_.Index;
 		Line newline = new Line();
-		if( focusedLine_.IsComment )
-		{
-			newline.IsComment = true;
-		}
 
 		if( caretPos == 0 && target.TextLength > 0 )
 		{

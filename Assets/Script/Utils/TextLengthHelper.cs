@@ -18,7 +18,7 @@ public class TextLengthHelper : MonoBehaviour {
 
 	public static float GetTextRectLength(Text text, int index)
 	{
-		if( index <= 0 )
+		if( index < 0 )
 		{
 			return 0;
 		}

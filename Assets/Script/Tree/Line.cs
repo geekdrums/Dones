@@ -71,7 +71,7 @@ public class Line : IEnumerable<Line>, IComparable<Line>
 		get { return isDone_; }
 		set
 		{
-			if( isLinkText_ || isComment_ ) return;
+			if( isLinkText_ ) return;
 
 			if( isDone_ != value )
 			{
@@ -124,22 +124,7 @@ public class Line : IEnumerable<Line>, IComparable<Line>
 		}
 	}
 	protected bool isBold_ = false;
-
-	public bool IsComment
-	{
-		get { return isComment_; }
-		set
-		{
-			if( isComment_ != value )
-			{
-				isComment_ = value;
-				if( Field != null )
-					Field.SetIsComment(isComment_);
-			}
-		}
-	}
-	protected bool isComment_ = false;
-
+	
 	public Vector3 TargetPosition { get; protected set; }
 
 	public enum EBindState
@@ -486,7 +471,6 @@ public class Line : IEnumerable<Line>, IComparable<Line>
 			Field.OnTextLengthChanged();
 		}
 		ApplyTextToTaggedLine();
-		//CheckIsComment();
 	}
 
 	public void FixTextInputAction()
@@ -629,8 +613,6 @@ public class Line : IEnumerable<Line>, IComparable<Line>
 			Field.SetIsBold(isBold_);
 			if( isLinkText_ )
 				Field.SetIsLinkText(isLinkText_);
-			if( isComment_ )
-				Field.SetIsComment(isComment_);
 		}
 	}
 
@@ -1628,13 +1610,6 @@ public class Line : IEnumerable<Line>, IComparable<Line>
 		{
 			builder.Append(TabString);
 		}
-		if( appendTag )
-		{
-			if( IsComment )
-			{
-				builder.Append(CommentTag);
-			}
-		}
 		builder.Append(Text);
 		if( appendTag )
 		{
@@ -1721,16 +1696,6 @@ public class Line : IEnumerable<Line>, IComparable<Line>
 		{
 			IsBold = false;
 		}
-
-		if( text.StartsWith(CommentTag) )
-		{
-			text = text.Remove(0, CommentTag.Length);
-			IsComment = true;
-		}
-		else
-		{
-			IsComment = false;
-		}
 	}
 
 	public void CheckIsLink()
@@ -1742,37 +1707,6 @@ public class Line : IEnumerable<Line>, IComparable<Line>
 			if( Field != null )
 				Field.SetIsLinkText(isLinkText_);
 		}
-	}
-	
-	public void CheckIsComment()
-	{
-		/*
-		if( text_.StartsWith(CommentTag) )
-		{
-			SetTextDirectly(text_.Remove(0, CommentTag.Length));
-			if( Field != null )
-			{
-				Field.CaretPosision = 0;
-			}
-
-			if( textAction_ != null && textAction_ is TextInputAction )
-			{
-				textAction_.Text.Remove(0, CommentTag.Length);
-			}
-			FixTextInputAction();
-			Tree.ActionManager.Execute(new LineAction(
-				targetLines: this,
-				execute: () =>
-				{
-					IsComment = true;
-				},
-				undo: () =>
-				{
-					IsComment = false;
-				}
-				));
-		}
-		*/
 	}
 
 	public void CheckHashTags()
@@ -1815,7 +1749,6 @@ public class Line : IEnumerable<Line>, IComparable<Line>
 		line.isDone_ = isDone_;
 		line.isFolded_ = isFolded_;
 		line.isLinkText_ = isLinkText_;
-		line.isComment_ = isComment_;
 		line.isClone_ = true;
 		return line;
 	}
