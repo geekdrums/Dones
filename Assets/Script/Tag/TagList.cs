@@ -121,7 +121,7 @@ public class TagList : MonoBehaviour
 			{
 				sourceTagParent.gameObject.SetActive(true);
 				tagParents_.Insert(GetTagOrderIndex(tag, tagParents_), sourceTagParent);
-				UpdateLayoutElement();
+				AnimParentsToTargetPosition();
 				return sourceTagParent;
 			}
 		}
@@ -130,7 +130,7 @@ public class TagList : MonoBehaviour
 		tagParent.Initialize(tag, this);
 		sourceTagParents_.Insert(GetTagOrderIndex(tag, sourceTagParents_), tagParent);
 		tagParents_.Insert(GetTagOrderIndex(tag, tagParents_), tagParent);
-		UpdateLayoutElement();
+		AnimParentsToTargetPosition();
 		return tagParent;
 	}
 
@@ -193,12 +193,12 @@ public class TagList : MonoBehaviour
 
 	#region layout
 
-	public void UpdateLayoutElement()
+	public void AnimParentsToTargetPosition(float delayTime = 0.0f)
 	{
 		float sum = TopMargin;
 		for( int i = 0; i < tagParents_.Count; ++i )
 		{
-			AnimManager.AddAnim(tagParents_[i], new Vector3(WidthMargin, -sum), ParamType.Position, AnimType.Time, GameContext.Config.AnimTime);
+			AnimManager.AddAnim(tagParents_[i], new Vector3(WidthMargin, -sum), ParamType.Position, AnimType.Time, GameContext.Config.AnimTime, delayTime);
 			sum += tagParents_[i].Height;
 
 			if( i == tagOvelayDesiredIndex_ )
@@ -278,7 +278,7 @@ public class TagList : MonoBehaviour
 		tagParents_.Remove(tagParent);
 		sourceTagParents_.Remove(tagParent);
 		heapManager_.BackToHeap(tagParent);
-		UpdateLayoutElement();
+		AnimParentsToTargetPosition();
 	}
 
 	public void ClearAll()
@@ -290,7 +290,7 @@ public class TagList : MonoBehaviour
 		}
 		tagParents_.Clear();
 		sourceTagParents_.Clear();
-		UpdateLayoutElement();
+		AnimParentsToTargetPosition();
 	}
 
 	public void OnTreePathChanged(Line titleLine)
@@ -306,7 +306,7 @@ public class TagList : MonoBehaviour
 				tagParents_.Add(tagParent);
 			}
 		}
-		UpdateLayoutElement();
+		AnimParentsToTargetPosition();
 	}
 
 	#endregion
@@ -388,7 +388,7 @@ public class TagList : MonoBehaviour
 				tagOvelayDesiredIndex_ = desiredIndex;
 			}
 		}
-		UpdateLayoutElement();
+		AnimParentsToTargetPosition();
 	}
 
 	public void OnEndOverDragLine(TaggedLine taggedLine, bool overed)
@@ -424,7 +424,7 @@ public class TagList : MonoBehaviour
 			}
 		}
 
-		UpdateLayoutElement();
+		AnimParentsToTargetPosition();
 	}
 
 	public bool IsOutsideOf(TagParent tagParent, float currentY)
@@ -550,7 +550,7 @@ public class TagList : MonoBehaviour
 		}
 
 		tagParents_ = sortedTagParents;
-		UpdateLayoutElement();
+		AnimParentsToTargetPosition();
 	}
 
 	public void SaveTagListSettings()

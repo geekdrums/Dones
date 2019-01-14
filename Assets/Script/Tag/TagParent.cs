@@ -52,7 +52,7 @@ public class TagParent : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDra
 				{
 					tagToggle_.SetFold(IsFolded);
 				}
-				tagList_.UpdateLayoutElement();
+				tagList_.AnimParentsToTargetPosition();
 			}
 		}
 	}
@@ -271,7 +271,7 @@ public class TagParent : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDra
 			AnimOnInstantiate(taggedLine);
 		}
 		
-		tagList_.UpdateLayoutElement();
+		tagList_.AnimParentsToTargetPosition();
 
 		return taggedLine;
 	}
@@ -307,16 +307,16 @@ public class TagParent : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDra
 		{
 			index = 0;
 		}
-		AnimLinesToTargetPosition(index, lines_.Count - 1);
+		float delayTime = 0.0f;
+		if( taggedLine.IsDoneAnimating )
+		{
+			delayTime = 0.3f;
+		}
+		AnimLinesToTargetPosition(index, lines_.Count - 1, delayTime);
 
 		if( isPinned_ || sourceLines_.Count > 0 )
 		{
 			float animTime = 0.2f;
-			float delayTime = 0.0f;
-			if( taggedLine.IsDoneAnimating )
-			{
-				delayTime = 0.2f;
-			}
 			AnimManager.AddAnim(taggedLine, 0.0f, ParamType.AlphaColor, AnimType.Time, animTime, delay: delayTime, endOption: AnimEndOption.Deactivate);
 			
 			if( needSelectionUpdate )
@@ -329,7 +329,7 @@ public class TagParent : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDra
 			OnLineDisabled(taggedLine);
 			tagList_.OnTagEmpty(this);
 		}
-		tagList_.UpdateLayoutElement();
+		tagList_.AnimParentsToTargetPosition(delayTime);
 	}
 
 	public void RemoveLine(Line line)
@@ -586,7 +586,7 @@ public class TagParent : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDra
 		AnimManager.AddAnim(taggedLine, GetTargetPosition(taggedLine), ParamType.Position, AnimType.BounceIn, 0.25f);
 	}
 
-	void AnimLinesToTargetPosition(int startIndex, int endIndex)
+	void AnimLinesToTargetPosition(int startIndex, int endIndex, float delayTime = 0.0f)
 	{
 		if( startIndex > endIndex )
 		{
@@ -601,7 +601,7 @@ public class TagParent : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDra
 		for( int i = startIndex; i <= endIndex; ++i )
 		{
 			AnimManager.RemoveOtherAnim(lines_[i], ParamType.Position);
-			AnimManager.AddAnim(lines_[i], GetTargetPosition(lines_[i]), ParamType.Position, AnimType.Time, GameContext.Config.AnimTime);
+			AnimManager.AddAnim(lines_[i], GetTargetPosition(lines_[i]), ParamType.Position, AnimType.Time, GameContext.Config.AnimTime, delayTime);
 		}
 	}
 
