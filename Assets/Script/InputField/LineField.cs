@@ -308,7 +308,7 @@ public class LineField : CustomInputField
 		return GameContext.Config.TextColor;
 	}
 
-	protected override void OnUpdatedTextRectLength()
+	public override void OnTextLengthChanged()
 	{
 		float charLength = GetFullTextRectLength();
 

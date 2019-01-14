@@ -57,24 +57,18 @@ public class CustomInputField : InputField, IColoredObject
 
 	#region text length
 	
-	public void OnTextLengthChanged()
+	public virtual void OnTextLengthChanged()
 	{
-		GameContext.TextLengthHelper.Request(m_TextComponent, OnUpdatedTextRectLength);
-	}
-
-	protected virtual void OnUpdatedTextRectLength()
-	{
-
 	}
 
 	public float GetTextRectLength(int index)
 	{
-		return TextLengthHelper.GetTextRectLength(m_TextComponent.cachedTextGenerator, index);
+		return TextLengthHelper.GetTextRectLength(m_TextComponent, index);
 	}
 
 	public float GetFullTextRectLength()
 	{
-		return TextLengthHelper.GetFullTextRectLength(m_TextComponent.cachedTextGenerator);
+		return TextLengthHelper.GetFullTextRectLength(m_TextComponent);
 	}
 
 	#endregion

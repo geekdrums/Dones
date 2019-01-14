@@ -47,8 +47,7 @@ public class TaggedLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragH
 #if UNITY_EDITOR
 			name = value;
 #endif
-
-			GameContext.TextLengthHelper.Request(textComponent_, OnTextLengthCalculated);
+			UpdateStrikeLineLength();
 		}
 	}
 	Text textComponent_;
@@ -223,7 +222,7 @@ public class TaggedLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragH
 			strikeLine_.gameObject.SetActive(true);
 			checkMark_.gameObject.SetActive(true);
 			listMark_.SetColor(Color.clear);
-			GameContext.TextLengthHelper.Request(textComponent_, OnTextLengthCalculated);
+			UpdateStrikeLineLength();
 
 			if( withAnim )
 			{
@@ -255,7 +254,7 @@ public class TaggedLine : Selectable, IDragHandler, IBeginDragHandler, IEndDragH
 		}
 	}
 
-	void OnTextLengthCalculated()
+	void UpdateStrikeLineLength()
 	{
 		float charLength = GameContext.TextLengthHelper.AbbreviateText(textComponent_, GameContext.Config.TagListTextMaxWidth, "...");
 		strikeLine_.SetLength(charLength);

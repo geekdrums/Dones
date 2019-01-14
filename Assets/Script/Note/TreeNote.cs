@@ -199,20 +199,13 @@ public class TreeNote : Note
 	{
 		List<Text> titlePathList = new List<Text>(GameContext.Window.TitlePath.GetComponentsInChildren<Text>(includeInactive: true));
 		
+		// 足りなかったら足す
 		while( titlePathList.Count < path.Length )
 		{
 			titlePathList.Add(Instantiate(TitlePathPrefab.gameObject, GameContext.Window.TitlePath.transform).GetComponent<Text>());
 		}
-
-		if( path.Length > 0 )
-		{
-			GameContext.TextLengthHelper.Request(titlePathList[path.Length - 1], OnTextLengthCalculated);
-		}
-		else
-		{
-			GameContext.Window.SearchField.transform.localPosition = new Vector3(55, GameContext.Window.SearchField.transform.localPosition.y, 0);
-		}
 		
+		// 文字列設定、余計な分はActiveを切る
 		for( int i = 0; i < titlePathList.Count; ++i )
 		{
 			titlePathList[i].gameObject.SetActive(i < path.Length);
@@ -221,6 +214,7 @@ public class TreeNote : Note
 				bool isLastPath = i == path.Length - 1;
 				titlePathList[i].text = path[i];
 				titlePathList[i].color = (isLastPath ? GameContext.Config.TextColor : GameContext.Config.DoneTextColor);
+				GameContext.TextLengthHelper.AbbreviateText(titlePathList[i], GameContext.Config.TabTextMaxWidth);
 				UnityEngine.UI.Button button = titlePathList[i].GetComponent<UnityEngine.UI.Button>();
 				button.enabled = isLastPath == false;
 				button.onClick.RemoveAllListeners();
@@ -231,18 +225,14 @@ public class TreeNote : Note
 				});
 			}
 		}
-	}
-
-	void OnTextLengthCalculated()
-	{
-		List<Text> titlePathList = new List<Text>(GameContext.Window.TitlePath.GetComponentsInChildren<Text>());
-
+		
+		// 位置設定
 		float x = 55;
 		float margin = 12;
 		float triangleWidth = 12;
-		for( int i = 0; i < titlePathList.Count; ++i )
+		for( int i = 0; i < path.Length; ++i )
 		{
-			float width = TextLengthHelper.GetFullTextRectLength(titlePathList[i].cachedTextGenerator);
+			float width = TextLengthHelper.GetFullTextRectLength(titlePathList[i]);
 			titlePathList[i].transform.localPosition = new Vector3(x, titlePathList[i].transform.localPosition.y, 0);
 			titlePathList[i].rectTransform.sizeDelta = new Vector2(width, titlePathList[i].rectTransform.sizeDelta.y);
 			x += width;
@@ -251,7 +241,7 @@ public class TreeNote : Note
 			triangle.transform.localPosition = new Vector3(width + margin, triangle.transform.localPosition.y, 0);
 			x += triangleWidth;
 		}
-		GameContext.Window.SearchField.transform.localPosition = new Vector3(x - 3, GameContext.Window.SearchField.transform.localPosition.y, 0);
+		GameContext.Window.SearchField.transform.localPosition = new Vector3(x, GameContext.Window.SearchField.transform.localPosition.y, 0);
 	}
 
 	public override void Destroy()

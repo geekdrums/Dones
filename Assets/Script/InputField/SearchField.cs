@@ -362,16 +362,13 @@ public class SearchField : CustomInputField
 	{
 		result.Rect = rectHeap_.ReviveOrInstantiate(result.Line.Field.transform);
 		result.Rect.SetColor(GameContext.Config.SearchUnfocusColor);
+		
+		float x = result.Index > 0 ? result.Line.Field.GetTextRectLength(result.Index - 1) : 0;
+		float width = result.Line.Field.GetTextRectLength(result.Index + text.Length - 1) - x;
 
-		GameContext.TextLengthHelper.Request(result.Line.Field.textComponent, () =>
-		{
-			float x = result.Index > 0 ? result.Line.Field.GetTextRectLength(result.Index - 1) : 0;
-			float width = result.Line.Field.GetTextRectLength(result.Index + text.Length - 1) - x;
-
-			result.Rect.rectTransform.anchoredPosition = new Vector2(x + 10, -4.5f);
-			result.Rect.rectTransform.sizeDelta = new Vector2(width, -7);
-			result.Rect.rectTransform.SetAsFirstSibling();
-		});
+		result.Rect.rectTransform.anchoredPosition = new Vector2(x + 10, -4.5f);
+		result.Rect.rectTransform.sizeDelta = new Vector2(width, -7);
+		result.Rect.rectTransform.SetAsFirstSibling();
 	}
 
 	void ClearSearchResult()

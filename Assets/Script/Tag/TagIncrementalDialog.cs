@@ -98,37 +98,14 @@ public class TagIncrementalDialog : MonoBehaviour {
 		searchResults_.Clear();
 		selectedIndex_ = 0;
 	}
-
-	bool shouldUpdateTextLength_ = false;
-
+	
 	void OnTextLengthChanged()
-	{
-		if( shouldUpdateTextLength_ == false )
-		{
-			shouldUpdateTextLength_ = true;
-			if( this.gameObject.activeInHierarchy )
-			{
-				StartCoroutine(UpdateTextLengthCoroutine());
-			}
-		}
-	}
-
-	IEnumerator UpdateTextLengthCoroutine()
-	{
-		yield return new WaitWhile(() => searchResults_.Find((TagText tagText) => tagText.TextComponent.cachedTextGenerator.characterCount == 0) != null);
-
-		OnUpdatedTextRectLength();
-
-		shouldUpdateTextLength_ = false;
-	}
-
-	void OnUpdatedTextRectLength()
 	{
 		float maxWidth = 0;
 		float height = searchResults_.Count * TagTextHeight;
 		foreach( TagText tagText in searchResults_ )
 		{
-			float width = TextLengthHelper.GetTextRectLength(tagText.TextComponent.cachedTextGenerator, tagText.Text.Length - 1);
+			float width = TextLengthHelper.GetFullTextRectLength(tagText.TextComponent);
 			if( maxWidth < width )
 			{
 				maxWidth = width;

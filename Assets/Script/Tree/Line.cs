@@ -530,11 +530,6 @@ public class Line : IEnumerable<Line>, IComparable<Line>
 	{
 		Binding = binding;
 		Field = Binding.GetComponent<LineField>();
-		BindState = EBindState.Bind;
-		if( OnBindStateChanged != null )
-		{
-			OnBindStateChanged(BindState);
-		}
 		if( Field != null )
 		{
 			if( parent_ != null && parent_.Binding != null )
@@ -573,6 +568,12 @@ public class Line : IEnumerable<Line>, IComparable<Line>
 		else
 		{
 			Tree = Binding.GetComponentInParent<Tree>();
+		}
+
+		BindState = EBindState.Bind;
+		if( OnBindStateChanged != null )
+		{
+			OnBindStateChanged(BindState);
 		}
 	}
 

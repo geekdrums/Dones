@@ -5,20 +5,7 @@ using UnityEngine;
 using UnityEngine.UI;
 
 public class TextLengthHelper : MonoBehaviour {
-
-	class UpdateTextLengthRequest
-	{
-		public Text TextComponent;
-		public event Action OnTextLengthCalculated;
-
-		public void OnRequestFinished()
-		{
-			OnTextLengthCalculated();
-		}
-	}
-
-	List<UpdateTextLengthRequest> requests_ = new List<UpdateTextLengthRequest>();
-
+	
 	// Use this for initialization
 	void Awake () {
 		GameContext.TextLengthHelper = this;
@@ -29,74 +16,54 @@ public class TextLengthHelper : MonoBehaviour {
 
 	}
 
-	public static float GetTextRectLength(TextGenerator textGen, int index)
+	public static float GetTextRectLength(Text text, int index)
 	{
-		if( textGen.characters.Count == 0 )
+		if( index <= 0 )
 		{
 			return 0;
 		}
-
-		index = Math.Min(textGen.characters.Count - 1, Math.Max(0, index));
-		return textGen.characters[index].cursorPos.x + textGen.characters[index].charWidth - textGen.characters[0].cursorPos.x;
-	}
-
-	public static float GetFullTextRectLength(TextGenerator textGen)
-	{
-		return GetTextRectLength(textGen, textGen.characterCount - 1);
-	}
-
-	public void Request(Text textComponent, Action onTextLengthCalculated)
-	{
-		UpdateTextLengthRequest request = requests_.Find((UpdateTextLengthRequest existReq)=>existReq.TextComponent == textComponent);
-		if( request == null )
+		else if( index >= text.text.Length )
 		{
-			request = new UpdateTextLengthRequest();
-			request.TextComponent = textComponent;
-			request.OnTextLengthCalculated += onTextLengthCalculated;
-			requests_.Add(request);
-			StartCoroutine(UpdateTextLengthCoroutine(request));
+			return text.preferredWidth;
 		}
-		else
+
+		int sum = 0;
+		for( int i = 0; i <= index; ++i )
 		{
-			request.OnTextLengthCalculated += onTextLengthCalculated;
+			if( text.text.Length <= i )
+			{
+				break;
+			}
+
+			CharacterInfo chInfo;
+			text.font.GetCharacterInfo(text.text[i], out chInfo);
+			sum += chInfo.advance;
 		}
+
+		return sum;
 	}
 
-	public void CancelRequest(Text textComponent)
+	public static float GetFullTextRectLength(Text text)
 	{
-		UpdateTextLengthRequest request = requests_.Find((UpdateTextLengthRequest existReq) => existReq.TextComponent == textComponent);
-		if( request != null )
-		{
-			requests_.Remove(request);
-		}
+		return text.preferredWidth;
 	}
 
-	IEnumerator UpdateTextLengthCoroutine(UpdateTextLengthRequest request)
+	public float AbbreviateText(Text text, float maxWidth, string substituteText = "...")
 	{
-		yield return new WaitWhile(() => request.TextComponent.gameObject.activeInHierarchy == false
-										|| request.TextComponent.cachedTextGenerator.characterCount != request.TextComponent.text.Length + 1);
-		
-		request.OnRequestFinished();
-		requests_.Remove(request);
-	}
-
-	public float AbbreviateText(Text textComponent, float maxWidth, string substituteText = "...")
-	{
-		TextGenerator gen = textComponent.cachedTextGenerator;
-		float charLength = GetFullTextRectLength(gen);
+		float charLength = GetFullTextRectLength(text);
 		if( charLength > maxWidth )
 		{
 			int maxCharCount = 0;
-			for( int i = 1; i < gen.characters.Count; ++i )
+			for( int i = 1; i < text.text.Length; ++i )
 			{
-				if( maxWidth < GetTextRectLength(gen, i) )
+				if( maxWidth < GetTextRectLength(text, i) )
 				{
 					maxCharCount = i - 1;
-					charLength = GetTextRectLength(gen, i - 1);
+					charLength = GetTextRectLength(text, i - 1);
 					break;
 				}
 			}
-			textComponent.text = textComponent.text.Substring(0, maxCharCount) + substituteText;
+			text.text = text.text.Substring(0, maxCharCount) + substituteText;
 		}
 		return charLength;
 	}
