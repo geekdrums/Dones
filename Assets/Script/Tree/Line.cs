@@ -482,6 +482,7 @@ public class Line : IEnumerable<Line>, IComparable<Line>
 
 		if( IsDone || HasAnyTags || IsLinkText )
 		{
+			Field.ForceLabelUpdate();
 			Field.OnTextLengthChanged();
 		}
 		ApplyTextToTaggedLine();

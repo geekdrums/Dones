@@ -175,11 +175,10 @@ public class LineField : CustomInputField
 			{
 				TagText tagText = BindedLine.Tree.TagHeapManager.Instantiate(this.transform);
 				tagText.Text = "#" + tag;
-				tagText.Rect.anchoredPosition = Vector2.zero;
 				tagText.gameObject.SetActive(isFocused == false);
 				tagText.TextComponent.fontStyle = BindedLine.IsBold ? FontStyle.Bold : FontStyle.Normal;
+				tagText.UpdateTextRect(this);
 				tagTexts_.Add(tagText);
-				OnTextLengthChanged();
 			}
 		}
 	}
@@ -332,11 +331,7 @@ public class LineField : CustomInputField
 		float rectHeight = RectHeight;
 		foreach( TagText tagText in tagTexts_ )
 		{
-			int index = text.LastIndexOf(tagText.Text);
-			float x = GetTextRectLength(index - 1);
-			tagText.Rect.anchoredPosition = new Vector2(x + textComponent.rectTransform.offsetMin.x, 0);
-			float width = GetTextRectLength(index + tagText.Text.Length - 1) - x;
-			tagText.Rect.sizeDelta = new Vector2(width, rectHeight);
+			tagText.UpdateTextRect(this);
 		}
 	}
 

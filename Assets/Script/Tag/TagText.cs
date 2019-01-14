@@ -31,4 +31,13 @@ public class TagText : MonoBehaviour {
 	{
 		return Text;
 	}
+
+	public void UpdateTextRect(LineField field)
+	{
+		int index = field.text.LastIndexOf(Text);
+		float x = field.GetTextRectLength(index - 1);
+		Rect.anchoredPosition = new Vector2(x + field.textComponent.rectTransform.offsetMin.x, 0);
+		float width = field.GetTextRectLength(index + Text.Length - 1) - x;
+		Rect.sizeDelta = new Vector2(width, field.RectHeight);
+	}
 }
