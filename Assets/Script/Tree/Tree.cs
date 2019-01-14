@@ -934,7 +934,10 @@ public class Tree : MonoBehaviour
 				targetLines: new Line[] { target, newline },
 				execute: () =>
 				{
-					target.Text = subString;
+					if( oldString != subString )
+					{
+						target.Text = subString;
+					}
 					insertParent.Insert(insertIndex, newline);
 					insertParent.AdjustLayoutRecursive(insertIndex + 1);
 					newline.Field.CaretPosision = 0;
@@ -942,7 +945,10 @@ public class Tree : MonoBehaviour
 				},
 				undo: () =>
 				{
-					target.Text = oldString;
+					if( oldString != subString )
+					{
+						target.Text = oldString;
+					}
 					insertParent.Remove(newline);
 					insertParent.AdjustLayoutRecursive(insertIndex);
 					target.Field.CaretPosision = caretPos;

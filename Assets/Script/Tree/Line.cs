@@ -1735,9 +1735,13 @@ public class Line : IEnumerable<Line>, IComparable<Line>
 
 	public void CheckIsLink()
 	{
-		isLinkText_ = text_.StartsWith("http");
-		if( Field != null )
-			Field.SetIsLinkText(isLinkText_);
+		bool newIsLink = text_.StartsWith("http");
+		if( newIsLink != isLinkText_ )
+		{
+			isLinkText_ = newIsLink;
+			if( Field != null )
+				Field.SetIsLinkText(isLinkText_);
+		}
 	}
 	
 	public void CheckIsComment()

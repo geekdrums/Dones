@@ -245,24 +245,27 @@ public class LineField : CustomInputField
 		else
 		{
 			strikeLine_.Direction = Vector3.right;
-			strikeLine_.Length = 0;
 			strikeLine_.Width = 1;
+			float charLength = GetFullTextRectLength();
 			if( BindedLine.IsLinkText )
 			{
 				strikeLine_.gameObject.SetActive(true);
 				strikeLine_.rectTransform.anchoredPosition = new Vector2(0, -7);
+				strikeLine_.SetLength(charLength);
 				strikeLine_.SetColor(GameContext.Config.ThemeColor);
 			}
 			else if( BindedLine.IsDone && BindedLine.IsClone == false )
 			{
 				strikeLine_.gameObject.SetActive(true);
 				strikeLine_.rectTransform.anchoredPosition = new Vector2(-3, 0);
+				strikeLine_.SetLength(charLength + 6);
 				strikeLine_.SetColor(GameContext.Config.StrikeColor);
 			}
 			else
 			{
 				strikeLine_.gameObject.SetActive(false);
 				strikeLine_.rectTransform.anchoredPosition = new Vector2(-3, 0);
+				strikeLine_.SetLength(0);
 				strikeLine_.SetColor(GameContext.Config.StrikeColor);
 			}
 		}
