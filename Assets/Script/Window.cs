@@ -326,6 +326,14 @@ public class Window : MonoBehaviour
 		}
 
 		treeFile_ = new FileInfo(saveDirectory + "/tree.dtml");
+		if( treeFile_.Exists == false )
+		{
+			StreamWriter writer = treeFile_.CreateText();
+			writer.Write(GameContext.Config.InitialTreeText);
+			writer.Flush();
+			writer.Close();
+		}
+
 		logDirectory_ = new DirectoryInfo(saveDirectory + "/log");
 
 		if( Directory.Exists(logDirectory_.FullName) == false )
