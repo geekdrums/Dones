@@ -279,7 +279,7 @@ public class TreeNote : Note
 	{
 		if( gameObject.activeInHierarchy )
 		{
-			layout_.preferredHeight = tree_.GetPreferredHeight();
+			layout_.preferredHeight = tree_.GetPreferredHeight() + +GameContext.Config.HeightPerLine;
 			contentSizeFitter_.SetLayoutVertical();
 		}
 	}
