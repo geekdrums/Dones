@@ -705,32 +705,37 @@ public class Tree : MonoBehaviour
 		// 逆順で下から処理
 		foreach( Line line in GetSelectedOrFocusedLines(ascending: false) )
 		{
-			if( line.Parent.IsTitleLine == false && (line.Parent.Field.IsSelected == false || line.Parent.Level <= 0) )
-			{
-				int index = line.Index;
-				Line targetLine = line;
-				Line oldParent = line.Parent;
-				Line newParent = line.Parent.Parent;
-				actionManager_.Execute(new LineAction(
-					targetLines: targetLine,
-					execute: () =>
-					{
-						Line layoutStart = targetLine.Parent[index + 1];
-						newParent.Insert(targetLine.Parent.Index + 1, targetLine);
-						if( layoutStart != null && layoutStart.Field.IsSelected == false )
-						{
-							layoutStart.Parent.AdjustLayoutRecursive(layoutStart.Index);
-						}
-					},
-					undo: () =>
-					{
-						oldParent.Insert(index, targetLine);
-						oldParent.AdjustLayoutRecursive(index);
-					}
-					));
-			}
+			ShiftTabLine(line);
 		}
 		actionManager_.EndChain();
+	}
+
+	protected void ShiftTabLine(Line line)
+	{
+		if( line.Parent.IsTitleLine == false && (line.Parent.Field.IsSelected == false || line.Parent.Level <= 0) )
+		{
+			int index = line.Index;
+			Line targetLine = line;
+			Line oldParent = line.Parent;
+			Line newParent = line.Parent.Parent;
+			actionManager_.Execute(new LineAction(
+				targetLines: targetLine,
+				execute: () =>
+				{
+					Line layoutStart = targetLine.Parent[index + 1];
+					newParent.Insert(targetLine.Parent.Index + 1, targetLine);
+					if( layoutStart != null && layoutStart.Field.IsSelected == false )
+					{
+						layoutStart.Parent.AdjustLayoutRecursive(layoutStart.Index);
+					}
+				},
+				undo: () =>
+				{
+					oldParent.Insert(index, targetLine);
+					oldParent.AdjustLayoutRecursive(index);
+				}
+				));
+		}
 	}
 
 	public void OnCtrlSpaceInput()
@@ -878,9 +883,8 @@ public class Tree : MonoBehaviour
 		}
 	}
 
-	protected void NewLine()
+	protected Line EnterNewLine()
 	{
-		//bool shift = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
 		int caretPos = focusedLine_.Field.CaretPosision;
 		Line target = focusedLine_;
 		Line parent = focusedLine_.Parent;
@@ -907,6 +911,8 @@ public class Tree : MonoBehaviour
 					ownerNote_.ScrollTo(target);
 				}
 				));
+
+			return focusedLine_;
 		}
 		else
 		{
@@ -951,6 +957,8 @@ public class Tree : MonoBehaviour
 					target.Field.IsFocused = true;
 				}
 				));
+
+			return newline;
 		}
 	}
 
@@ -962,7 +970,18 @@ public class Tree : MonoBehaviour
 		}
 		else
 		{
-			NewLine();
+			bool shift = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+			if( shift )
+			{
+				actionManager_.StartChain();
+				Line line = EnterNewLine();
+				ShiftTabLine(line);
+				actionManager_.EndChain();
+			}
+			else
+			{
+				EnterNewLine();
+			}
 		}
 	}
 

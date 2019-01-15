@@ -179,7 +179,15 @@ public class TreeNote : Note
 	public override void SetNoteViewParam(NoteViewParam param)
 	{
 		Tree.SetPath(param.Path);
-		Tree.TitleLine[0].Field.Select();
+		if( param.FocusedLine != null && param.FocusedLine.Field != null && param.FocusedLine.IsChildOf(Tree.TitleLine) )
+		{
+			param.FocusedLine.Field.Select();
+			param.FocusedLine.Field.CaretPosision = Math.Min(param.FocusedLine.Text.Length, param.CaretPosition);
+		}
+		else
+		{
+			Tree.TitleLine[0].Field.Select();
+		}
 		UpdateTreePathList(param.Path);
 
 		LogNote.SetNoteViewParam(param);
@@ -192,6 +200,9 @@ public class TreeNote : Note
 	public override void CacheNoteViewParam(NoteViewParam param)
 	{
 		base.CacheNoteViewParam(param);
+
+		param.FocusedLine = Tree.LastFocusedLine;
+		param.CaretPosition = (Tree.LastFocusedLine != null && Tree.LastFocusedLine.Field != null ? Tree.LastFocusedLine.Field.CaretPosision : 0);
 		LogNote.CacheNoteViewParam(param);
 	}
 
