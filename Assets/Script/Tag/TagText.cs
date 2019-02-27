@@ -5,21 +5,48 @@ using UnityEngine.UI;
 
 public class TagText : MonoBehaviour {
 
-	public string Text { get { return textComponent_.text; } set { textComponent_.text = value; } }
-	public Text TextComponent { get { return textComponent_; } }
+	public string Text { get { return TextComponent.text; } set { TextComponent.text = value; } }
+	public Text TextComponent
+	{
+		get
+		{
+			if( textComponent_ == null )
+			{
+				textComponent_ = GetComponentInChildren<Text>();
+			}
+			return textComponent_;
+		}
+	}
 	Text textComponent_;
 
-	public Image BG { get { return image_; } }
+	public Image BG
+	{
+		get
+		{
+			if( image_ == null )
+			{
+				image_ = GetComponent<Image>();
+			}
+			return image_;
+		}
+	}
 	Image image_;
 
-	public RectTransform Rect { get { return rect_; } }
+	public RectTransform Rect
+	{
+		get
+		{
+			if( rect_ == null )
+			{
+				rect_ = GetComponent<RectTransform>();
+			}
+			return rect_;
+		}
+	}
 	RectTransform rect_;
 
 	// Use this for initialization
 	void Awake () {
-		textComponent_ = GetComponentInChildren<Text>();
-		image_ = GetComponent<Image>();
-		rect_ = GetComponent<RectTransform>();
 	}
 	
 	// Update is called once per frame
