@@ -111,7 +111,7 @@ public class SearchField : CustomInputField
 		textChanged_ = true;
 	}
 
-	void Search(Tree tree)
+	void Search(LineTree tree)
 	{
 		ClearSearchResult();
 
@@ -345,7 +345,7 @@ public class SearchField : CustomInputField
 		(action as Line.TextAction).OnFixEvent -= OnTextEditLineFixed;
 	}
 
-	public void OnTreePathChanged(Tree tree)
+	public void OnTreePathChanged(LineTree tree)
 	{
 		if( CanSearch() )
 		{

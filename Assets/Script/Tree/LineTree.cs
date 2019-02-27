@@ -10,8 +10,8 @@ using UniRx;
 using UniRx.Triggers;
 using System.IO;
 
-// Window > Note > [ Tree ] > Line
-public class Tree : MonoBehaviour
+// Window > Note > [ LineTree ] > Line
+public class LineTree : MonoBehaviour
 {
 	#region params
 

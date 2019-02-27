@@ -11,7 +11,7 @@ using UniRx.Triggers;
 using System.IO;
 using System.Runtime.InteropServices;
 
-// Window > [ Note ] > Tree > Line
+// Window > [ Note ] > LineTree > Line
 public class Note : MonoBehaviour
 {
 	public ActionManager ActionManager { get { return actionManager_; } }
@@ -29,7 +29,7 @@ public class Note : MonoBehaviour
 
 	protected bool isScrollAnimating_;
 
-	protected List<Tree> saveRequestedTrees_ = new List<Tree>();
+	protected List<LineTree> saveRequestedTrees_ = new List<LineTree>();
 	protected float lastSaveRequestedTime_ = 0;
 
 	protected virtual void Awake()
@@ -141,7 +141,7 @@ public class Note : MonoBehaviour
 
 	public virtual void OnEdited(object sender, EventArgs e)
 	{
-		Tree tree = sender as Tree;
+		LineTree tree = sender as LineTree;
 		if( saveRequestedTrees_.Contains(tree) == false )
 			saveRequestedTrees_.Add(tree);
 		
@@ -158,7 +158,7 @@ public class Note : MonoBehaviour
 
 	public void DoAutoSave()
 	{
-		foreach( Tree tree in saveRequestedTrees_ )
+		foreach( LineTree tree in saveRequestedTrees_ )
 		{
 			tree.SaveFile();
 		}

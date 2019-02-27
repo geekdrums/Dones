@@ -20,7 +20,7 @@ public class ContextMenu : MonoBehaviour {
 	public Button FoldAllButton;
 	public Button UnfoldAllButton;
 
-	Tree tree_;
+	LineTree tree_;
 	bool isOpening_;
 
 	// Use this for initialization
@@ -40,7 +40,7 @@ public class ContextMenu : MonoBehaviour {
 		}
 	}
 
-	public void Open(Tree tree, Vector3 position)
+	public void Open(LineTree tree, Vector3 position)
 	{
 		tree_ = tree;
 
@@ -53,7 +53,7 @@ public class ContextMenu : MonoBehaviour {
 		RepeatDoneButton		.interactable = tree_.FocusedLine != null && (tree_ is LogTree == false);
 		AddTagButton			.interactable = tree_.FocusedLine != null && (tree_ is LogTree == false);
 		CopyButton				.interactable = tree_.FocusedLine != null || tree_.HasSelection;
-		PasteButton				.interactable = Tree.Clipboard != null && Tree.Clipboard != "";
+		PasteButton				.interactable = LineTree.Clipboard != null && LineTree.Clipboard != "";
 		CopyWithoutFormatButton	.interactable = tree_.FocusedLine != null || tree_.HasSelection;
 		FoldButton				.interactable = tree_.FocusedLine != null;
 		UnfoldButton			.interactable = tree_.FocusedLine != null;

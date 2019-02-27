@@ -71,13 +71,12 @@ public class TreePath : IEnumerable<string>
 		return builder.ToString();
 	}
 
-	public override bool Equals(object obj)
+	public bool IsSame(TreePath other)
 	{
-		if( obj is TreePath == false ) return false;
-		if( Length != (obj as TreePath).Length ) return false;
+		if( Length != other.Length ) return false;
 		for( int i = 0; i < Length; ++i )
 		{
-			if( this[i] != (obj as TreePath)[i] ) return false;
+			if( this[i] != other[i] ) return false;
 		}
 		return true;
 	}

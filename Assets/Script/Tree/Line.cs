@@ -8,7 +8,7 @@ using UnityEngine.UI;
 using UnityEngine.EventSystems;
 using UniRx;
 
-// Window > Note > Tree > [ Line ]
+// Window > Note > LineTree > [ Line ]
 public class Line : IEnumerable<Line>, IComparable<Line>
 {
 	#region params
@@ -138,7 +138,7 @@ public class Line : IEnumerable<Line>, IComparable<Line>
 	public event Action<EBindState> OnBindStateChanged;
 
 	public GameObject Binding { get; protected set; }
-	public Tree Tree { get; protected set; }
+	public LineTree Tree { get; protected set; }
 	public LineField Field { get; protected set; }
 	public TreeToggle Toggle { get; protected set; }
 	
@@ -552,7 +552,7 @@ public class Line : IEnumerable<Line>, IComparable<Line>
 		}
 		else
 		{
-			Tree = Binding.GetComponentInParent<Tree>();
+			Tree = Binding.GetComponentInParent<LineTree>();
 		}
 
 		BindState = EBindState.Bind;

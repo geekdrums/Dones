@@ -117,7 +117,7 @@ public class TabGroup : MonoBehaviour, IEnumerable<TabButton>
 		{
 			if( existTab.BindedNote is TreeNote )
 			{
-				if( existTab.ViewParam.Path.Equals(path) )
+				if( existTab.ViewParam.Path.IsSame(path) )
 				{
 					if( select )
 					{

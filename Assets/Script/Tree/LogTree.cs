@@ -11,7 +11,7 @@ using UniRx.Triggers;
 using System.IO;
 
 // Window - LogNote - [ LogTree ] - Line
-public class LogTree : Tree
+public class LogTree : LineTree
 {
 	#region params
 

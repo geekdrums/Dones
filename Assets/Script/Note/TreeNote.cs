@@ -11,15 +11,15 @@ using UniRx.Triggers;
 using System.IO;
 using System.Runtime.InteropServices;
 
-// Window - [ TreeNote ] - Line
+// Window - [ TreeNote ] - LineTree - Line
 public class TreeNote : Note
 {
 	#region properties
 	
-	public Tree Tree { get { return tree_; } }
-	protected Tree tree_;
+	public LineTree Tree { get { return tree_; } }
+	protected LineTree tree_;
 
-	protected Tree focusedTree_;
+	protected LineTree focusedTree_;
 
 	public bool IsEdited { get { return tree_.IsEdited; } }
 	public FileInfo File { get { return tree_ != null ? tree_.File : null; } }
@@ -51,7 +51,7 @@ public class TreeNote : Note
 		tagHeapParentObject_.SetActive(false);
 		tagHeapManager_.Initialize(1, TagTextPrefab, tagHeapParentObject_.transform);
 
-		tree_ = GetComponent<Tree>();
+		tree_ = GetComponent<LineTree>();
 		tree_.Initialize(this, new ActionManagerProxy(actionManager_), heapManager_, tagHeapManager_);
 		tree_.OnEdited += this.OnEdited;
 		tree_.OnDoneChanged += this.OnDoneChanged;
@@ -74,7 +74,7 @@ public class TreeNote : Note
 		
 		if( Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1) )
 		{
-			Tree oldFocusedTree = focusedTree_;
+			LineTree oldFocusedTree = focusedTree_;
 			focusedTree_ = null;
 			Vector2 mousePosition = Input.mousePosition;
 			if( Rect.Contains(mousePosition) )
