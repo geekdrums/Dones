@@ -1,5 +1,4 @@
 .vs/
-obj/
 Temp/
 Library/
 UnityVS/
@@ -16,3 +15,9 @@ UnityVS.*
 *.prx
 *.bak.meta
 Assets/StreamingAssets/settings.txt
+*.cache
+*.pdb
+*.csproj.CopyComplete
+*.csproj.FileListAbsolute.txt
+
+
